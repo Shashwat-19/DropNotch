@@ -5,25 +5,59 @@ Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 ## Goal
 Run a reverse-engineering analysis (REA) of Canopy and Atoll, turn it into a feature matrix and architecture plan for DropNotch, then scaffold the foundation. DropNotch must be original code that Shash owns.
 
-## Phase 1: Analysis (no app code yet)
-1. Use the `reference-analyst` agent to fetch Canopy's three public pages (https://getcanopy.pro, /changelog, /privacy). List every feature and behavioural claim, e.g. event-driven instead of polling, idle memory, external/non-notch display support, lock-screen music and lyrics, AirPods battery and volume, charging indicator, weather, privacy stance.
-2. Use the `reference-analyst` agent to clone Atoll (https://github.com/Ebullioscopic/Atoll) into ./reference/atoll. Check out tag v2.3.3-alpha.4 if it exists; otherwise use the closest tag and report which. Inventory its features from the README and source. For each feature, note the frameworks/APIs used (public vs private/undocumented), the permissions required (Accessibility, Screen Recording, Location, Calendars, Bluetooth), and the files where it lives. Notes go in docs/research/, in the analyst's own words, with no code.
-3. Write docs/FEATURE_MATRIX.md, one row per feature:
-   Feature | Canopy | Atoll | macOS API / approach | Public or private | Permissions | Breakage risk on macOS updates | DropNotch priority (MVP / v0.2 / later / skip) | Notes
-   Merge in DropNotch's own list:
-   - Main screen: song icon on the left and waveform on the right while playing; hover to expand; user-chosen calendar or notes panel; file tray with AirDrop; timer; notes; terminal; clipboard history; Mac battery; AirPods battery with connect animation; animals on the left when nothing is playing.
-   - Lock screen: Mac battery, audio-device battery, AQI, temperature, full-screen now playing.
-   MVP is: music controls, file tray + AirDrop, clipboard history, quick notes, and a customisable notch layout. Judge features by how fast a frequent action gets done.
-4. Write docs/ARCHITECTURE.md: module layout, the protocol every feature module implements (compact view, expanded view, settings view, enabled flag), state management, persistence, notch panel window configuration, handling of notch vs non-notch/external displays, and an energy budget listing what is event-driven, what genuinely needs polling, and at what interval.
-5. Write docs/RISKS.md: private APIs (MediaRemote restrictions since macOS 15.4, AirPods battery, drawing on the lock screen), permission UX, and distribution outside the App Store (Developer ID, notarisation, DMG, Sparkle updates).
-6. STOP. Summarise the 10 decisions you need from Shash and wait for approval.
+## Phase 1: Analysis (done, 2026-10-24)
+Canopy's public pages and Atoll's features were analysed, and the decisions D1–D10 were approved by Shash. Outputs: docs/FEATURE_MATRIX.md, docs/ARCHITECTURE.md, docs/RISKS.md, docs/DECISIONS.md and docs/research/.
 
-## Phase 2: Foundation (only after Phase 1 is approved)
-Use the `planner` agent first, then implement.
-- LSUIElement = YES (no Dock icon), set through project.yml. Add a menu-bar item with Settings and Quit.
-- NotchPanel: a borderless, non-activating NSPanel above the menu bar that joins all Spaces and full-screen apps. Position it from NSScreen.safeAreaInsets and auxiliaryTopLeftArea/auxiliaryTopRightArea. Show a fallback pill on displays without a notch. Reposition on screen-parameter changes.
-- Hover state machine: closed → peek → open, with debounce and spring animations. The panel is click-through when closed.
-- Module protocol and registry, plus one stub module (Now Playing) rendering a placeholder.
-- Unit tests (via `test-writer`) for notch geometry and the hover state machine.
-- Run `xcodegen generate`, then `xcodebuild -scheme DropNotch -destination 'platform=macOS' build test`, and report the actual output.
-- Finish with `code-reviewer` and `performance-optimizer`, and record decisions in docs/DECISIONS.md.
+## Phase 2: Foundation (planned; needs Shash's approval before any app code)
+
+Decision numbers (D1–D10) refer to docs/DECISIONS.md. Start with the `planner` agent and send its plan to Shash. Steps a and b are verification and project setup; step a ends with a report to Shash, and no module code is built until Shash has read it.
+
+a. **Step 0: verify before building.** Report to Shash before continuing.
+   - **Clipboard warning probe (D7).** Build a throwaway probe in a scratch folder outside DropNotch/. It is not committed. It reads `NSPasteboard.general` in the background when `changeCount` changes. Record: whether macOS shows a privacy alert or prompt on the current macOS version; what triggers it; whether reading only `changeCount` and `types` avoids it. Report the result to Shash before the Clipboard module is built.
+   - **Apple API claims.** Check every [I]-tagged Apple API claim in docs/ARCHITECTURE.md, docs/RISKS.md and docs/FEATURE_MATRIX.md against developer.apple.com. Re-tag each as [V: doc URL], or correct it. Anything that can only be confirmed on a device goes on the manual-check list in step i.
+
+b. **project.yml and dependencies.**
+   - `LSUIElement` = YES (Info.plist properties).
+   - `ENABLE_HARDENED_RUNTIME` on; no App Sandbox (D4).
+   - Entitlements file, declared in project.yml, containing `com.apple.security.automation.apple-events`.
+   - `NSAppleEventsUsageDescription` in Info.plist properties.
+   - `KeyboardShortcuts` package pinned with `exactVersion:` (version as recorded in DECISIONS.md D10). Run `dependency-manager` first, and record the licence in DECISIONS.md.
+   - Run `xcodegen generate`.
+
+c. **Menu-bar item and launch at login.** `NSStatusItem` with Settings and Quit. Launch at login through `SMAppService`.
+
+d. **NotchPanel.**
+   - Borderless, non-activating `NSPanel` above the menu bar. Joins all Spaces and full-screen apps.
+   - Closed state sized exactly to the notch (D5). Pill on displays without a notch.
+   - One display only (D9).
+   - Repositions on screen-parameter changes, debounced 200 ms.
+   - Displays are keyed by `CGDirectDisplayID`, never by name.
+
+e. **Hover state machine.** Closed → peek → open. 0.3 s open delay, 0.1 s exit debounce, spring animations. Uses an AppKit tracking area. No polling loop.
+
+f. **Module protocol, registry and stub module.**
+   - `NotchModule` protocol and `ModuleRegistry` (ARCHITECTURE.md §3).
+   - Fixed layout slots (D8).
+   - One stub Now Playing module behind a `NowPlayingSource` protocol (D2), rendering a placeholder. No real sources yet.
+
+g. **Unit tests via `test-writer`.**
+   - Notch geometry (the pure `NotchGeometry` function, ARCHITECTURE.md §7).
+   - Hover state machine (the pure transition function).
+   - Registry start and stop on enable and disable.
+
+h. **Build and test.** Run `xcodegen generate`, then `xcodebuild -scheme DropNotch -destination 'platform=macOS' build test`. Show the real output. Nothing is claimed as passing without it.
+
+i. **Manual checks on a real notched Mac.** These cannot run in CI.
+   - Hover at the top pixel row.
+   - Clicks next to the closed notch reach the apps underneath.
+   - Panel behaviour over full-screen apps and across Spaces.
+   - Reposition when an external display is connected or removed.
+   - Every item from step a that could only be confirmed on a device.
+
+j. **Review and records.**
+   - `code-reviewer`, `performance-optimizer` and `accessibility-auditor` (the notch UI changed).
+   - `security-auditor`, because the entitlements changed in step b (CLAUDE.md).
+   - Update docs/DECISIONS.md and docs/ARCHITECTURE.md.
+
+## Out of scope for Phase 2
+Now Playing real sources, file tray, clipboard, and notes modules (Phase 3). MediaRemote (v0.2). Lock screen (beyond v0.2). Sparkle.
