@@ -389,7 +389,7 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - `canBecomeKey` and `canBecomeMain` return false
 - shown with `orderFrontRegardless()`
 
-`NotchHostingView` sets `sizingOptions = []` and sits inside a plain `NSView` container that is the panel's `contentView`, resized by its autoresizing mask. The root view ignores the safe area.
+`NotchHostingView` sets `sizingOptions = []` and sits inside a plain `NSView` container that is the panel's `contentView`; the hosting view keeps a fixed screen rect (D19). The root view ignores the safe area.
 
 **Correction (2026-10-24, fix/hover-glitch):** the first version made the hosting view itself the `contentView`, on the belief that `sizingOptions = []` stops SwiftUI resizing the window. It doesn't. The docs say `[]` creates no constraints, but a hosting view that is a window's `contentView` also updates the window's `contentMinSize` and `contentMaxSize`, and nothing says `[]` turns that off. On the device the window snapped back to the shape's size straight after each `setFrame`, followed the spring frame by frame, and the app crashed in an Update Constraints pass (crash stack: `NSHostingView.updateWindowContentSizeExtremaIfNecessary` → `setNeedsUpdateConstraints`). The container takes the hosting view out of that role.
 
@@ -462,8 +462,10 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - When it closes, the shape animates first. The `withAnimation` completion then shrinks the panel to the current geometry's closed frame. It does this only if nothing has changed since the close started: no phase change and no screen change, tracked by a counter.
 - When it grows while the panel is already larger than the target (re-entering during a close), the panel keeps its larger frame.
 - With Reduce Motion on, the animation is `nil`, so the change is immediate.
+- The hosting view (the canvas) stays at the open frame's screen rect. `NotchPanel.setFrame(_:canvas:)` repositions it inside the panel with every panel frame change (open origin minus panel origin, so it stays on whole pixels), and the container clips it to the panel (added 2026-10-24, fix/hover-glitch).
 
 **Evidence:**
+- Device recording before the canvas change: when the panel grew, the shape's left edge jumped to the new panel's left edge and only the right edge animated. The hosting view's new size reached SwiftUI in the same update as the animated phase change, so the shape's position animated from where it sat in the old, smaller layout. With a fixed-size canvas there is no re-layout, so only the shape's size animates.
 - The `withAnimation(_:completionCriteria:_:completion:)` completion "will always be fired exactly one time", and right away when no animation runs [V: https://developer.apple.com/documentation/swiftui/withanimation(_:completioncriteria:_:completion:)]. This is macOS 14+, which matches the deployment target.
 - The Reduce Motion setting is read from `NSWorkspace.accessibilityDisplayShouldReduceMotion` [V: https://developer.apple.com/documentation/appkit/nsworkspace/accessibilitydisplayshouldreducemotion].
 
