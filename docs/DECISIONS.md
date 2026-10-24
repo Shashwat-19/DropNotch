@@ -371,3 +371,52 @@ Terms for a reader new to Swift or AppKit:
 **Why:** for a Swift newcomer, the menu is a few lines of SwiftUI. The `activate()` call is there because opening a menu-bar menu doesn't make an agent app (`LSUIElement`) active, so its Settings window could otherwise open behind the frontmost app [I: device check]. `openSettings` is only available inside a `View`, which is why the menu items live in a separate `MenuBarMenu` view rather than in the `App` body.
 
 **Consequences / follow-ups:** device check: Settings comes to the front and takes keyboard focus. If not, the fallback is switching the activation policy to `.regular` while Settings is open (FEATURE_MATRIX, "Menu-bar item with Settings and Quit" row).
+
+## D16. AppKit owns the notch window; SwiftUI draws inside it
+
+**Date:** 2026-10-24 · **Status:** Accepted (Phase 2 plan, step d)
+
+**Decision:** the SwiftUI `App` uses `@NSApplicationDelegateAdaptor` to create an `AppDelegate`, which creates `NotchPanel` (an `NSPanel` subclass) and puts a SwiftUI `NotchRootView` inside it through `NotchHostingView` (an `NSHostingView` subclass). Panel settings:
+- borderless and `.nonactivatingPanel`, so clicking it doesn't activate DropNotch
+- clear background, no shadow, not movable, `hidesOnDeactivate = false`
+- level `.statusBar`
+- joins all Spaces, works over full-screen apps, stationary, left out of window cycling
+- `canBecomeKey` and `canBecomeMain` return false
+- shown with `orderFrontRegardless()`
+
+`NotchHostingView` sets `sizingOptions = []`, and the root view ignores the safe area.
+
+**Evidence:**
+- `hidesOnDeactivate` defaults to true for `NSPanel` [V: https://developer.apple.com/documentation/appkit/nswindow/hidesondeactivate]. An agent app is almost never active, so it would hide straight away.
+- `orderFrontRegardless()` "moves the window to the front of its level, even if its application isn't active, without changing either the key window or the main window" [V: https://developer.apple.com/documentation/appkit/nswindow/orderfrontregardless()].
+- `sizingOptions` defaults to `.standardBounds`, and when the hosting view is a window's content view it also updates the window's min and max content size [V: https://developer.apple.com/documentation/swiftui/nshostingview/sizingoptions].
+- `.fullScreenAuxiliary` shows the window on the same Space as a full-screen window [V: https://developer.apple.com/documentation/appkit/nswindow/collectionbehavior-swift.struct/fullscreenauxiliary]. `.stationary` keeps it unaffected by Mission Control [V: https://developer.apple.com/documentation/appkit/nswindow/collectionbehavior-swift.struct/stationary].
+- `.statusBar` is Apple's "level for a status window" [V: https://developer.apple.com/documentation/appkit/nswindow/level-swift.struct/statusbar]. That it sits above the menu bar and above full-screen apps is [I: device check].
+
+**Alternatives considered:**
+- A SwiftUI `Window` scene. Rejected: SwiftUI has no public control over non-activating behaviour, window level or Spaces behaviour.
+- Atoll's level, `mainMenu + 3`. Not chosen: a named level is easier to reason about. It can be raised if the device check fails.
+
+**Why (for a Swift newcomer):**
+- SwiftUI is good at drawing, but the notch needs window behaviour that only AppKit exposes.
+- `sizingOptions = []` stops SwiftUI's preferred content size from fighting the frames that `NotchGeometry` sets.
+- `.ignoresSafeArea()` matters because the panel sits over the camera housing. SwiftUI would otherwise push the content down out of the safe area [I: device check].
+- ARCHITECTURE §6's `acceptsFirstMouse` override isn't added yet, because Phase 2 has no clickable controls.
+
+## D17. The notch display is chosen from `NSScreen.screens` and kept by display ID
+
+**Date:** 2026-10-24 · **Status:** Accepted (Phase 2 plan, step d; refines the planner's CGDisplay calls)
+
+**Decision:** the pure `ScreenObserver.chooseDisplay` picks the first screen that has a notch. If no screen has one, it picks `NSScreen.screens[0]`. Screens are identified by the `CGDirectDisplayID` stored under the `NSScreenNumber` key of `deviceDescription`.
+
+**Evidence:**
+- The screen at index 0 of `NSScreen.screens` is "the screen that contains the menu bar and whose origin is at the point (0, 0)" [V: https://developer.apple.com/documentation/appkit/nsscreen/screens].
+- `NSScreen.main` is the screen with the key window, not the menu-bar screen [V: https://developer.apple.com/documentation/appkit/nsscreen/main].
+- `NSScreenNumber` holds the display ID as an `NSNumber` [V: https://developer.apple.com/documentation/appkit/nsscreen/devicedescription].
+- The auxiliary top areas are in global screen coordinates and are nil when the top of the screen isn't obscured [V: https://developer.apple.com/documentation/appkit/nsscreen/auxiliarytopleftarea-uglc].
+
+**Alternatives considered:**
+- `CGDisplayIsBuiltin` plus `CGMainDisplayID()`, as the planner proposed. Dropped: both are extra calls with no effect on the result. Only a built-in panel has a camera housing [I], and `screens[0]` is already documented as the menu-bar screen.
+- Matching screens by name. Rejected: two identical monitors share a name.
+
+**Why:** keeping the choice a pure function over `(id, hasNotch)` pairs makes D9 testable without real displays.

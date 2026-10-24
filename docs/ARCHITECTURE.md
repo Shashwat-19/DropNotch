@@ -92,23 +92,24 @@ No Core Data or SwiftData: the data is small, and plain files are easier to insp
 Configuration (all public AppKit; Atoll uses the same flags [V: research/atoll-system-shell.md B1]):
 - `NSPanel` subclass, style mask borderless + `nonactivatingPanel`, which Apple defines as a panel that doesn't activate the owning app [V: https://developer.apple.com/documentation/appkit/nswindow/stylemask-swift.struct/nonactivatingpanel]. Whether a click still takes focus is a device check.
 - Transparent: not opaque, clear background, no shadow, not movable, `hidesOnDeactivate = false`.
-- Level: above the main-menu level, so the panel draws over the menu bar [V: Atoll uses main-menu + 3].
+- Level: `.statusBar`, one above the main-menu level, so the panel draws over the menu bar (D16; Atoll uses main-menu + 3 [V]).
 - Collection behaviour: can join all Spaces, full-screen auxiliary, stationary, ignores window cycling [V: same flags in Atoll].
-- Hosts SwiftUI through a small `NSHostingView` subclass that overrides `acceptsFirstMouse(for:)` to return true, so one click works without activating the window first. (In AppKit, the first click on an inactive window normally only activates it.) [V: Atoll does the same]
-- Can become key only while open and a text field needs input (notes). Closed and peek states never take key focus.
+- Hosts SwiftUI through a small `NSHostingView` subclass with `sizingOptions = []`, so the frames come from `NotchGeometry` only (D16). Once the panel has clickable controls, the subclass overrides `acceptsFirstMouse(for:)` to return true, so one click works without activating the window first. (In AppKit, the first click on an inactive window normally only activates it.) [V: Atoll does the same]
+- Can become key only while open and a text field needs input (notes). Closed and peek states never take key focus. In Phase 2 the panel never becomes key (D16).
 - App runs as an agent app (`LSUIElement`), set in project.yml [V: https://developer.apple.com/documentation/bundleresources/information-property-list/lsuielement].
 
 Closed-state hit testing (**D5, accepted**). A window with `ignoresMouseEvents` set is transparent to mouse events [V: https://developer.apple.com/documentation/appkit/nswindow/ignoresmouseevents], so hover can't be detected from it. So the closed panel is resized to exactly the notch rectangle (Atoll does the same [V]) and keeps receiving mouse events. A tracking area on it gives hover enter and exit. Everything outside that rectangle is click-through because the window doesn't cover it. On a notched display there is no menu-bar content behind the notch [I: device check; not in Apple docs]. On a non-notch screen the pill blocks clicks only inside its own small rectangle. Rejected: a full-width click-through panel plus a global mouse-moved monitor, which receives a copy of every mouse event sent to other apps [V: https://developer.apple.com/documentation/appkit/nsevent/addglobalmonitorforevents(matching:handler:)], so DropNotch would process pointer movement system-wide.
 
 ## 7. Notch vs non-notch and external displays
 
-- Notch present when `NSScreen.safeAreaInsets.top > 0`. Notch width = screen width minus `auxiliaryTopLeftArea` and `auxiliaryTopRightArea` widths. Height = top inset [V: Atoll's geometry; APIs are macOS 12+ [I]].
+- Notch present when `NSScreen.safeAreaInsets.top > 0` and both auxiliary top areas exist [V: https://developer.apple.com/documentation/appkit/nsscreen/auxiliarytopleftarea-uglc]. Notch width = screen width minus `auxiliaryTopLeftArea` and `auxiliaryTopRightArea` widths. Height = top inset [V: Atoll's geometry; APIs are macOS 12+ [I]].
 - No notch: draw a pill centred at the top. Height defaults to the menu-bar height (full frame minus visible frame) [V: Atoll offers a mode that uses the menu-bar height].
 - Frames are rounded to whole pixels for the screen's backing scale, because the top inset can be fractional (33.5 pt) [V: Atoll comment].
 - Display choice for MVP (**D9**): one panel on the built-in display if it has a notch, otherwise on the main display. All-displays mode is v0.2.
 - Displays are identified by `CGDirectDisplayID` from the screen's device description, never by localised name. Atoll's use of names can confuse two identical monitors [V: research note B5].
 - `NSApplication.didChangeScreenParametersNotification` triggers a reposition, debounced 200 ms as a design choice (Apple doesn't document bursts) [V: https://developer.apple.com/documentation/appkit/nsapplication/didchangescreenparametersnotification]. Space changes need no handling for the public collection behaviour [I: device check]; `NSWorkspace.activeSpaceDidChangeNotification` exists if needed [V: https://developer.apple.com/documentation/appkit/nsworkspace/activespacedidchangenotification].
-- Geometry is computed by a pure function `NotchGeometry(screenFrame:safeAreaTop:auxLeft:auxRight:backingScale:)` so it is unit-testable without real screens.
+- Geometry is computed by a pure value type `NotchGeometry(screenFrame:safeAreaTop:auxLeftWidth:auxRightWidth:menuBarHeight:backingScale:)`, so it is unit-testable without real screens. It outputs `hasNotch`, `closedFrame`, `peekFrame` and `openFrame`, all aligned to whole pixels. `menuBarHeight` sizes the pill; when it is 0 (menu bar auto-hidden), a fixed fallback height is used.
+- The display choice is the pure `ScreenObserver.chooseDisplay` (D17).
 
 ## 8. Module-specific design notes (MVP)
 
