@@ -59,7 +59,7 @@ i. **Manual checks on a real notched Mac.** These cannot run in CI.
    - The closed shape lines up with the hardware notch with no visible seam (fractional inset), and the root view isn't pushed down by the safe area (D16).
    - The panel never takes keyboard focus; typing in the app in front keeps working.
    - `.statusBar` level draws above the menu bar and full-screen apps; menus opened from the menu bar still draw above the panel (D16).
-   - Pill on a screen without a notch (external display, clamshell), including with the menu bar auto-hidden.
+   - Pill on a screen without a notch (external display, clamshell), including with the menu bar auto-hidden. On a crowded menu bar, status items or menus the pill covers still behave acceptably (expected effect of D5).
    - No window or Dock icon at launch.
    - Menu-bar Settings… opens Settings in front, with keyboard focus, while another app is frontmost (D14). ⌘Q in the Settings window quits.
    - Deferred (Shash, 2026-10-24): the step a items that can only be confirmed on a device need features outside Phase 2. Each one is checked in the phase that builds its feature:

@@ -4,10 +4,10 @@ import AppKit
 /// (200 ms one-shot debounce, ARCHITECTURE.md §9).
 @MainActor
 final class ScreenObserver: NSObject {
-    private let onChange: () -> Void
+    private let onChange: @MainActor () -> Void
     private var debounce: Task<Void, Never>?
 
-    init(onChange: @escaping () -> Void) {
+    init(onChange: @escaping @MainActor () -> Void) {
         self.onChange = onChange
         super.init()
         // AppKit posts this on the main actor, so the selector runs there too.
@@ -29,7 +29,7 @@ final class ScreenObserver: NSObject {
     /// The display for the single notch panel (D9): the first screen with a notch,
     /// otherwise the first screen, which `NSScreen.screens` documents as the one
     /// with the menu bar. `candidates` must be in `NSScreen.screens` order.
-    static func chooseDisplay(_ candidates: [(id: CGDirectDisplayID, hasNotch: Bool)]) -> CGDirectDisplayID? {
+    nonisolated static func chooseDisplay(_ candidates: [(id: CGDirectDisplayID, hasNotch: Bool)]) -> CGDirectDisplayID? {
         (candidates.first { $0.hasNotch } ?? candidates.first)?.id
     }
 }

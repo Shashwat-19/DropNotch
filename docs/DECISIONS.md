@@ -216,6 +216,7 @@ Terms for a reader new to Swift or AppKit:
 **Consequences / follow-ups:**
 - All-displays mode is v0.2. It needs its own decision on per-display layout.
 - Screen-change handling (a 0.2 s debounce after `didChangeScreenParametersNotification`) is described in ARCHITECTURE.md §7.
+- Implemented in Phase 2 through D17: the first screen with a notch, otherwise the menu-bar screen. There is no saved choice yet.
 
 ---
 
@@ -372,6 +373,10 @@ Terms for a reader new to Swift or AppKit:
 
 **Consequences / follow-ups:** device check: Settings comes to the front and takes keyboard focus. If not, the fallback is switching the activation policy to `.regular` while Settings is open (FEATURE_MATRIX, "Menu-bar item with Settings and Quit" row).
 
+## D15. Reserved
+
+Withdrawn before use: it was planned for launch at login, which moved to Phase 3 (D14).
+
 ## D16. AppKit owns the notch window; SwiftUI draws inside it
 
 **Date:** 2026-10-24 · **Status:** Accepted (Phase 2 plan, step d)
@@ -411,6 +416,7 @@ Terms for a reader new to Swift or AppKit:
 
 **Evidence:**
 - The screen at index 0 of `NSScreen.screens` is "the screen that contains the menu bar and whose origin is at the point (0, 0)" [V: https://developer.apple.com/documentation/appkit/nsscreen/screens].
+- With mirroring, `screens[0]` is the largest drawable display instead [V: same page].
 - `NSScreen.main` is the screen with the key window, not the menu-bar screen [V: https://developer.apple.com/documentation/appkit/nsscreen/main].
 - `NSScreenNumber` holds the display ID as an `NSNumber` [V: https://developer.apple.com/documentation/appkit/nsscreen/devicedescription].
 - The auxiliary top areas are in global screen coordinates and are nil when the top of the screen isn't obscured [V: https://developer.apple.com/documentation/appkit/nsscreen/auxiliarytopleftarea-uglc].

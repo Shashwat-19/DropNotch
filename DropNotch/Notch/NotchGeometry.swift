@@ -58,8 +58,8 @@ struct NotchGeometry: Equatable {
     /// device pixel rather than the nearest point. Halves always round up, so a
     /// display at a negative origin rounds the same way as one at a positive origin.
     private static func pixelAligned(_ rect: CGRect, scale: CGFloat) -> CGRect {
-        let round = { (value: CGFloat) in (value * scale + 0.5).rounded(.down) / scale }
-        let minX = round(rect.minX), minY = round(rect.minY)
-        return CGRect(x: minX, y: minY, width: round(rect.maxX) - minX, height: round(rect.maxY) - minY)
+        let snap = { (value: CGFloat) in (value * scale + 0.5).rounded(.down) / scale }
+        let minX = snap(rect.minX), minY = snap(rect.minY)
+        return CGRect(x: minX, y: minY, width: snap(rect.maxX) - minX, height: snap(rect.maxY) - minY)
     }
 }

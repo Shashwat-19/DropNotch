@@ -18,7 +18,6 @@ final class NotchGeometryTests: XCTestCase {
                       menuBarHeight: menuBarHeight, backingScale: 2)
     }
 
-    // 1
     func testNotchedScreenClosedFrameMatchesNotch() {
         let geometry = notched(screen)
         XCTAssertTrue(geometry.hasNotch)
@@ -28,7 +27,6 @@ final class NotchGeometryTests: XCTestCase {
         XCTAssertEqual(geometry.closedFrame.height, inset)
     }
 
-    // 2
     func testSecondaryDisplayOriginShiftsEveryFrame() {
         let base = notched(screen)
         for origin in [CGPoint(x: 1500, y: 200), CGPoint(x: -1920, y: -300)] {
@@ -46,8 +44,7 @@ final class NotchGeometryTests: XCTestCase {
         XCTAssertEqual(geometry.closedFrame.maxY, frame.maxY)
     }
 
-    // 3
-    func testNoNotchDrawsPillUnderMenuBar() {
+    func testNoNotchDrawsPillMatchingMenuBarHeight() {
         let geometry = plain(screen, menuBarHeight: 25)
         XCTAssertFalse(geometry.hasNotch)
         XCTAssertEqual(geometry.closedFrame.midX, screen.midX)
@@ -56,14 +53,12 @@ final class NotchGeometryTests: XCTestCase {
         XCTAssertEqual(geometry.closedFrame.maxY, screen.maxY)
     }
 
-    // 4
     func testAutoHiddenMenuBarUsesFallbackHeight() {
         let geometry = plain(screen, menuBarHeight: 0)
         XCTAssertEqual(geometry.closedFrame.height, NotchGeometry.fallbackPillHeight)
         XCTAssertEqual(geometry.closedFrame.maxY, screen.maxY)
     }
 
-    // 5
     func testInsetWithoutBothAuxiliaryAreasIsTreatedAsNoNotch() {
         for (auxLeft, auxRight) in [(left, nil), (nil, right), (nil, nil)] as [(CGFloat?, CGFloat?)] {
             let geometry = NotchGeometry(screenFrame: screen, safeAreaTop: inset, auxLeftWidth: auxLeft,
@@ -74,11 +69,10 @@ final class NotchGeometryTests: XCTestCase {
         }
     }
 
-    // 6
     func testFractionalInsetIsKeptOnRetinaAndRoundedOnStandardDisplay() {
         XCTAssertEqual(notched(screen, inset: 33.5, scale: 2).closedFrame.height, 33.5)
-        let standard = notched(screen, inset: 33.5, scale: 1).closedFrame.height
-        XCTAssertEqual(standard, standard.rounded())
+        // The bottom edge sits at a half point; at scale 1 it rounds half up, so the frame is 33 tall.
+        XCTAssertEqual(notched(screen, inset: 33.5, scale: 1).closedFrame.height, 33)
     }
 
     func testEveryEdgeLandsOnAWholeDevicePixel() {
@@ -99,7 +93,6 @@ final class NotchGeometryTests: XCTestCase {
         }
     }
 
-    // 7
     func testPeekAndOpenFramesGrowFromTheClosedFrame() {
         for geometry in [notched(screen), notched(screen, inset: 33.5, scale: 1), plain(screen)] {
             let closed = geometry.closedFrame

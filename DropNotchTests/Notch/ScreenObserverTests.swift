@@ -1,8 +1,6 @@
 import XCTest
 @testable import DropNotch
 
-// ScreenObserver is @MainActor, so its static helper is too.
-@MainActor
 final class ScreenObserverTests: XCTestCase {
     func testNotchedDisplayWinsEvenWhenNotFirst() {
         XCTAssertEqual(ScreenObserver.chooseDisplay([(id: 1, hasNotch: false), (id: 2, hasNotch: true)]), 2)
@@ -19,5 +17,17 @@ final class ScreenObserverTests: XCTestCase {
 
     func testNoDisplaysGivesNil() {
         XCTAssertNil(ScreenObserver.chooseDisplay([]))
+    }
+
+    @MainActor
+    func testBurstOfScreenChangesCallsOnChangeOnce() async throws {
+        var calls = 0
+        let observer = ScreenObserver { calls += 1 }
+        // The test host's own AppDelegate also repositions its panel on these; that's harmless.
+        NotificationCenter.default.post(name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        NotificationCenter.default.post(name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        try await Task.sleep(for: .milliseconds(500))
+        XCTAssertEqual(calls, 1)
+        withExtendedLifetime(observer) {}
     }
 }
