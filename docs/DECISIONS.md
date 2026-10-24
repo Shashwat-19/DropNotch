@@ -329,3 +329,20 @@ Terms for a reader new to Swift or AppKit:
 
 **Consequences / follow-ups:** the release pipeline (cicd-agent) should check the shipped app's entitlements with `codesign` before notarising.
 
+
+---
+
+## D7a. Clipboard history handles macOS pasteboard privacy
+
+**Date:** 2026-10-24 · **Status:** Accepted (approved by Shash; refines D7)
+
+**Decision:** clipboard history stays in the MVP, with three changes to D7:
+1. When the user turns clipboard history on, check `NSPasteboard.general.accessBehavior` (macOS 15.4+, behind `#available`; the deployment target is 14.0). `alwaysAllow`: start watching. `ask` or `default`: show DropNotch's own explanation first, then start. `alwaysDeny`: don't start; show a "blocked in System Settings" state instead of an empty history.
+2. Read in the cheapest order: `changeCount` on the timer, `types` only when it changes, skip concealed and transient items, and only then read the content.
+3. Re-check `accessBehavior` on each content read and stop watching if it becomes `alwaysDeny`, because denied access fails silently [V: https://developer.apple.com/documentation/appkit/nspasteboard/accessbehavior-swift.enum].
+
+**Evidence:** step a probe on macOS 27.0.1: `alwaysAllow`, all reads succeeded, no alert [V: docs/research/clipboard-probe-2026-10-24.md]. Apple documents "ask on programmatic access" as the default from macOS 15.4 [V: same URL].
+
+**Alternatives considered:** move clipboard history to v0.2 (rejected: reads work, and the design above handles ask and deny); rely on the observed `alwaysAllow` (rejected: it contradicts Apple's documented default and may differ on other Macs).
+
+**Consequences / follow-ups:** whether `changeCount` or `types` reads alone trigger the alert under "ask" is checked by a further probe run (see the report).
