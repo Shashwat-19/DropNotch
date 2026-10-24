@@ -7,8 +7,9 @@ struct MenuBarMenu: View {
 
     var body: some View {
         Button("Settings…") {
-            // An agent app is never active, so without this the Settings window
-            // can open behind the frontmost app (D14).
+            // Opening the menu-bar menu doesn't make an agent app active, so without
+            // this the Settings window can open behind the frontmost app (D14).
+            // `activate()` replaces `activate(ignoringOtherApps:)`, deprecated in macOS 14.
             NSApp.activate()
             openSettings()
         }

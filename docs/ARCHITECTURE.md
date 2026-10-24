@@ -17,7 +17,7 @@ Choices marked **(Dn)** are accepted decisions in [DECISIONS.md](DECISIONS.md).
 
 ```
 DropNotch/
-  App/            DropNotchApp (entry point), AppDelegate, menu-bar item, launch-at-login
+  App/            DropNotchApp (entry point), AppDelegate, menu-bar item
   Notch/          NotchPanel, NotchGeometry, NotchHoverStateMachine, NotchRootView, ScreenObserver, ModuleRegistry
   Modules/
     NowPlaying/   compact + expanded + settings views, NowPlayingModel
@@ -27,7 +27,7 @@ DropNotch/
   Services/       one protocol + implementations per system dependency:
                   NowPlayingSource (AppleMusic, Spotify; MediaRemote later),
                   PasteboardWatcher, BluetoothBatteryProvider (later), …
-  Settings/       Settings window, layout editor, per-module settings host
+  Settings/       Settings window, launch at login (Phase 3), layout editor, per-module settings host
   Support/        Logger categories, file locations, small shared helpers
 DropNotchTests/   mirrors the folders above
 ```

@@ -8,9 +8,9 @@ Run a reverse-engineering analysis (REA) of Canopy and Atoll, turn it into a fea
 ## Phase 1: Analysis (done, 2026-10-24)
 Canopy's public pages and Atoll's features were analysed, and the decisions D1–D10 were approved by Shash. Outputs: docs/FEATURE_MATRIX.md, docs/ARCHITECTURE.md, docs/RISKS.md, docs/DECISIONS.md and docs/research/.
 
-## Phase 2: Foundation (planned; needs Shash's approval before any app code)
+## Phase 2: Foundation (in progress; plan approved 2026-10-24)
 
-Decision numbers (D1–D10) refer to docs/DECISIONS.md. Start with the `planner` agent and send its plan to Shash. Steps a and b are verification and project setup; step a ends with a report to Shash, and no module code is built until Shash has read it.
+Decision numbers (D1–D14) refer to docs/DECISIONS.md. Start with the `planner` agent and send its plan to Shash. Steps a and b are verification and project setup; step a ends with a report to Shash, and no module code is built until Shash has read it.
 
 Plan for c–j approved by Shash, 2026-10-24: branches `feat/menu-bar` (c), `feat/notch-panel` (d), `feat/hover-state` (e) and `feat/module-registry` (f), merged in that order; the g tests go in the branch whose logic they test. **After `feat/hover-state` merges, stop** and hand Shash the hover device checks from step i. `feat/module-registry` waits for Shash's report.
 
@@ -56,6 +56,7 @@ i. **Manual checks on a real notched Mac.** These cannot run in CI.
    - Clicks next to the closed notch reach the apps underneath.
    - Panel behaviour over full-screen apps and across Spaces.
    - Reposition when an external display is connected or removed.
+   - Menu-bar Settings… opens Settings in front, with keyboard focus, while another app is frontmost (D14). ⌘Q in the Settings window quits.
    - Deferred (Shash, 2026-10-24): the step a items that can only be confirmed on a device need features outside Phase 2. Each one is checked in the phase that builds its feature:
      - Automation prompts (Release build, D11): does macOS show one prompt per target app, on the first Apple Event? Not stated in Apple docs; confirm on device.
      - Privacy grants after re-signing: does an ad-hoc rebuild re-prompt or lose grants? Not stated in Apple docs; confirm on device.
