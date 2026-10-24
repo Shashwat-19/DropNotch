@@ -24,13 +24,19 @@ targets:
   DropNotch:
     type: application
     platform: macOS
-    sources: [DropNotch]
+    sources:
+      - DropNotch
+      # Licence notices for bundled packages ship inside the app (MIT requires it).
+      - path: THIRD_PARTY_NOTICES.md
+        buildPhase: resources
     dependencies:
       - package: KeyboardShortcuts
     info:
       path: DropNotch/Info.plist
       properties:
         CFBundleDisplayName: DropNotch
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         # Agent app: no Dock icon or app menu.
         LSUIElement: true
         NSAppleEventsUsageDescription: DropNotch sends play, pause and skip commands to Music and Spotify when you use the controls in the notch.
