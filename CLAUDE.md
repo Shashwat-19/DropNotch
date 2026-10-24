@@ -48,6 +48,7 @@ Once docs/ARCHITECTURE.md exists it is the source of truth for module layout. Ke
 - Energy: event-driven by default. Every timer or polling loop needs an interval and a justification in docs/ARCHITECTURE.md. Nothing blocking on the main thread.
 - Privacy: no analytics or telemetry. Clipboard history skips concealed/transient pasteboard types, stays on the Mac and is never logged. Request each permission only when the feature that needs it is first enabled.
 - No secrets in the repo. Signing identities and notarisation credentials live in the keychain or CI secrets.
+- Any change touching entitlements, Apple Events or signing must also pass a Release build and a Release launch before merging (Debug builds don't get the hardened runtime; see docs/DECISIONS.md D11).
 
 ### Honesty
 - Never claim something builds, runs or passes unless you ran it and saw it pass. Show the real output. Label anything unverified as unverified.

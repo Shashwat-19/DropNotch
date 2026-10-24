@@ -283,11 +283,12 @@ Terms for a reader new to Swift or AppKit:
 
 **Alternatives considered:**
 - Force the runtime in Debug and disable library validation. Rejected: this is a hardened-runtime exception, against D4.
-- Turn off the debug-dylib split (`ENABLE_DEBUG_DYLIB: NO`) and force the runtime. Not chosen for now: the app then builds and launches hardened [V: security-auditor local build, 2026-10-24], but whether the injected test bundle passes library validation is untested [I], and SwiftUI Previews may reload more slowly. An option for Shash if Debug must match Release.
+- Turn off the debug-dylib split (`ENABLE_DEBUG_DYLIB: NO`) and force the runtime. Not chosen for now: the app then builds and launches hardened [V: security-auditor local build, 2026-10-24], but whether the injected test bundle passes library validation is untested [I], and SwiftUI Previews may reload more slowly. Shash decided (2026-10-24) to keep Debug as it is.
 
 **Why:** An ad-hoc signature carries no Team ID, so library validation cannot match the app against its own code. Once a Developer ID exists, Debug can be revisited.
 
 **Consequences / follow-ups:**
+- Rule added to CLAUDE.md (Shash, 2026-10-24): any change touching entitlements, Apple Events or signing must also pass a Release build and a Release launch before merging.
 - Anything that must be tested under the hardened runtime, such as the Apple Events Automation prompts in Phase 2, is tested with a Release build.
 - Revisit when a Developer ID exists.
 - README.md and docs/ARCHITECTURE.md were not checked in this entry. If either describes the hardened runtime as on for every build, it needs the same note.
