@@ -47,7 +47,7 @@ final class NotchState {
         }
         Logger.notch.debug("Notch panel on display \(id), notch: \(chosen.geometry.hasNotch)")
         geometry = chosen.geometry
-        setPanelFrame(chosen.geometry.closedFrame, reason: "screen change")
+        setPanelFrame(chosen.geometry.panelFrame(for: .closed), reason: "screen change")
         // Shows the panel without activating DropNotch.
         panel.orderFrontRegardless()
     }
@@ -56,6 +56,8 @@ final class NotchState {
     func send(_ event: NotchHoverStateMachine.Event) {
         let old = hover
         let effect = hover.handle(event)
+        // Moves arrive many times a second; only a sweep restarting the open delay is news.
+        if case .pointerMoved = event, effect == nil { return }
         let summary = "\(event): \(old.phase) → \(hover.phase), inside \(old.pointerInside) → \(hover.pointerInside), "
             + "effect \(effect.map { "\($0)" } ?? "none")"
         Logger.notch.debug("Hover \(summary, privacy: .public)")
@@ -110,10 +112,10 @@ final class NotchState {
                     Logger.notch.debug("Close completion skipped (started at change \(started))")
                     return
                 }
-                self.setPanelFrame(geometry.closedFrame, reason: "close completion")
+                self.setPanelFrame(geometry.panelFrame(for: .closed), reason: "close completion")
             }
         } else {
-            let target = geometry.frame(for: phase)
+            let target = geometry.panelFrame(for: phase)
             // After re-entering during a close the panel is still larger; keep it, so the
             // pointer stays inside and the shape isn't clipped mid-animation.
             if !panel.frame.contains(target) {
@@ -131,7 +133,7 @@ final class NotchState {
         Logger.notch.debug("Panel frame (\(reason, privacy: .public)): \(change, privacy: .public)")
         // The open frame is the largest and shares every phase's top edge and centre, so
         // every phase's shape fits a canvas there.
-        panel.setFrame(frame, canvas: geometry.openFrame)
+        panel.setFrame(frame, canvas: geometry.panelFrame(for: .open))
     }
 }
 

@@ -13,6 +13,9 @@ struct NotchGeometry: Equatable {
     static let peekGrowth = CGSize(width: 24, height: 8)
     /// Minimum size of the open panel.
     static let openSize = CGSize(width: 480, height: 150)
+    /// How far the panel reaches above the screen. A pointer pushed against the top edge
+    /// reports y == screen maxY, which a frame ending there counts as outside (D20).
+    static let topOverhang: CGFloat = 1
 
     let hasNotch: Bool
     let closedFrame: CGRect
@@ -50,12 +53,19 @@ struct NotchGeometry: Equatable {
                                       scale: backingScale)
     }
 
+    /// Where the shape is drawn in each phase.
     func frame(for phase: NotchHoverStateMachine.Phase) -> CGRect {
         switch phase {
         case .closed: closedFrame
         case .peek: peekFrame
         case .open: openFrame
         }
+    }
+
+    /// The panel's frame: the shape's frame plus `topOverhang` above the screen.
+    func panelFrame(for phase: NotchHoverStateMachine.Phase) -> CGRect {
+        let frame = frame(for: phase)
+        return CGRect(x: frame.minX, y: frame.minY, width: frame.width, height: frame.height + Self.topOverhang)
     }
 
     /// AppKit's y axis points up, so a frame hanging from the top edge has `maxY == top`.

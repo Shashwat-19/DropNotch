@@ -135,8 +135,74 @@ final class NotchHoverStateMachineTests: XCTestCase {
         XCTAssertFalse(machine.pointerInside)
     }
 
+    // MARK: Sweep guard (D20)
+
+    /// Moves at a steady speed: `count` events 8 ms apart (a 120 Hz pointer), starting at `x`.
+    private func moves(from x: Double, at time: Double, speed: (x: Double, y: Double), count: Int)
+        -> [Machine.Event] {
+        (0..<count).map { step in
+            let t = Double(step) * 0.008
+            return .pointerMoved(x: x + speed.x * t, time: time + t)
+        }
+    }
+
+    func testFastHorizontalMoveKeepsRestartingTheOpenDelay() {
+        var machine = driven([.pointerEntered])
+        let effects = moves(from: 800, at: 10, speed: (x: 1200, y: 0), count: 10).map { machine.handle($0) }
+        // The first move only sets the baseline; every later one restarts the delay.
+        XCTAssertNil(effects.first ?? nil)
+        XCTAssertEqual(effects.dropFirst().filter { $0 == .startOpenDelay }.count, 9)
+        XCTAssertEqual(machine.phase, .peek)
+    }
+
+    func testSlowingDownThenStoppingOpens() {
+        var machine = driven([.pointerEntered])
+        // Ends at x 838.4, t 10.032; the slow moves carry on from there at 200 pt/s.
+        for event in moves(from: 800, at: 10, speed: (x: 1200, y: 0), count: 5) { _ = machine.handle(event) }
+        let slow = moves(from: 840, at: 10.040, speed: (x: 200, y: 0), count: 5).map { machine.handle($0) }
+        XCTAssertTrue(slow.allSatisfy { $0 == nil })
+
+        XCTAssertNil(machine.handle(.openDelayElapsed))
+        XCTAssertEqual(machine.phase, .open)
+    }
+
+    // Approaching the notch from below moves y only; the guard looks at x.
+    func testVerticalApproachDoesNotRestartTheOpenDelay() {
+        var machine = driven([.pointerEntered])
+        let effects = moves(from: 855, at: 10, speed: (x: 0, y: 2000), count: 10).map { machine.handle($0) }
+        XCTAssertTrue(effects.allSatisfy { $0 == nil })
+
+        XCTAssertNil(machine.handle(.openDelayElapsed))
+        XCTAssertEqual(machine.phase, .open)
+    }
+
+    func testRepeatedMoveWithTheSameTimestampIsIgnored() {
+        var machine = driven([.pointerEntered, .pointerMoved(x: 800, time: 10)])
+        XCTAssertNil(machine.handle(.pointerMoved(x: 900, time: 10)))
+        // The baseline is still the first move: 8 pt in 8 ms = 1000 pt/s.
+        XCTAssertEqual(machine.handle(.pointerMoved(x: 808, time: 10.008)), .startOpenDelay)
+    }
+
+    func testFastMovesOutsidePeekDoNothing() {
+        var open = opened
+        var closed = Machine()
+        for event in moves(from: 800, at: 10, speed: (x: 2000, y: 0), count: 5) {
+            XCTAssertNil(open.handle(event))
+            XCTAssertNil(closed.handle(event))
+        }
+        XCTAssertEqual(open.phase, .open)
+        XCTAssertEqual(closed.phase, .closed)
+    }
+
+    // The speed is never measured across a gap outside the panel.
+    func testReenteringStartsANewBaseline() {
+        var machine = driven([.pointerEntered, .pointerMoved(x: 700, time: 10), .pointerExited, .pointerEntered])
+        XCTAssertNil(machine.handle(.pointerMoved(x: 900, time: 10.05)))
+    }
+
     func testTimingConstants() {
         XCTAssertEqual(Machine.openDelay, .milliseconds(120))
         XCTAssertEqual(Machine.exitDebounce, .milliseconds(100))
+        XCTAssertEqual(Machine.sweepSpeed, 600)
     }
 }

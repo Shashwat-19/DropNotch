@@ -11,6 +11,8 @@ struct NotchRootView: View {
         UnevenRoundedRectangle(bottomLeadingRadius: radius, bottomTrailingRadius: radius)
             .fill(.black)
             .frame(width: size.width, height: size.height)
+            // The panel reaches above the screen (D20); keep the shape below the screen's top.
+            .padding(.top, NotchGeometry.topOverhang)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             // The panel overlaps the camera housing; without this SwiftUI would push
             // the content below the screen's safe area.

@@ -15,7 +15,9 @@ final class NotchHostingView: NSHostingView<NotchRootView> {
         // reports while it is. `.inVisibleRect`: the area is the view's visible part, which
         // NotchPanel's clipping container limits to the panel frame, so it follows the panel
         // without recomputing in `updateTrackingAreas()` (D18).
-        let area = NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+        // `.mouseMoved`: moves inside the panel only, for the sweep guard (D20); no global monitor.
+        let area = NSTrackingArea(rect: .zero,
+                                  options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect],
                                   owner: self, userInfo: nil)
         addTrackingArea(area)
         hoverArea = area
@@ -37,6 +39,17 @@ final class NotchHostingView: NSHostingView<NotchRootView> {
         super.mouseExited(with: event)
         logPointer("mouseExited", event)
         if event.trackingArea === hoverArea { rootView.state.send(.pointerExited) }
+    }
+
+    // `event.trackingArea` raises for mouse-moved events, so moves can't be filtered to our
+    // area. Repeats from SwiftUI's areas are expected to carry the same timestamp, and the
+    // machine drops them (D20).
+    override func mouseMoved(with event: NSEvent) {
+        super.mouseMoved(with: event)
+        // Global x recorded with the event. Not `locationInWindow`: the panel moves when it
+        // grows on entry. `mouseLocation` is "now", so it's only the fallback.
+        let x = event.cgEvent?.location.x ?? NSEvent.mouseLocation.x
+        rootView.state.send(.pointerMoved(x: x, time: event.timestamp))
     }
 
     private func logPointer(_ name: String, _ event: NSEvent) {

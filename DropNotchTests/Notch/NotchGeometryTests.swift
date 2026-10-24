@@ -126,4 +126,17 @@ final class NotchGeometryTests: XCTestCase {
         XCTAssertEqual(geometry.openFrame.width, geometry.peekFrame.width)
         XCTAssertTrue(geometry.openFrame.contains(geometry.peekFrame))
     }
+
+    // The panel reaches above the screen so the top pixel row counts as inside (D20).
+    func testPanelFrameAddsTheTopOverhangOnly() {
+        let geometry = notched(screen)
+        for phase in [NotchHoverStateMachine.Phase.closed, .peek, .open] {
+            let shape = geometry.frame(for: phase), panel = geometry.panelFrame(for: phase)
+            XCTAssertEqual(panel.minX, shape.minX, "\(phase)")
+            XCTAssertEqual(panel.minY, shape.minY, "\(phase)")
+            XCTAssertEqual(panel.width, shape.width, "\(phase)")
+            XCTAssertEqual(panel.maxY, screen.maxY + NotchGeometry.topOverhang, "\(phase)")
+        }
+        XCTAssertEqual(NotchGeometry.topOverhang, 1)
+    }
 }

@@ -49,6 +49,12 @@ final class NotchPanel: NSPanel {
         canvas.offsetBy(dx: -panelFrame.minX, dy: -panelFrame.minY)
     }
 
+    // The panel deliberately reaches 1 pt above the screen (D20). AppKit only constrains
+    // titled windows, so this is a safeguard: never pull the panel back onto the screen.
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+        frameRect
+    }
+
     // Phase 2 has no text input, so the panel never takes keyboard focus.
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
