@@ -389,7 +389,9 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - `canBecomeKey` and `canBecomeMain` return false
 - shown with `orderFrontRegardless()`
 
-`NotchHostingView` sets `sizingOptions = []`, and the root view ignores the safe area.
+`NotchHostingView` sets `sizingOptions = []` and sits inside a plain `NSView` container that is the panel's `contentView`, resized by its autoresizing mask. The root view ignores the safe area.
+
+**Correction (2026-10-24, fix/hover-glitch):** the first version made the hosting view itself the `contentView`, on the belief that `sizingOptions = []` stops SwiftUI resizing the window. It doesn't. The docs say `[]` creates no constraints, but a hosting view that is a window's `contentView` also updates the window's `contentMinSize` and `contentMaxSize`, and nothing says `[]` turns that off. On the device the window snapped back to the shape's size straight after each `setFrame`, followed the spring frame by frame, and the app crashed in an Update Constraints pass (crash stack: `NSHostingView.updateWindowContentSizeExtremaIfNecessary` → `setNeedsUpdateConstraints`). The container takes the hosting view out of that role.
 
 **Evidence:**
 - `hidesOnDeactivate` defaults to true for `NSPanel` [V: https://developer.apple.com/documentation/appkit/nswindow/hidesondeactivate]. An agent app is almost never active, so it would hide straight away.
@@ -404,7 +406,8 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Why (for a Swift newcomer):**
 - SwiftUI is good at drawing, but the notch needs window behaviour that only AppKit exposes.
-- `sizingOptions = []` stops SwiftUI's preferred content size from fighting the frames that `NotchGeometry` sets.
+- `sizingOptions = []` stops SwiftUI adding size constraints, and the container stops it resizing the window, so only `NotchGeometry` sets the frame.
+- A fixed open-size panel with click-through was considered instead and rejected: reliable click-through needs `ignoresMouseEvents`, which also silences the tracking area, so it would need a global mouse-moved monitor (against D5 and D18).
 - `.ignoresSafeArea()` matters because the panel sits over the camera housing. SwiftUI would otherwise push the content down out of the safe area [I: device check].
 - ARCHITECTURE §6's `acceptsFirstMouse` override isn't added yet, because Phase 2 has no clickable controls.
 

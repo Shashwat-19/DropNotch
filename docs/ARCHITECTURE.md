@@ -95,7 +95,7 @@ Configuration (all public AppKit; Atoll uses the same flags [V: research/atoll-s
 - Transparent: not opaque, clear background, no shadow, not movable, `hidesOnDeactivate = false`.
 - Level: `.statusBar`, one above the main-menu level, so the panel draws over the menu bar (D16; Atoll uses main-menu + 3 [V]).
 - Collection behaviour: can join all Spaces, full-screen auxiliary, stationary, ignores window cycling [V: same flags in Atoll].
-- Hosts SwiftUI through a small `NSHostingView` subclass with `sizingOptions = []`, so the frames come from `NotchGeometry` only (D16). Once the panel has clickable controls, the subclass overrides `acceptsFirstMouse(for:)` to return true, so one click works without activating the window first. (In AppKit, the first click on an inactive window normally only activates it.) [V: Atoll does the same]
+- Hosts SwiftUI through a small `NSHostingView` subclass with `sizingOptions = []`, placed inside a plain `NSView` container that is the panel's `contentView`, so the frames come from `NotchGeometry` only. As the `contentView` itself, the hosting view would resize the window to its content (D16). Once the panel has clickable controls, the subclass overrides `acceptsFirstMouse(for:)` to return true, so one click works without activating the window first. (In AppKit, the first click on an inactive window normally only activates it.) [V: Atoll does the same]
 - Can become key only while open and a text field needs input (notes). Closed and peek states never take key focus. In Phase 2 the panel never becomes key (D16).
 - App runs as an agent app (`LSUIElement`), set in project.yml [V: https://developer.apple.com/documentation/bundleresources/information-property-list/lsuielement].
 
