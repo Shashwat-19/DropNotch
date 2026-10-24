@@ -34,7 +34,8 @@ targets:
         # Agent app: no Dock icon or app menu.
         LSUIElement: true
         NSAppleEventsUsageDescription: DropNotch uses this to show what is playing in Music and Spotify and to control playback from the notch.
-    # No App Sandbox (D4). Under the hardened runtime, Automation requests need the Apple Events entitlement (D2).
+    # No App Sandbox (D4). Under the hardened runtime, sending Apple Events to other apps
+    # (Music, Spotify) needs this entitlement (D2).
     entitlements:
       path: DropNotch/DropNotch.entitlements
       properties:

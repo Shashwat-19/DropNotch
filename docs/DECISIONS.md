@@ -51,7 +51,7 @@ Terms for a reader new to Swift or AppKit:
 - Playback controls are sent with Apple Events (AppleScript).
 - The waveform is decorative. It animates only while something is playing and the view is visible, and it stays static in Low Power Mode.
 - Every source sits behind a `NowPlayingSource` protocol, so a MediaRemote-based source can be added in v0.2.
-- The `com.apple.security.automation.apple-events` entitlement (needed under the hardened runtime) and the `NSAppleEventsUsageDescription` key are added through `project.yml` in Phase 2.
+- The `com.apple.security.automation.apple-events` entitlement (needed under the hardened runtime to send Apple Events to other apps such as Music and Spotify; not needed for same-team processes [V: https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.security.automation.apple-events]) and the `NSAppleEventsUsageDescription` key are added through `project.yml` in Phase 2.
 
 **Alternatives considered:**
 - MediaRemote through `ungive/mediaremote-adapter` now. This covers any app, but depends on a workaround for a private framework.
@@ -107,11 +107,11 @@ Terms for a reader new to Swift or AppKit:
 
 **Alternatives considered:** App Sandbox, with the entitlements and file-access exceptions it would need.
 
-**Why:** Private APIs and Apple Events to other apps are impractical inside the sandbox. DropNotch is not on the Mac App Store, so the sandbox brings no distribution benefit. The hardened runtime is needed for notarisation.
+**Why:** Private APIs and Apple Events to other apps are impractical inside the sandbox. DropNotch is not on the Mac App Store, so the sandbox brings no distribution benefit. The hardened runtime is needed for notarisation [V: https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution].
 
 **Consequences / follow-ups:**
 - Without the sandbox a bug has a wider reach. `security-auditor` reviews every change to the file tray, clipboard, subprocesses or entitlements.
-- The apple-events entitlement from D2 is a hardened-runtime *resource-access* entitlement (it lets the app ask the user for Automation permission), not a *runtime exception* that weakens code-signing protection [I: Apple lists it under hardened runtime resource access; confirm against developer.apple.com in Phase 2 step a].
+- The apple-events entitlement from D2 is a hardened-runtime *resource-access* entitlement (it lets the app ask the user for Automation permission), not a *runtime exception* that weakens code-signing protection [V: https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.security.automation.apple-events; https://developer.apple.com/documentation/security/hardened-runtime lists it under Resource Access, not Runtime Exceptions]. It is not needed for targets signed by the same team ID.
 
 ---
 

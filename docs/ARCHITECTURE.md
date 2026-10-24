@@ -96,7 +96,7 @@ Configuration (all public AppKit; Atoll uses the same flags [V: research/atoll-s
 - Collection behaviour: can join all Spaces, full-screen auxiliary, stationary, ignores window cycling [V: same flags in Atoll].
 - Hosts SwiftUI through a small `NSHostingView` subclass that overrides `acceptsFirstMouse(for:)` to return true, so one click works without activating the window first. (In AppKit, the first click on an inactive window normally only activates it.) [V: Atoll does the same]
 - Can become key only while open and a text field needs input (notes). Closed and peek states never take key focus.
-- App runs as an agent app (`LSUIElement`), set in project.yml (Phase 2 task) [V: TASK.md].
+- App runs as an agent app (`LSUIElement`), set in project.yml [V: https://developer.apple.com/documentation/bundleresources/information-property-list/lsuielement].
 
 Closed-state hit testing (**D5, accepted**). A fully click-through window (`ignoresMouseEvents = true`) gets no mouse events, so hover can't be detected from it [I]. So the closed panel is resized to exactly the notch rectangle (Atoll does the same [V]) and keeps receiving mouse events. A tracking area on it gives hover enter and exit. Everything outside that rectangle is click-through because the window doesn't cover it. On a notched display there is no menu-bar content behind the notch [I]. On a non-notch screen the pill blocks clicks only inside its own small rectangle. Rejected: a full-width click-through panel plus a global mouse-moved monitor, which fires on every mouse move system-wide [I].
 
