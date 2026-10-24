@@ -486,3 +486,29 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - The counter matters because the pointer can come back, or a display can be unplugged, during the close animation. Without it, an old completion would shrink the panel at the wrong moment or move it back to the old screen's frame (code-reviewer W1).
 
 **Trade-off:** for about 0.25 s after closing starts, the panel's larger, mostly transparent frame may still catch clicks and hover [I: device check; whether macOS passes clicks through fully transparent pixels is not documented]. Re-entering in that time peeks and then reopens the notch.
+
+## D20. The panel reaches 1 pt above the screen, and fast sideways moves restart the open delay
+
+**Date:** 2026-10-25 · **Status:** Accepted (fix/hover-glitch, Shash). Branch 4's registry decision moves to D21.
+
+**Decision:**
+- **Top edge.** Every panel frame is `NotchGeometry.panelFrame(for:)`: the shape's frame plus `topOverhang` (1 pt) above the screen's top edge. The shape still uses `frame(for:)`, and `NotchRootView` pads its top by the same 1 pt, so nothing visible moves. `NotchPanel` overrides `constrainFrameRect(_:to:)` to return the frame unchanged. The tracking area covers the full panel, overhang included, because the canvas is clipped to the panel (D19).
+- **Sweep guard.** The tracking area also has `.mouseMoved`, so the hosting view gets moves while the pointer is inside the panel, and only then. Each move goes to the state machine as `pointerMoved(x:time:)`. During peek, if the horizontal speed since the previous move is above `NotchHoverStateMachine.sweepSpeed` (600 pt/s), the open delay starts again. A pointer that slows down or stops opens 0.12 s later as usual. Vertical speed is ignored, so approaching the notch from below is unaffected.
+
+**Evidence:**
+- Device log, 2026-10-25: 17 of 32 failed peeks exited at exactly y = 1112, the screen's top edge. A pointer pushed against the top edge reports y = maxY, and a frame ending at maxY counts it as outside. That the window server delivers hover in a strip above the screen is [I: device check].
+- `constrainFrameRect(_:to:)` is "invoked automatically … whenever a titled NSWindow object is placed onscreen and whenever its size is changed", and "subclasses can override this method to prevent their instances from being constrained" [V: https://developer.apple.com/documentation/appkit/nswindow/constrainframerect(_:to:)]. The panel is borderless, so the override is a safeguard.
+- With `.mouseMoved`, "the owner of the tracking area receives mouseMoved(with:) messages while the mouse cursor is within the area" [V: https://developer.apple.com/documentation/appkit/nstrackingarea/options-swift.struct/mousemoved]. Whether that holds for a non-key panel of an inactive app, given `acceptsMouseMovedEvents` is false by default, is [I: device check].
+- `NSEvent.trackingArea` raises an exception for anything other than entered, exited and cursor-update events [V: https://developer.apple.com/documentation/appkit/nsevent/trackingarea]. So moves can't be filtered to our area. If SwiftUI's own tracking areas deliver the same move again, it should carry the same timestamp, and the machine ignores moves that aren't later than the previous one [I: device check].
+- The x position comes from `event.cgEvent?.location`, which is recorded with the event. Quartz flips y but not x, so x is on the same axis as AppKit's screen coordinates. `NSEvent.mouseLocation` is the fallback, but it gives the position when the event is handled, not when it happened.
+
+**Alternatives considered:**
+- Count a pointer at y = maxY as inside by checking `NSEvent.mouseLocation` on exit. Rejected: the closed notch would still never get an enter event from the top row.
+- A global mouse-moved monitor for the sweep guard. Rejected under D5: moves are only needed while the pointer is inside the panel.
+- A longer open delay instead of the guard. Rejected: the 0.3 s delay felt slow on the device (D18).
+
+**Why:**
+- The speed is measured between consecutive moves, not smoothed. That is simple and testable, but a jittery hand could read as a sweep [I: device check]. The threshold is one constant.
+- Moves that change nothing aren't logged, because they arrive many times a second. During a sweep each move still restarts the timer (a cancel and a new `Task`) and logs it. That's about 120 a second, but only for the length of the sweep. It's a performance-optimizer item for the Phase 2 pass.
+
+**Trade-off:** if a display is arranged directly above the notched screen, the 1 pt overhang lies on that display's bottom row. A pointer resting there over the notch could peek or open it [I: device check, RISKS §4].
