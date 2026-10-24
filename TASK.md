@@ -55,6 +55,9 @@ i. **Manual checks on a real notched Mac.** These cannot run in CI.
    - Hover at the top pixel row.
    - Clicks next to the closed notch reach the apps underneath.
    - Panel behaviour over full-screen apps and across Spaces.
+   - A pointer passing straight across the notch doesn't open it; peek grows the shape while the delay runs (D18).
+   - No flicker at the edge of the open panel; re-entering during the close animation ends cleanly, open or closed (D19).
+   - Reduce Motion turns off the spring (D19).
    - Reposition when an external display is connected or removed.
    - The closed shape lines up with the hardware notch with no visible seam (fractional inset), and the root view isn't pushed down by the safe area (D16).
    - The panel never takes keyboard focus; typing in the app in front keeps working.

@@ -74,7 +74,8 @@ Transient HUDs (timed overlays shown for a few seconds: battery, Bluetooth conne
 - Models are `@Observable` classes on the main actor (Observation framework, macOS 14+ [V: https://developer.apple.com/documentation/observation/observable]; matches the 14.0 target [V: project.yml]). SwiftUI views update only for the observable properties their body reads [V: https://developer.apple.com/documentation/swiftui/migrating-from-the-observable-object-protocol-to-the-observable-macro].
 - One model per module (for example `NowPlayingModel`, `TrayStore`) plus one `NotchState` for the hover state machine and layout.
 - Services expose `AsyncStream`s or async functions (CLAUDE.md). A module consumes a stream inside a `Task` it starts in `start()` and cancels in `stop()`.
-- The hover state machine (`closed → peek → open`) is a plain value type with a pure `transition(event:) -> State` function, so it can be unit-tested without a window. Timers for open delay and exit debounce are owned by `NotchState`, not by views.
+- The hover state machine (`closed → peek → open`) is a plain value type, `NotchHoverStateMachine`, so it can be unit-tested without a window. Its `handle(_:)` updates the phase and returns which timer to start or cancel; `NotchState` owns that single timer, not the views (D18).
+- **Peek** is the phase while the pointer is inside and the 0.3 s open delay runs. The shape grows a few points so the user sees the notch has noticed them. Timed HUDs (section 3) will reuse it later.
 
 ## 5. Persistence
 

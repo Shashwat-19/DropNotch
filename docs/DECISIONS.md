@@ -426,3 +426,47 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - Matching screens by name. Rejected: two identical monitors share a name.
 
 **Why:** keeping the choice a pure function over `(id, hasNotch)` pairs makes D9 testable without real displays.
+
+## D18. Hover uses an AppKit tracking area and a pure state machine
+
+**Date:** 2026-10-24 · **Status:** Accepted (Phase 2 plan, step e)
+
+**Decision:**
+- `NotchHostingView` adds one `NSTrackingArea` with `.mouseEnteredAndExited`, `.activeAlways` and `.inVisibleRect`. Its enter and exit events go to `NotchState.send(_:)`.
+- `NotchHoverStateMachine` is a value type. Its `handle(_:)` returns an effect (start the open delay, start the exit debounce, or cancel the timer). `NotchState` runs that effect with one cancellable `Task.sleep`, and starting a timer replaces the running one.
+- Peek is the phase between the pointer entering and the open delay ending. The shape grows by `NotchGeometry.peekGrowth` (decision 2 of the Phase 2 plan, Shash).
+
+**Evidence:**
+- `.activeAlways` delivers events "regardless of first-responder status, window status, or application status" [V: https://developer.apple.com/documentation/appkit/nstrackingarea/options-swift.struct/activealways].
+- With `.inVisibleRect` the area "is automatically synchronized with changes in the view's visible area" [V: https://developer.apple.com/documentation/appkit/nstrackingarea/options-swift.struct/invisiblerect].
+- Whether the area fires at the top pixel row is [I: device check, RISKS §4].
+
+**Alternatives considered:**
+- SwiftUI `onHover`. Rejected: it gives no control over when the area is active, and DropNotch is never the active app.
+- A global mouse-moved monitor. Rejected under D5.
+- `handle(_:) -> State`, as the ARCHITECTURE §4 sketch had it. Changed: with effects, the timer logic is decided in the pure, tested code, and `NotchState` only carries it out.
+
+**Why (for a Swift newcomer):**
+- `NSHostingView` also receives `mouseEntered`/`mouseExited` for SwiftUI's own tracking areas. The overrides therefore call `super` and only forward events whose `trackingArea` is ours.
+- Late timer events are ignored by the state machine (for example, an open-delay event after the pointer left), so cancelling a `Task` slightly late can't open the notch by mistake.
+
+## D19. Grow the panel before animating, shrink it after
+
+**Date:** 2026-10-24 · **Status:** Accepted (Phase 2 plan, step e)
+
+**Decision:**
+- When the notch grows (to peek or open), `NotchState` sets the panel to the larger frame first, then animates the shape with a spring (0.35 s, bounce 0.15).
+- When it closes, the shape animates first. The `withAnimation` completion then shrinks the panel, but only if the hover phase is still closed.
+- With Reduce Motion on, the animation is `nil`, so the change is immediate.
+
+**Evidence:**
+- The `withAnimation(_:completionCriteria:_:completion:)` completion "will always be fired exactly one time", and right away when no animation runs [V: https://developer.apple.com/documentation/swiftui/withanimation(_:completioncriteria:_:completion:)]. This is macOS 14+, which matches the deployment target.
+- The Reduce Motion setting is read from `NSWorkspace.accessibilityDisplayShouldReduceMotion` [V: https://developer.apple.com/documentation/appkit/nsworkspace/accessibilitydisplayshouldreducemotion].
+
+**Alternatives considered:**
+- Animate the window frame itself with AppKit. Rejected: two animation systems would run against each other, and resizing a window every frame costs more than redrawing a shape.
+- Keep the panel at the open size all the time. Rejected under D5: it would block clicks around the notch.
+
+**Why:** the shape can only draw inside the panel, so the panel has to be big enough before the shape grows and can't shrink until the shape has finished shrinking. The phase check matters because the pointer can come back during the close animation.
+
+**Trade-off:** for about 0.35 s after closing starts, the panel's larger, mostly transparent frame still catches clicks and hover. Re-entering in that time reopens the notch.
