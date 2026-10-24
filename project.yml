@@ -9,7 +9,7 @@ settings:
     SWIFT_VERSION: "5.0"
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
-    CODE_SIGN_IDENTITY: "-"   # sign to run locally; no Apple Developer account needed yet
+    CODE_SIGN_IDENTITY: "-"
 targets:
   DropNotch:
     type: application
@@ -28,6 +28,10 @@ targets:
     sources: [DropNotchTests]
     dependencies:
       - target: DropNotch
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.shashwat.DropNotchTests
 schemes:
   DropNotch:
     build:
