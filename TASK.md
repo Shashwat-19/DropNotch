@@ -14,6 +14,8 @@ Decision numbers (D1–D14) refer to docs/DECISIONS.md. Start with the `planner`
 
 Plan for c–j approved by Shash, 2026-10-24: branches `feat/menu-bar` (c), `feat/notch-panel` (d), `feat/hover-state` (e) and `feat/module-registry` (f), merged in that order; the g tests go in the branch whose logic they test. **After `feat/hover-state` merges, stop** and hand Shash the hover device checks from step i. `feat/module-registry` waits for Shash's report.
 
+**Status (2026-10-25):** c, d and e are on main. The d–e checks passed on a notched Mac on 2026-10-25, after the fixes on `fix/hover-glitch`: the D16 correction, the D18 retune, the D19 canvas and D20. The notch opens centred in about 0.2–0.3 s, every deliberate hover opened it, sweeps didn't, and resting at the top edge kept it open. **Next: branch 4, `feat/module-registry` (step f); its registry decision is D21.** Two D20 device checks are still open; they are listed in step i.
+
 a. **Step 0: verify before building.** Done 2026-10-24 (preview-flag run partial); report in docs/research/clipboard-probe-2026-10-24.md, reviewed by Shash; decisions D7a and D7b.
    - **Clipboard warning probe (D7).** Build a throwaway probe in a scratch folder outside DropNotch/. It is not committed. It reads `NSPasteboard.general` in the background when `changeCount` changes. Record: whether macOS shows a privacy alert or prompt on the current macOS version; what triggers it; whether reading only `changeCount` and `types` avoids it. Report the result to Shash before the Clipboard module is built.
    - **Apple API claims.** Check every [I]-tagged Apple API claim in docs/ARCHITECTURE.md, docs/RISKS.md and docs/FEATURE_MATRIX.md against developer.apple.com. Re-tag each as [V: doc URL], or correct it. Anything that can only be confirmed on a device goes on the manual-check list in step i.
@@ -66,6 +68,9 @@ i. **Manual checks on a real notched Mac.** These cannot run in CI.
    - `.statusBar` level draws above the menu bar and full-screen apps; menus opened from the menu bar still draw above the panel (D16).
    - Pill on a screen without a notch (external display, clamshell), including with the menu bar auto-hidden. On a crowded menu bar, status items or menus the pill covers still behave acceptably (expected effect of D5).
    - No window or Dock icon at launch.
+   - Still to confirm (D20):
+     - With a display arranged directly above the notched screen, a pointer resting on that display's bottom edge over the notch doesn't trigger peek or open.
+     - A slow, slightly shaky approach still opens the notch. The sweep guard measures speed from one move to the next, with no smoothing.
    - Menu-bar Settings… opens Settings in front, with keyboard focus, while another app is frontmost (D14). ⌘Q in the Settings window quits.
    - Deferred (Shash, 2026-10-24): the step a items that can only be confirmed on a device need features outside Phase 2. Each one is checked in the phase that builds its feature:
      - Automation prompts (Release build, D11): does macOS show one prompt per target app, on the first Apple Event? Not stated in Apple docs; confirm on device.
