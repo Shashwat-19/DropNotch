@@ -55,9 +55,10 @@ struct NotchGeometry: Equatable {
     }
 
     /// The top inset can be fractional (33.5 pt), so round each edge to the nearest
-    /// device pixel rather than the nearest point.
+    /// device pixel rather than the nearest point. Halves always round up, so a
+    /// display at a negative origin rounds the same way as one at a positive origin.
     private static func pixelAligned(_ rect: CGRect, scale: CGFloat) -> CGRect {
-        let round = { (value: CGFloat) in (value * scale).rounded() / scale }
+        let round = { (value: CGFloat) in (value * scale + 0.5).rounded(.down) / scale }
         let minX = round(rect.minX), minY = round(rect.minY)
         return CGRect(x: minX, y: minY, width: round(rect.maxX) - minX, height: round(rect.maxY) - minY)
     }
