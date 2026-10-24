@@ -57,6 +57,11 @@ i. **Manual checks on a real notched Mac.** These cannot run in CI.
    - Every item from step a that could only be confirmed on a device, including:
      - Automation prompts (Release build, D11): does macOS show one prompt per target app, on the first Apple Event? Not stated in Apple docs; confirm on device.
      - Privacy grants after re-signing: does an ad-hoc rebuild re-prompt or lose grants? Not stated in Apple docs; confirm on device.
+     - Clipboard (D7): results of the step a probe; also whether Always Deny leaves `changeCount` working.
+     - Folder prompts: does an unsandboxed build get the Desktop, Documents or Downloads prompt on first access?
+     - Downloaded DMG: is it quarantined and checked like the app?
+     - Audio-tap permission prompt from a Release build (v0.2 waveform).
+     - Screen capture: are our windows excluded via ScreenCaptureKit filters (Apple says not to rely on `sharingType`)?
 
 j. **Review and records.**
    - `code-reviewer`, `performance-optimizer` and `accessibility-auditor` (the notch UI changed).
