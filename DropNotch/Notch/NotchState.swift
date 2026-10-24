@@ -12,17 +12,24 @@ final class NotchState {
     private(set) var displayedPhase = NotchHoverStateMachine.Phase.closed
     private(set) var geometry: NotchGeometry?
 
+    // Strong reference cycle (state → panel → hosting view → root view → state), on
+    // purpose: AppDelegate keeps all of them for the app's lifetime.
     @ObservationIgnored var panel: NSPanel?
     @ObservationIgnored private var hover = NotchHoverStateMachine()
     @ObservationIgnored private var timer: Task<Void, Never>?
+    /// Bumped on every phase change and screen change, so a close animation's completion
+    /// can tell whether anything happened after it started (D19).
+    @ObservationIgnored private var changeCount = 0
 
     private static let spring = Animation.spring(duration: 0.35, bounce: 0.15)
 
     /// Re-reads the screens and moves the panel. Called at launch and after each
-    /// debounced screen change. Resets the hover state, because the old frames no longer apply.
+    /// debounced screen change. Resets the hover state, because the old frames no longer
+    /// apply; a pointer still inside has to leave and come back before hover works again.
     func screensChanged() {
         guard let panel else { return }
         timer?.cancel()
+        changeCount += 1
         hover = NotchHoverStateMachine()
         displayedPhase = .closed
 
@@ -72,17 +79,24 @@ final class NotchState {
     /// Shrink: animate the shape first, then shrink the panel once the animation ends (D19).
     private func show(_ phase: NotchHoverStateMachine.Phase) {
         guard phase != displayedPhase, let geometry, let panel else { return }
+        changeCount += 1
         let animation = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil : Self.spring
         if phase == .closed {
+            let started = changeCount
             withAnimation(animation) {
                 displayedPhase = .closed
             } completion: { [weak self] in
-                // The pointer may have come back while the shape was shrinking.
-                guard let self, self.hover.phase == .closed else { return }
-                panel.setFrame(geometry.closedFrame, display: true)
+                // Skip if the pointer came back or the screen changed while the shape was shrinking.
+                guard let self, self.changeCount == started, let geometry = self.geometry else { return }
+                self.panel?.setFrame(geometry.closedFrame, display: true)
             }
         } else {
-            panel.setFrame(geometry.frame(for: phase), display: true)
+            let target = geometry.frame(for: phase)
+            // After re-entering during a close the panel is still larger; keep it, so the
+            // pointer stays inside and the shape isn't clipped mid-animation.
+            if !panel.frame.contains(target) {
+                panel.setFrame(target, display: true)
+            }
             withAnimation(animation) { displayedPhase = phase }
         }
     }

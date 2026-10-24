@@ -56,7 +56,9 @@ i. **Manual checks on a real notched Mac.** These cannot run in CI.
    - Clicks next to the closed notch reach the apps underneath.
    - Panel behaviour over full-screen apps and across Spaces.
    - A pointer passing straight across the notch doesn't open it; peek grows the shape while the delay runs (D18).
-   - No flicker at the edge of the open panel; re-entering during the close animation ends cleanly, open or closed (D19).
+   - No flicker at the edge of the open panel (D18).
+   - Re-entering the leftover transparent area during the close animation peeks and reopens without clipping the shape; clicks in that area during the close (D19).
+   - Growing from closed shows no one-frame jump of the shape (D19).
    - Reduce Motion turns off the spring (D19).
    - Reposition when an external display is connected or removed.
    - The closed shape lines up with the hardware notch with no visible seam (fractional inset), and the root view isn't pushed down by the safe area (D16).

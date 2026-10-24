@@ -448,7 +448,7 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Why (for a Swift newcomer):**
 - `NSHostingView` also receives `mouseEntered`/`mouseExited` for SwiftUI's own tracking areas. The overrides therefore call `super` and only forward events whose `trackingArea` is ours.
-- Late timer events are ignored by the state machine (for example, an open-delay event after the pointer left), so cancelling a `Task` slightly late can't open the notch by mistake.
+- A cancelled timer never delivers its event: the timer `Task` and `cancel()` both run on the main actor, and the task checks `Task.isCancelled` after sleeping. As a second line of defence, the state machine ignores events that don't fit the current phase (for example, an open-delay event after the pointer left).
 
 ## D19. Grow the panel before animating, shrink it after
 
@@ -456,7 +456,8 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Decision:**
 - When the notch grows (to peek or open), `NotchState` sets the panel to the larger frame first, then animates the shape with a spring (0.35 s, bounce 0.15).
-- When it closes, the shape animates first. The `withAnimation` completion then shrinks the panel, but only if the hover phase is still closed.
+- When it closes, the shape animates first. The `withAnimation` completion then shrinks the panel to the current geometry's closed frame. It does this only if nothing has changed since the close started: no phase change and no screen change, tracked by a counter.
+- When it grows while the panel is already larger than the target (re-entering during a close), the panel keeps its larger frame.
 - With Reduce Motion on, the animation is `nil`, so the change is immediate.
 
 **Evidence:**
@@ -467,6 +468,8 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - Animate the window frame itself with AppKit. Rejected: two animation systems would run against each other, and resizing a window every frame costs more than redrawing a shape.
 - Keep the panel at the open size all the time. Rejected under D5: it would block clicks around the notch.
 
-**Why:** the shape can only draw inside the panel, so the panel has to be big enough before the shape grows and can't shrink until the shape has finished shrinking. The phase check matters because the pointer can come back during the close animation.
+**Why:**
+- The shape can only draw inside the panel. So the panel has to be big enough before the shape grows, and it can't shrink until the shape has finished shrinking.
+- The counter matters because the pointer can come back, or a display can be unplugged, during the close animation. Without it, an old completion would shrink the panel at the wrong moment or move it back to the old screen's frame (code-reviewer W1).
 
-**Trade-off:** for about 0.35 s after closing starts, the panel's larger, mostly transparent frame still catches clicks and hover. Re-entering in that time reopens the notch.
+**Trade-off:** for about 0.35 s after closing starts, the panel's larger, mostly transparent frame may still catch clicks and hover [I: device check; whether macOS passes clicks through fully transparent pixels is not documented]. Re-entering in that time peeks and then reopens the notch.
