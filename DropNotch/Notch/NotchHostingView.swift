@@ -8,11 +8,13 @@ final class NotchHostingView: NSHostingView<NotchRootView> {
     required init(rootView: NotchRootView) {
         super.init(rootView: rootView)
         // NotchGeometry decides the size; no Auto Layout constraints from SwiftUI's content.
-        // This alone doesn't stop window resizing; NotchPanel's container does (D16).
+        // This alone doesn't stop window resizing; NotchPanel's container does (D16), and
+        // NotchPanel keeps this view at the open size (D19).
         sizingOptions = []
         // `.activeAlways`: DropNotch is never the active app, and without it the area only
-        // reports while it is. `.inVisibleRect`: the area follows the view as the panel
-        // resizes, so it never needs recomputing in `updateTrackingAreas()` (D18).
+        // reports while it is. `.inVisibleRect`: the area is the view's visible part, which
+        // NotchPanel's clipping container limits to the panel frame, so it follows the panel
+        // without recomputing in `updateTrackingAreas()` (D18).
         let area = NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
                                   owner: self, userInfo: nil)
         addTrackingArea(area)

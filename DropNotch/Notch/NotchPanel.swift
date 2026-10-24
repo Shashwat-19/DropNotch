@@ -3,7 +3,10 @@ import AppKit
 /// Borderless window that sits over the notch (ARCHITECTURE.md §6, D16).
 /// Configuration only; what it shows comes from SwiftUI.
 final class NotchPanel: NSPanel {
+    private let canvas: NSView
+
     init(contentView: NSView) {
+        canvas = contentView
         // `.nonactivatingPanel`: clicking the panel doesn't activate DropNotch,
         // so the app in front keeps focus.
         super.init(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel],
@@ -23,11 +26,27 @@ final class NotchPanel: NSPanel {
         // SwiftUI content, even with `sizingOptions = []`. Wrapping it in a plain view
         // keeps the frame under NotchGeometry's control (D16).
         let container = NSView()
-        // Autoresizing only adds size changes, so start from the container's bounds.
-        contentView.frame = container.bounds
-        contentView.autoresizingMask = [.width, .height]
+        // Views don't clip by default since macOS 14, and the canvas is usually larger than the
+        // panel. Clipping also limits the canvas's visibleRect, which is what keeps its
+        // `.inVisibleRect` tracking area to the visible panel; don't remove it.
+        container.clipsToBounds = true
         container.addSubview(contentView)
         self.contentView = container
+    }
+
+    /// Moves the panel and keeps the content canvas at `canvas`, a fixed screen rect. The
+    /// canvas never moves or resizes on screen, so SwiftUI never re-lays out the shape when
+    /// the panel grows: only the shape's own size animates (D19).
+    func setFrame(_ frame: CGRect, canvas: CGRect) {
+        // The canvas has no autoresizing mask, so this frame holds after the resize below.
+        self.canvas.frame = Self.canvasFrame(panelFrame: frame, canvas: canvas)
+        setFrame(frame, display: true)
+    }
+
+    /// `canvas` in the panel's own coordinates. Subtracting the snapped origins, rather than
+    /// centring by half the width difference, keeps the canvas on whole pixels.
+    static func canvasFrame(panelFrame: CGRect, canvas: CGRect) -> CGRect {
+        canvas.offsetBy(dx: -panelFrame.minX, dy: -panelFrame.minY)
     }
 
     // Phase 2 has no text input, so the panel never takes keyboard focus.

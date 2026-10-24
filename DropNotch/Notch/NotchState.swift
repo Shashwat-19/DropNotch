@@ -14,7 +14,7 @@ final class NotchState {
 
     // Strong reference cycle (state → panel → hosting view → root view → state), on
     // purpose: AppDelegate keeps all of them for the app's lifetime.
-    @ObservationIgnored var panel: NSPanel?
+    @ObservationIgnored var panel: NotchPanel?
     @ObservationIgnored private var hover = NotchHoverStateMachine()
     @ObservationIgnored private var timer: Task<Void, Never>?
     /// Bumped on every phase change and screen change, so a close animation's completion
@@ -118,10 +118,12 @@ final class NotchState {
     }
 
     private func setPanelFrame(_ frame: CGRect, reason: String) {
-        guard let panel else { return }
+        guard let panel, let geometry else { return }
         let change = "\(NSStringFromRect(panel.frame)) → \(NSStringFromRect(frame))"
         Logger.notch.debug("Panel frame (\(reason, privacy: .public)): \(change, privacy: .public)")
-        panel.setFrame(frame, display: true)
+        // The open frame is the largest and shares every phase's top edge and centre, so
+        // every phase's shape fits a canvas there.
+        panel.setFrame(frame, canvas: geometry.openFrame)
     }
 }
 
