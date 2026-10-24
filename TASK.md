@@ -12,7 +12,7 @@ Canopy's public pages and Atoll's features were analysed, and the decisions D1�
 
 Decision numbers (D1–D10) refer to docs/DECISIONS.md. Start with the `planner` agent and send its plan to Shash. Steps a and b are verification and project setup; step a ends with a report to Shash, and no module code is built until Shash has read it.
 
-a. **Step 0: verify before building.** Done 2026-10-24; report in docs/research/clipboard-probe-2026-10-24.md, awaiting Shash's review.
+a. **Step 0: verify before building.** Done 2026-10-24 (preview-flag run partial); report in docs/research/clipboard-probe-2026-10-24.md, reviewed by Shash; decisions D7a and D7b.
    - **Clipboard warning probe (D7).** Build a throwaway probe in a scratch folder outside DropNotch/. It is not committed. It reads `NSPasteboard.general` in the background when `changeCount` changes. Record: whether macOS shows a privacy alert or prompt on the current macOS version; what triggers it; whether reading only `changeCount` and `types` avoids it. Report the result to Shash before the Clipboard module is built.
    - **Apple API claims.** Check every [I]-tagged Apple API claim in docs/ARCHITECTURE.md, docs/RISKS.md and docs/FEATURE_MATRIX.md against developer.apple.com. Re-tag each as [V: doc URL], or correct it. Anything that can only be confirmed on a device goes on the manual-check list in step i.
 
@@ -57,7 +57,7 @@ i. **Manual checks on a real notched Mac.** These cannot run in CI.
    - Every item from step a that could only be confirmed on a device, including:
      - Automation prompts (Release build, D11): does macOS show one prompt per target app, on the first Apple Event? Not stated in Apple docs; confirm on device.
      - Privacy grants after re-signing: does an ad-hoc rebuild re-prompt or lose grants? Not stated in Apple docs; confirm on device.
-     - Clipboard (D7): results of the step a probe; also whether Always Deny leaves `changeCount` working.
+     - Clipboard (D7): under "ask" (Apple's default), does reading `changeCount` or `types` alone trigger the alert? Does `changeCount` still work under Always Deny?
      - Folder prompts: does an unsandboxed build get the Desktop, Documents or Downloads prompt on first access?
      - Downloaded DMG: is it quarantined and checked like the app?
      - Audio-tap permission prompt from a Release build (v0.2 waveform).
@@ -70,3 +70,5 @@ j. **Review and records.**
 
 ## Out of scope for Phase 2
 Now Playing real sources, file tray, clipboard, and notes modules (Phase 3). MediaRemote (v0.2). Lock screen (beyond v0.2). Sparkle.
+
+Clipboard module (Phase 3), first step: re-run probe copies 4–6 (detection call and text reads) under the preview flag (`defaults write com.shashwat.ClipboardProbe EnablePasteboardPrivacyDeveloperPreview -bool yes`), with the probe's main-actor fix (D7b); delete the flag afterwards. See docs/research/clipboard-probe-2026-10-24.md §4.

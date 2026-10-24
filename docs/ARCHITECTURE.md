@@ -98,7 +98,7 @@ Configuration (all public AppKit; Atoll uses the same flags [V: research/atoll-s
 - Can become key only while open and a text field needs input (notes). Closed and peek states never take key focus.
 - App runs as an agent app (`LSUIElement`), set in project.yml [V: https://developer.apple.com/documentation/bundleresources/information-property-list/lsuielement].
 
-Closed-state hit testing (**D5, accepted**). A window with `ignoresMouseEvents` set is transparent to mouse events [V: https://developer.apple.com/documentation/appkit/nswindow/ignoresmouseevents], so hover can't be detected from it. So the closed panel is resized to exactly the notch rectangle (Atoll does the same [V]) and keeps receiving mouse events. A tracking area on it gives hover enter and exit. Everything outside that rectangle is click-through because the window doesn't cover it. On a notched display there is no menu-bar content behind the notch [I: device check; not in Apple docs]. On a non-notch screen the pill blocks clicks only inside its own small rectangle. Rejected: a full-width click-through panel plus a global mouse-moved monitor, which receives copies of events posted to other apps [V: https://developer.apple.com/documentation/appkit/nsevent/addglobalmonitorforevents(matching:handler:)].
+Closed-state hit testing (**D5, accepted**). A window with `ignoresMouseEvents` set is transparent to mouse events [V: https://developer.apple.com/documentation/appkit/nswindow/ignoresmouseevents], so hover can't be detected from it. So the closed panel is resized to exactly the notch rectangle (Atoll does the same [V]) and keeps receiving mouse events. A tracking area on it gives hover enter and exit. Everything outside that rectangle is click-through because the window doesn't cover it. On a notched display there is no menu-bar content behind the notch [I: device check; not in Apple docs]. On a non-notch screen the pill blocks clicks only inside its own small rectangle. Rejected: a full-width click-through panel plus a global mouse-moved monitor, which receives a copy of every mouse event sent to other apps [V: https://developer.apple.com/documentation/appkit/nsevent/addglobalmonitorforevents(matching:handler:)], so DropNotch would process pointer movement system-wide.
 
 ## 7. Notch vs non-notch and external displays
 
@@ -141,7 +141,7 @@ Target: zero wake-ups while idle, apart from the clipboard poll. Intervals below
 
 | Timer | Interval | Runs when | Why it can't be an event |
 |---|---|---|---|
-| Clipboard `changeCount` poll | 0.5 s, tolerance 0.25 s (D7) | Clipboard module enabled and screen awake | The NSPasteboard reference has no change notification, only `changeCount` [V: https://developer.apple.com/documentation/appkit/nspasteboard/changecount]. Reading one integer per tick is cheap [I: not measured]. Atoll uses 0.5 s [V]. |
+| Clipboard `changeCount` poll | 0.5 s, tolerance 0.25 s (D7) | Clipboard module enabled and screen awake | The `changeCount` page describes only the counter; no change notification is documented [V: https://developer.apple.com/documentation/appkit/nspasteboard/changecount]. Reading one integer per tick is cheap [I: not measured]. Atoll uses 0.5 s [V]. |
 | Hover open delay | One-shot 0.3 s | Pointer enters the closed notch | Avoids opening when the pointer just passes through. Atoll's default is 0.3 s [V]. |
 | Hover exit debounce | One-shot 0.1 s | Pointer leaves | Avoids flicker at the edge [V: Atoll uses 100 ms]. |
 | Peek dismissal | One-shot, 2–3 s | A peek HUD is showing | Timed by definition. |

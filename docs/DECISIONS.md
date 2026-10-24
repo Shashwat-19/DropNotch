@@ -175,7 +175,7 @@ Terms for a reader new to Swift or AppKit:
 **Why:** macOS has no public notification for pasteboard changes, so polling the integer `changeCount` is the cheapest reliable check. Skipping concealed items keeps passwords from entering history. Memory-only storage keeps copied text out of preference files by default. The 25-item cap bounds memory use.
 
 **Consequences / follow-ups:**
-- Phase 2 step a probe, 2026-10-24 (docs/research/clipboard-probe-2026-10-24.md): on macOS 27.0.1 an ad-hoc background app reported `accessBehavior` = `alwaysAllow`, read the change counter, types and text with no alert [V]. Behaviour under "ask" (Apple's documented default) is still untested. Proposed design changes in that report (check `accessBehavior` on enable, cheapest-read order, stop on Always Deny) await Shash's approval.
+- Phase 2 step a probe, 2026-10-24 (docs/research/clipboard-probe-2026-10-24.md): on macOS 27.0.1 an ad-hoc background app reported `accessBehavior` = `alwaysAllow`, read the change counter, types and text with no alert [V]. Behaviour under "ask" (Apple's documented default) is still untested. Shash approved the design changes as D7a.
 - The marker names follow the nspasteboard.org convention. This is to be confirmed (ARCHITECTURE.md §8).
 - This poll is the only always-on timer in the MVP (ARCHITECTURE.md §9).
 
@@ -211,7 +211,7 @@ Terms for a reader new to Swift or AppKit:
 
 **Alternatives considered:** As presented in the Phase 1 decision list. The option in FEATURE_MATRIX.md (the Notch on several displays row) is one panel per display from the start, as Atoll does.
 
-**Why:** One panel means fewer windows and fewer screen-change paths to test. Names are unreliable for identical monitors, so IDs are used instead (ARCHITECTURE.md §7). A display ID persists across processes and typically stays the same until restart [V: https://developer.apple.com/documentation/coregraphics/cgdirectdisplayid], so the chosen display is matched again after each restart.
+**Why:** One panel means fewer windows and fewer screen-change paths to test. Names are unreliable for identical monitors, so IDs are used instead (ARCHITECTURE.md §7). A display ID can persist across processes and typically stays constant until the machine restarts [V: https://developer.apple.com/documentation/coregraphics/cgdirectdisplayid]. After a restart the saved ID may not match, so the saved choice falls back to the built-in display when no match is found.
 
 **Consequences / follow-ups:**
 - All-displays mode is v0.2. It needs its own decision on per-display layout.
@@ -325,12 +325,11 @@ Terms for a reader new to Swift or AppKit:
 
 **Alternatives considered:** leave it to the Developer ID export step to strip the entitlement (rejected: cheap to fix now, and the export path isn't verified to strip it).
 
-**Why:** `get-task-allow` lets other processes running as the same user attach to the app and read its memory [I: Apple's entitlement page wasn't reachable; confirm], which would include clipboard history. Notarisation requires it not to be set to true [V: https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution].
+**Why:** `get-task-allow` lets other processes running as the same user attach to the app and read its memory [I: no Apple page checked for this; confirm], which would include clipboard history. Notarisation requires it not to be set to true [V: https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution].
 
 **Consequences / follow-ups:** the release pipeline (cicd-agent) should check the shipped app's entitlements with `codesign` before notarising.
 
 
----
 
 ## D7a. Clipboard history handles macOS pasteboard privacy
 
@@ -341,8 +340,21 @@ Terms for a reader new to Swift or AppKit:
 2. Read in the cheapest order: `changeCount` on the timer, `types` only when it changes, skip concealed and transient items, and only then read the content.
 3. Re-check `accessBehavior` on each content read and stop watching if it becomes `alwaysDeny`, because denied access fails silently [V: https://developer.apple.com/documentation/appkit/nspasteboard/accessbehavior-swift.enum].
 
-**Evidence:** step a probe on macOS 27.0.1: `alwaysAllow`, all reads succeeded, no alert [V: docs/research/clipboard-probe-2026-10-24.md]. Apple documents "ask on programmatic access" as the default from macOS 15.4 [V: same URL].
+**Evidence:** step a probe on macOS 27.0.1: `alwaysAllow`, all reads succeeded, no alert [V: docs/research/clipboard-probe-2026-10-24.md]. Apple says the default is "to ask upon programmatic access" from macOS 15.4 [V: same URL].
 
-**Alternatives considered:** move clipboard history to v0.2 (rejected: reads work, and the design above handles ask and deny); rely on the observed `alwaysAllow` (rejected: it contradicts Apple's documented default and may differ on other Macs).
+**Alternatives considered:** move clipboard history to v0.2 (rejected: reads worked under `alwaysAllow`, and the design above handles ask and deny); rely on the observed `alwaysAllow` (rejected: it contradicts Apple's documented default and may differ on other Macs).
 
-**Consequences / follow-ups:** whether `changeCount` or `types` reads alone trigger the alert under "ask" is checked by a further probe run (see the report).
+**Consequences / follow-ups:** under the preview flag, `changeCount` and `types` reads gave no alert; detection and text reads are untested and are re-run as the first step of the Clipboard module (report §4).
+
+## D7b. Pasteboard calls run on the main thread
+
+**Date:** 2026-10-24 · **Status:** Accepted (Shash)
+
+**Decision:** every `NSPasteboard` call (reads, `accessBehavior`, `detectedPatterns(for:)`) runs on the main actor. Async calls are awaited from `@MainActor` code, never from a detached or background `Task`.
+
+**Evidence:** under the pasteboard privacy preview (`accessBehavior` = `default`), the probe called `detectedPatterns(for:)` from a background `Task` and AppKit threw `NSInternalInconsistencyException`: "-[HIRunLoopSemaphore wait:] has been invoked on a secondary thread" [V: probe stderr, 2026-10-24; docs/research/clipboard-probe-2026-10-24.md §4]. Under `alwaysAllow` the same call didn't crash, so the bug only shows under the privacy setting.
+
+**Why:** a crash that appears only when the user's privacy setting changes would be hard to catch in testing. Keeping the pasteboard on the main actor also matches CLAUDE.md (UI state on `@MainActor`). `PasteboardWatcher` (ARCHITECTURE.md §8) is main-actor isolated.
+
+**Consequences:** the 0.5 s poll and reads stay on the main thread. They are cheap, so this shouldn't break the "nothing blocking on the main thread" rule [I: to measure in the Clipboard module].
+
