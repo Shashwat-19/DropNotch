@@ -16,13 +16,15 @@ a. **Step 0: verify before building.** Report to Shash before continuing.
    - **Clipboard warning probe (D7).** Build a throwaway probe in a scratch folder outside DropNotch/. It is not committed. It reads `NSPasteboard.general` in the background when `changeCount` changes. Record: whether macOS shows a privacy alert or prompt on the current macOS version; what triggers it; whether reading only `changeCount` and `types` avoids it. Report the result to Shash before the Clipboard module is built.
    - **Apple API claims.** Check every [I]-tagged Apple API claim in docs/ARCHITECTURE.md, docs/RISKS.md and docs/FEATURE_MATRIX.md against developer.apple.com. Re-tag each as [V: doc URL], or correct it. Anything that can only be confirmed on a device goes on the manual-check list in step i.
 
-b. **project.yml and dependencies.**
-   - `LSUIElement` = YES (Info.plist properties).
-   - `ENABLE_HARDENED_RUNTIME` on; no App Sandbox (D4).
-   - Entitlements file, declared in project.yml, containing `com.apple.security.automation.apple-events`.
-   - `NSAppleEventsUsageDescription` in Info.plist properties.
-   - `KeyboardShortcuts` package pinned with `exactVersion:` (version as recorded in DECISIONS.md D10). Run `dependency-manager` first, and record the licence in DECISIONS.md.
-   - Run `xcodegen generate`.
+b. **project.yml and dependencies.** Done on branch `feat/project-config` (commit 7b083c3) unless marked otherwise.
+   - `LSUIElement` = YES (Info.plist properties). Done.
+   - `ENABLE_HARDENED_RUNTIME` on; no App Sandbox (D4). Done.
+   - Hardened runtime applies to Release only for now (D11); test Automation prompts with a Release build.
+   - Entitlements file, declared in project.yml, containing `com.apple.security.automation.apple-events`. Done.
+   - `NSAppleEventsUsageDescription` in Info.plist properties. Done.
+   - `KeyboardShortcuts` package pinned with `exactVersion:` (3.1.0, as recorded in DECISIONS.md D10a). Done. The licence (MIT) is recorded in D10a. `dependency-manager` verified the resolved pin, licence and Swift modes (D10a).
+   - `fileGroups` lists CLAUDE.md, TASK.md and docs as reference-only files in Xcode's navigator (D12). Done.
+   - Run `xcodegen generate`. Done.
 
 c. **Menu-bar item and launch at login.** `NSStatusItem` with Settings and Quit. Launch at login through `SMAppService`.
 

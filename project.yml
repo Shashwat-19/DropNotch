@@ -31,7 +31,7 @@ targets:
       path: DropNotch/Info.plist
       properties:
         CFBundleDisplayName: DropNotch
-        # Agent app: no Dock icon or app menu (TASK.md Phase 2 step b).
+        # Agent app: no Dock icon or app menu.
         LSUIElement: true
         NSAppleEventsUsageDescription: DropNotch uses this to show what is playing in Music and Spotify and to control playback from the notch.
     # No App Sandbox (D4). Under the hardened runtime, Automation requests need the Apple Events entitlement (D2).
@@ -42,8 +42,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.shashwat.DropNotch
-        # Applied to Release. Xcode leaves it off for ad-hoc Debug signing, where library
-        # validation would reject the app's own debug dylib (no Team ID until Developer ID).
+        # Set for all configurations (D4). Xcode still omits the runtime when signing Debug
+        # ad hoc: with no Team ID, library validation would reject the app's own debug dylib (D11).
         ENABLE_HARDENED_RUNTIME: YES
   DropNotchTests:
     type: bundle.unit-test

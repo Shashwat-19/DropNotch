@@ -248,10 +248,11 @@ Terms for a reader new to Swift or AppKit:
 
 - Licence: MIT, copyright Sindre Sorhus [V: https://github.com/sindresorhus/KeyboardShortcuts/blob/main/license]. Compatible with MIT DropNotch (D1) [I: both permissive; MIT only requires keeping the notice].
 - Pin: `exactVersion: 3.1.0`, released 2026-09-11, latest stable; release notes mention macOS 27 compatibility [V: https://github.com/sindresorhus/KeyboardShortcuts/releases/tag/3.1.0].
-- 3.0.0 was a breaking release that renamed the default-shortcut API and moved the package to Swift 6 [V: https://github.com/sindresorhus/KeyboardShortcuts/releases/tag/3.0.0]. DropNotch stays in Swift 5 language mode. Swift packages compile in their own language mode, so this should not affect the app [I: confirm when the Phase 2 build runs].
-- Requires macOS 10.15+, no dependencies of its own [V: README and Package.swift]. Package manifest needs swift-tools 6.2, which Xcode 27.1 is expected to satisfy [I].
+- 3.0.0 was a breaking release that renamed the default-shortcut API and moved the package to Swift 6 [V: https://github.com/sindresorhus/KeyboardShortcuts/releases/tag/3.0.0]. DropNotch stays in Swift 5 mode: the package module compiles with `-swift-version 6` and the app module with `-swift-version 5`, and build and tests pass [V: local build logs, 2026-10-24].
+- Requires macOS 10.15+. No package-level dependencies, so nothing transitive is fetched [V: Package.swift; Package.resolved has one pin]. Manifest needs swift-tools 6.2, satisfied by the installed Swift 6.4 toolchain [V: `swift --version`].
+- Resolved to revision `772133d9dbe800fdac0473226822994c5c162c58` (tag 3.1.0); the checked-out `license` file is MIT [V: Package.resolved, checkout]. Verified by `dependency-manager` on 2026-10-24 after the package was added on feat/project-config.
 - It uses Carbon's global hot-key API, which is public but legacy. Apple has no newer replacement [V: README FAQ for the Carbon use; I for "no replacement"].
-- Ship its licence text in a third-party notices file in the app bundle.
+- Ship its licence text in a third-party notices file in the app bundle. Not added yet: no code imports the package, and the built binary contains none of its symbols. Must be in place before the first release that links it.
 
 ## D2a. MediaRemote adapter: licence and security check (verification for D2)
 
@@ -263,4 +264,50 @@ Terms for a reader new to Swift or AppKit:
 - **Alternatives considered:** load the framework in-process (needs disable-library-validation, which draws extra Gatekeeper checks and widens code-injection risk); no generic now playing at all.
 - **Conditions for v0.2:** build the framework from upstream source at a pinned commit; sign it with our Developer ID; check the bundle signature before launching Perl; minimal environment, fixed argument arrays; run the adapter's own `test` command at most once per macOS build; stream without artwork; never log the output; `dependency-manager` and `security-auditor` review before merge.
 - **Not verified:** the real adapter wasn't run, and no Developer-ID-signed framework or notarisation was tested.
+
+---
+
+## D11. Hardened runtime applies to Release builds only until a Developer ID exists.
+
+**Date:** 2026-10-24
+**Status:** Accepted
+
+**Decision:**
+- `project.yml` keeps `ENABLE_HARDENED_RUNTIME: YES`. Xcode leaves the runtime off for ad-hoc ("Sign to Run Locally") Debug builds and applies it to Release.
+- Until a Developer ID exists, the hardened runtime is therefore a Release-only property. This refines D4's "the hardened runtime is on" for local Debug builds.
+
+**Evidence** [V: local builds 2026-10-24, macOS 27.0.1, Xcode 27.1]:
+- Debug app: `codesign` flags=0x2(adhoc).
+- Release app: flags=0x10002(adhoc,runtime).
+- Forcing `--options=runtime` on the Debug app made it fail to load its own debug dylib with "mapping process and mapped file (non-platform) have different Team IDs". The test runner crashed.
+
+**Alternatives considered:**
+- Force the runtime in Debug and disable library validation. Rejected: this is a hardened-runtime exception, against D4.
+- Turn off the debug-dylib split and force the runtime. Rejected: the injected test bundle would hit the same Team ID check [I].
+
+**Why:** An ad-hoc signature carries no Team ID, so library validation cannot match the app against its own code. Once a Developer ID exists, Debug can be revisited.
+
+**Consequences / follow-ups:**
+- Anything that must be tested under the hardened runtime, such as the Apple Events Automation prompts in Phase 2, is tested with a Release build.
+- Revisit when a Developer ID exists.
+- README.md and docs/ARCHITECTURE.md were not checked in this entry. If either describes the hardened runtime as on for every build, it needs the same note.
+
+---
+
+## D12. Docs appear in Xcode's navigator as reference-only files.
+
+**Date:** 2026-10-24
+**Status:** Accepted (requested by Shash)
+
+**Decision:** `project.yml` `fileGroups` lists `CLAUDE.md`, `TASK.md` and `docs`, so they show in Xcode's navigator with no target membership. They are not copied into the app.
+
+**Evidence** [V: local build 2026-10-24]: the generated project has file references for them and no build-file entries, and the built app contains no `.md` files.
+
+**Alternatives considered:** Leave them out of the project. Rejected: Shash wants them visible while working in Xcode.
+
+**Why:** The files stay one click away while working in Xcode, and they are not bundled into the app.
+
+**Consequences / follow-ups:**
+- The `fileGroups` comment in `project.yml` describes this decision. Keep the two in step.
+- After any change to `fileGroups`, check that the built app still contains no `.md` files.
 
