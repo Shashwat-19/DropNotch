@@ -283,7 +283,7 @@ Terms for a reader new to Swift or AppKit:
 
 **Alternatives considered:**
 - Force the runtime in Debug and disable library validation. Rejected: this is a hardened-runtime exception, against D4.
-- Turn off the debug-dylib split and force the runtime. Rejected: the injected test bundle would hit the same Team ID check [I].
+- Turn off the debug-dylib split (`ENABLE_DEBUG_DYLIB: NO`) and force the runtime. Not chosen for now: the app then builds and launches hardened [V: security-auditor local build, 2026-10-24], but whether the injected test bundle passes library validation is untested [I], and SwiftUI Previews may reload more slowly. An option for Shash if Debug must match Release.
 
 **Why:** An ad-hoc signature carries no Team ID, so library validation cannot match the app against its own code. Once a Developer ID exists, Debug can be revisited.
 
@@ -310,4 +310,20 @@ Terms for a reader new to Swift or AppKit:
 **Consequences / follow-ups:**
 - The `fileGroups` comment in `project.yml` describes this decision. Keep the two in step.
 - After any change to `fileGroups`, check that the built app still contains no `.md` files.
+
+---
+
+## D13. Release builds don't carry the debugger entitlement
+
+**Date:** 2026-10-24 · **Status:** Accepted (security-auditor finding on feat/project-config)
+
+**Decision:** set `CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO` for the DropNotch target's Release configuration in `project.yml`. Debug keeps Xcode's injected entitlements so the debugger can attach.
+
+**Evidence:** before the change, the ad-hoc Release app carried `com.apple.security.get-task-allow`; after it, only `com.apple.security.automation.apple-events`, still with the hardened-runtime flag [V: `codesign -d --entitlements -` and `codesign -dvvv` on local Release builds, 2026-10-24]. Debug build and tests still pass [V: local build].
+
+**Alternatives considered:** leave it to the Developer ID export step to strip the entitlement (rejected: cheap to fix now, and not every export path may strip it [I]).
+
+**Why:** `get-task-allow` lets other processes running as the same user attach to the app and read its memory, which would include clipboard history. Notarisation is expected to reject it [I].
+
+**Consequences / follow-ups:** the release pipeline (cicd-agent) should check the shipped app's entitlements with `codesign` before notarising.
 

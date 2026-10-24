@@ -33,7 +33,7 @@ targets:
         CFBundleDisplayName: DropNotch
         # Agent app: no Dock icon or app menu.
         LSUIElement: true
-        NSAppleEventsUsageDescription: DropNotch uses this to show what is playing in Music and Spotify and to control playback from the notch.
+        NSAppleEventsUsageDescription: DropNotch sends play, pause and skip commands to Music and Spotify when you use the controls in the notch.
     # No App Sandbox (D4). Under the hardened runtime, sending Apple Events to other apps
     # (Music, Spotify) needs this entitlement (D2).
     entitlements:
@@ -46,6 +46,11 @@ targets:
         # Set for all configurations (D4). Xcode still omits the runtime when signing Debug
         # ad hoc: with no Team ID, library validation would reject the app's own debug dylib (D11).
         ENABLE_HARDENED_RUNTIME: YES
+      configs:
+        # Stop Xcode adding get-task-allow (debugger attach) to Release: it would expose the
+        # app's memory to same-user processes and block notarisation. Debug keeps it.
+        Release:
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
   DropNotchTests:
     type: bundle.unit-test
     platform: macOS
