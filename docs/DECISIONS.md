@@ -52,6 +52,7 @@ Terms for a reader new to Swift or AppKit:
 - The waveform is decorative. It animates only while something is playing and the view is visible, and it stays static in Low Power Mode.
 - Every source sits behind a `NowPlayingSource` protocol, so a MediaRemote-based source can be added in v0.2.
 - The `com.apple.security.automation.apple-events` entitlement (needed under the hardened runtime to send Apple Events to other apps such as Music and Spotify; not needed for same-team processes [V: https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.security.automation.apple-events]) and the `NSAppleEventsUsageDescription` key are added through `project.yml` in Phase 2.
+- The usage text ("DropNotch sends play, pause and skip commands to Music and Spotify…") describes commands that don't exist yet. Re-check it whenever the Now Playing feature changes.
 
 **Alternatives considered:**
 - MediaRemote through `ungive/mediaremote-adapter` now. This covers any app, but depends on a workaround for a private framework.
@@ -252,7 +253,7 @@ Terms for a reader new to Swift or AppKit:
 - Requires macOS 10.15+. No package-level dependencies, so nothing transitive is fetched [V: Package.swift; Package.resolved has one pin]. Manifest needs swift-tools 6.2, satisfied by the installed Swift 6.4 toolchain [V: `swift --version`].
 - Resolved to revision `772133d9dbe800fdac0473226822994c5c162c58` (tag 3.1.0); the checked-out `license` file is MIT [V: Package.resolved, checkout]. Verified by `dependency-manager` on 2026-10-24 after the package was added on feat/project-config.
 - It uses Carbon's global hot-key API, which is public but legacy. Apple has no newer replacement [V: README FAQ for the Carbon use; I for "no replacement"].
-- Ship its licence text in a third-party notices file in the app bundle. Not added yet: no code imports the package, and the built binary contains none of its symbols. Must be in place before the first release that links it.
+- Ship its licence text in the app bundle: added as THIRD_PARTY_NOTICES.md (commit 84b16fd), the verbatim MIT text from the 3.1.0 checkout, bundled as a resource [V: Release build Resources folder, 2026-10-24].
 
 ## D2a. MediaRemote adapter: licence and security check (verification for D2)
 
@@ -291,7 +292,7 @@ Terms for a reader new to Swift or AppKit:
 - Rule added to CLAUDE.md (Shash, 2026-10-24): any change touching entitlements, Apple Events or signing must also pass a Release build and a Release launch before merging.
 - Anything that must be tested under the hardened runtime, such as the Apple Events Automation prompts in Phase 2, is tested with a Release build.
 - Revisit when a Developer ID exists.
-- README.md and docs/ARCHITECTURE.md were not checked in this entry. If either describes the hardened runtime as on for every build, it needs the same note.
+- README.md and docs/ARCHITECTURE.md were checked: neither describes the hardened runtime as on for every build [V: code-reviewer, 2026-10-24].
 
 ---
 

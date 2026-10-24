@@ -54,7 +54,7 @@ targets:
         ENABLE_HARDENED_RUNTIME: YES
       configs:
         # Stop Xcode adding get-task-allow (debugger attach) to Release: it would expose the
-        # app's memory to same-user processes and block notarisation. Debug keeps it.
+        # app's memory to same-user processes, and notarisation requires it absent (D13). Debug keeps it.
         Release:
           CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
   DropNotchTests:

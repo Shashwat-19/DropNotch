@@ -55,8 +55,8 @@ i. **Manual checks on a real notched Mac.** These cannot run in CI.
    - Panel behaviour over full-screen apps and across Spaces.
    - Reposition when an external display is connected or removed.
    - Every item from step a that could only be confirmed on a device, including:
-     - Automation prompts (Release build, D11): one prompt per target app, shown on the first Apple Event? No Apple doc states this.
-     - Privacy grants after re-signing: does an ad-hoc rebuild re-prompt or lose grants? No Apple doc states this.
+     - Automation prompts (Release build, D11): does macOS show one prompt per target app, on the first Apple Event? Not stated in Apple docs; confirm on device.
+     - Privacy grants after re-signing: does an ad-hoc rebuild re-prompt or lose grants? Not stated in Apple docs; confirm on device.
 
 j. **Review and records.**
    - `code-reviewer`, `performance-optimizer` and `accessibility-auditor` (the notch UI changed).
