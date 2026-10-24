@@ -112,6 +112,13 @@ final class NotchGeometryTests: XCTestCase {
         }
     }
 
+    func testFrameForPhaseReturnsMatchingFrame() {
+        let geometry = notched(screen)
+        XCTAssertEqual(geometry.frame(for: .closed), geometry.closedFrame)
+        XCTAssertEqual(geometry.frame(for: .peek), geometry.peekFrame)
+        XCTAssertEqual(geometry.frame(for: .open), geometry.openFrame)
+    }
+
     func testOpenFrameNeverSmallerThanPeekForAWideNotch() {
         // Notch wider than openSize: open must follow peek rather than shrink below it.
         let geometry = NotchGeometry(screenFrame: screen, safeAreaTop: inset, auxLeftWidth: 100,
