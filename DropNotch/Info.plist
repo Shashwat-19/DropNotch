@@ -20,5 +20,9 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>DropNotch uses this to show what is playing in Music and Spotify and to control playback from the notch.</string>
 </dict>
 </plist>

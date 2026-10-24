@@ -4,6 +4,16 @@ options:
   deploymentTarget:
     macOS: "14.0"
   createIntermediateGroups: true
+# Shown in Xcode's navigator for reference only; not members of any target.
+fileGroups:
+  - CLAUDE.md
+  - TASK.md
+  - docs
+packages:
+  # MIT; licence and pin recorded in docs/DECISIONS.md D10a.
+  KeyboardShortcuts:
+    url: https://github.com/sindresorhus/KeyboardShortcuts
+    exactVersion: 3.1.0
 settings:
   base:
     SWIFT_VERSION: "5.0"
@@ -15,13 +25,26 @@ targets:
     type: application
     platform: macOS
     sources: [DropNotch]
+    dependencies:
+      - package: KeyboardShortcuts
     info:
       path: DropNotch/Info.plist
       properties:
         CFBundleDisplayName: DropNotch
+        # Agent app: no Dock icon or app menu (TASK.md Phase 2 step b).
+        LSUIElement: true
+        NSAppleEventsUsageDescription: DropNotch uses this to show what is playing in Music and Spotify and to control playback from the notch.
+    # No App Sandbox (D4). Under the hardened runtime, Automation requests need the Apple Events entitlement (D2).
+    entitlements:
+      path: DropNotch/DropNotch.entitlements
+      properties:
+        com.apple.security.automation.apple-events: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.shashwat.DropNotch
+        # Applied to Release. Xcode leaves it off for ad-hoc Debug signing, where library
+        # validation would reject the app's own debug dylib (no Team ID until Developer ID).
+        ENABLE_HARDENED_RUNTIME: YES
   DropNotchTests:
     type: bundle.unit-test
     platform: macOS
