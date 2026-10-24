@@ -1,0 +1,37 @@
+name: DropNotch
+options:
+  bundleIdPrefix: com.shashwat
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_IDENTITY: "-"   # sign to run locally; no Apple Developer account needed yet
+targets:
+  DropNotch:
+    type: application
+    platform: macOS
+    sources: [DropNotch]
+    info:
+      path: DropNotch/Info.plist
+      properties:
+        CFBundleDisplayName: DropNotch
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.shashwat.DropNotch
+  DropNotchTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources: [DropNotchTests]
+    dependencies:
+      - target: DropNotch
+schemes:
+  DropNotch:
+    build:
+      targets:
+        DropNotch: all
+    test:
+      targets: [DropNotchTests]
