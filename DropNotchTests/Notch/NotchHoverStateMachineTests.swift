@@ -34,12 +34,12 @@ final class NotchHoverStateMachineTests: XCTestCase {
         XCTAssertEqual(machine.handle(.pointerEntered), .startOpenDelay)
         XCTAssertEqual(machine.phase, .peek)
 
-        // The exit debounce replaces the open delay, so openDelayElapsed never arrives.
         XCTAssertEqual(machine.handle(.pointerExited), .startExitDebounce)
         XCTAssertEqual(machine.phase, .peek)
         XCTAssertFalse(machine.pointerInside)
 
-        XCTAssertNil(machine.handle(.exitDebounceElapsed))
+        // Closing from peek cancels the open delay, which is still running.
+        XCTAssertEqual(machine.handle(.exitDebounceElapsed), .cancelOpenDelay)
         XCTAssertEqual(machine.phase, .closed)
     }
 
@@ -55,7 +55,7 @@ final class NotchHoverStateMachineTests: XCTestCase {
     func testReenteringOpenBeforeDebounceStaysOpen() {
         var machine = opened
         XCTAssertEqual(machine.handle(.pointerExited), .startExitDebounce)
-        XCTAssertEqual(machine.handle(.pointerEntered), .cancelTimer)
+        XCTAssertEqual(machine.handle(.pointerEntered), .cancelExitDebounce)
         XCTAssertEqual(machine.phase, .open)
         XCTAssertTrue(machine.pointerInside)
 
@@ -64,14 +64,41 @@ final class NotchHoverStateMachineTests: XCTestCase {
         XCTAssertEqual(machine.phase, .open)
     }
 
-    func testReenteringPeekBeforeDebounceRestartsOpenDelay() {
+    // A brief exit during peek must not restart the open delay.
+    func testReenteringPeekBeforeDebounceKeepsTheOpenDelayRunning() {
         var machine = driven([.pointerEntered])
         XCTAssertEqual(machine.handle(.pointerExited), .startExitDebounce)
-        XCTAssertEqual(machine.handle(.pointerEntered), .startOpenDelay)
+        XCTAssertEqual(machine.handle(.pointerEntered), .cancelExitDebounce)
         XCTAssertEqual(machine.phase, .peek)
 
         XCTAssertNil(machine.handle(.openDelayElapsed))
         XCTAssertEqual(machine.phase, .open)
+    }
+
+    func testOpenDelayEndingDuringABriefExitOpensOnReentry() {
+        var machine = driven([.pointerEntered, .pointerExited])
+        XCTAssertNil(machine.handle(.openDelayElapsed))
+        XCTAssertEqual(machine.phase, .peek)
+
+        XCTAssertEqual(machine.handle(.pointerEntered), .cancelExitDebounce)
+        XCTAssertEqual(machine.phase, .open)
+    }
+
+    func testOpenDelayThatEndedOutsideIsForgottenOnceClosed() {
+        var machine = driven([.pointerEntered, .pointerExited, .openDelayElapsed, .exitDebounceElapsed])
+        XCTAssertEqual(machine.phase, .closed)
+
+        // A fresh hover peeks and waits for a new open delay, even across a brief exit.
+        XCTAssertEqual(machine.handle(.pointerEntered), .startOpenDelay)
+        XCTAssertEqual(machine.handle(.pointerExited), .startExitDebounce)
+        XCTAssertEqual(machine.handle(.pointerEntered), .cancelExitDebounce)
+        XCTAssertEqual(machine.phase, .peek)
+    }
+
+    func testExitDebounceElapsedWhileClosedDoesNothing() {
+        var machine = Machine()
+        XCTAssertNil(machine.handle(.exitDebounceElapsed))
+        XCTAssertEqual(machine.phase, .closed)
     }
 
     func testOpenDelayElapsedWhileClosedDoesNothing() {
@@ -109,7 +136,7 @@ final class NotchHoverStateMachineTests: XCTestCase {
     }
 
     func testTimingConstants() {
-        XCTAssertEqual(Machine.openDelay, .milliseconds(300))
+        XCTAssertEqual(Machine.openDelay, .milliseconds(120))
         XCTAssertEqual(Machine.exitDebounce, .milliseconds(100))
     }
 }

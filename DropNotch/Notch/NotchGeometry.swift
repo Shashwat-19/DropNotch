@@ -8,8 +8,9 @@ struct NotchGeometry: Equatable {
     static let pillWidth: CGFloat = 200
     /// Pill height when the menu bar is auto-hidden and has no height to copy.
     static let fallbackPillHeight: CGFloat = 24
-    /// How much the shape grows while the open delay runs (peek).
-    static let peekGrowth = CGSize(width: 16, height: 4)
+    /// How much the shape grows while the open delay runs (peek): 12 pt each side and
+    /// 8 pt down, so a pointer resting near the notch stays inside.
+    static let peekGrowth = CGSize(width: 24, height: 8)
     /// Minimum size of the open panel.
     static let openSize = CGSize(width: 480, height: 150)
 

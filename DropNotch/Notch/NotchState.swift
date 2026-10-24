@@ -16,19 +16,21 @@ final class NotchState {
     // purpose: AppDelegate keeps all of them for the app's lifetime.
     @ObservationIgnored var panel: NotchPanel?
     @ObservationIgnored private var hover = NotchHoverStateMachine()
-    @ObservationIgnored private var timer: Task<Void, Never>?
+    /// One timer per kind, keyed by the event it delivers (open delay, exit debounce).
+    @ObservationIgnored private var timers: [NotchHoverStateMachine.Event: Task<Void, Never>] = [:]
     /// Bumped on every phase change and screen change, so a close animation's completion
     /// can tell whether anything happened after it started (D19).
     @ObservationIgnored private var changeCount = 0
 
-    private static let spring = Animation.spring(duration: 0.35, bounce: 0.15)
+    // No bounce: an overshoot past the open size would be cut flat by the panel's edges.
+    private static let spring = Animation.spring(duration: 0.25, bounce: 0)
 
     /// Re-reads the screens and moves the panel. Called at launch and after each
     /// debounced screen change. Resets the hover state, because the old frames no longer
     /// apply; a pointer still inside has to leave and come back before hover works again.
     func screensChanged() {
         guard let panel else { return }
-        timer?.cancel()
+        timers.values.forEach { $0.cancel() }
         changeCount += 1
         hover = NotchHoverStateMachine()
         displayedPhase = .closed
@@ -50,7 +52,7 @@ final class NotchState {
         panel.orderFrontRegardless()
     }
 
-    /// Called by the tracking area in `NotchHostingView` and by this class's own timer.
+    /// Called by the tracking area in `NotchHostingView` and by this class's own timers.
     func send(_ event: NotchHoverStateMachine.Event) {
         let old = hover
         let effect = hover.handle(event)
@@ -62,9 +64,10 @@ final class NotchState {
             startTimer(NotchHoverStateMachine.openDelay, then: .openDelayElapsed)
         case .startExitDebounce?:
             startTimer(NotchHoverStateMachine.exitDebounce, then: .exitDebounceElapsed)
-        case .cancelTimer?:
-            Logger.notch.debug("Timer cancelled")
-            timer?.cancel()
+        case .cancelOpenDelay?:
+            cancelTimer(.openDelayElapsed)
+        case .cancelExitDebounce?:
+            cancelTimer(.exitDebounceElapsed)
         case nil:
             break
         }
@@ -72,16 +75,21 @@ final class NotchState {
     }
 
     private func startTimer(_ delay: Duration, then event: NotchHoverStateMachine.Event) {
-        timer?.cancel()
+        timers[event]?.cancel()
         let name = "\(event)"
         Logger.notch.debug("Timer started: \(name, privacy: .public) after \(delay.description, privacy: .public)")
         // One-shot, cancellable; inherits the main actor (ARCHITECTURE.md §9).
-        timer = Task { [weak self] in
+        timers[event] = Task { [weak self] in
             try? await Task.sleep(for: delay)
             guard !Task.isCancelled else { return }
             Logger.notch.debug("Timer fired: \(name, privacy: .public)")
             self?.send(event)
         }
+    }
+
+    private func cancelTimer(_ event: NotchHoverStateMachine.Event) {
+        Logger.notch.debug("Timer cancelled: \(String(describing: event), privacy: .public)")
+        timers[event]?.cancel()
     }
 
     /// Grow: enlarge the panel first, then animate the shape into the new space.

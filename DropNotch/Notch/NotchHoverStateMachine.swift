@@ -5,7 +5,7 @@ struct NotchHoverStateMachine {
     enum Phase {
         /// The shape matches the notch.
         case closed
-        /// The pointer is inside and the open delay is running; the shape grows slightly.
+        /// The open delay is running; the shape grows so it is easier to stay inside.
         case peek
         case open
     }
@@ -14,19 +14,21 @@ struct NotchHoverStateMachine {
         case pointerEntered, pointerExited, openDelayElapsed, exitDebounceElapsed
     }
 
-    /// What `NotchState` should do with its single timer. Starting one replaces
-    /// whichever timer is running.
+    /// What `NotchState` should do with its two timers, one per kind. Starting a timer
+    /// replaces a running one of the same kind; the other kind keeps running.
     enum Effect {
-        case startOpenDelay, startExitDebounce, cancelTimer
+        case startOpenDelay, cancelOpenDelay, startExitDebounce, cancelExitDebounce
     }
 
     /// Avoids opening when the pointer only passes through (ARCHITECTURE.md §9).
-    static let openDelay: Duration = .milliseconds(300)
+    static let openDelay: Duration = .milliseconds(120)
     /// Avoids flicker when the pointer grazes the edge (ARCHITECTURE.md §9).
     static let exitDebounce: Duration = .milliseconds(100)
 
     private(set) var phase = Phase.closed
     private(set) var pointerInside = false
+    /// The open delay ran out during peek while the pointer was briefly outside.
+    private var openDue = false
 
     mutating func handle(_ event: Event) -> Effect? {
         switch event {
@@ -37,20 +39,25 @@ struct NotchHoverStateMachine {
                 phase = .peek
                 return .startOpenDelay
             case .peek:
-                // Back inside before the exit debounce ended, which replaced the open delay.
-                return .startOpenDelay
+                // Back within the exit debounce: keep the open delay's progress (D18).
+                if openDue { phase = .open; openDue = false }
+                return .cancelExitDebounce
             case .open:
-                return .cancelTimer
+                return .cancelExitDebounce
             }
         case .pointerExited:
             pointerInside = false
             return phase == .closed ? nil : .startExitDebounce
         case .openDelayElapsed:
-            if phase == .peek && pointerInside { phase = .open }
+            guard phase == .peek else { return nil }
+            if pointerInside { phase = .open } else { openDue = true }
             return nil
         case .exitDebounceElapsed:
-            if !pointerInside { phase = .closed }
-            return nil
+            guard !pointerInside, phase != .closed else { return nil }
+            let wasPeek = phase == .peek
+            phase = .closed
+            openDue = false
+            return wasPeek ? .cancelOpenDelay : nil
         }
     }
 }
