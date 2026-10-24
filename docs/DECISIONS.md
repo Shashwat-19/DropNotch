@@ -358,3 +358,17 @@ Terms for a reader new to Swift or AppKit:
 
 **Consequences:** the 0.5 s poll and reads stay on the main thread. They are cheap, so this shouldn't break the "nothing blocking on the main thread" rule [I: to measure in the Clipboard module].
 
+
+## D14. Menu-bar item uses SwiftUI `MenuBarExtra`
+
+**Date:** 2026-10-24 · **Status:** Accepted (Shash, Phase 2 plan)
+
+**Decision:** the menu-bar item is a SwiftUI `MenuBarExtra` (menu style) with Settings… (⌘,) and Quit (⌘Q), plus a SwiftUI `Settings` scene. Settings… calls `NSApp.activate()` and then `openSettings()`. Launch at login moved to Phase 3 Settings (Shash, 2026-10-24).
+
+**Evidence:** `MenuBarExtra` is macOS 13+ [V: https://developer.apple.com/documentation/swiftui/menubarextra]; `OpenSettingsAction` is macOS 14+ and is read from a view's environment [V: https://developer.apple.com/documentation/swiftui/opensettingsaction]; `NSApplication.activate()` is macOS 14+ and "activates the receiver app, if appropriate" [V: https://developer.apple.com/documentation/appkit/nsapplication/activate()].
+
+**Alternatives considered:** `NSStatusItem` with an `NSMenu`, as TASK.md first said (rejected: more AppKit code, and opening SwiftUI's `Settings` scene from AppKit has no public API, while `openSettings` works from a SwiftUI menu).
+
+**Why:** for a Swift newcomer, the menu is a few lines of SwiftUI. The `activate()` call is there because an agent app (`LSUIElement`) is never the active app, so its Settings window could otherwise open behind the frontmost app [I: device check]. `openSettings` is only available inside a `View`, which is why the menu items live in a separate `MenuBarMenu` view rather than in the `App` body.
+
+**Consequences / follow-ups:** device check: Settings comes to the front and takes keyboard focus. If not, the fallback is switching the activation policy to `.regular` while Settings is open (FEATURE_MATRIX row 27).

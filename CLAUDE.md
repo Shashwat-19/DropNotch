@@ -16,7 +16,13 @@ Maintainer: Shash. Strong in Python and TypeScript, new to Swift. Briefly explai
 ## Directory structure
 ```
 project.yml          # source of truth for the Xcode project
-DropNotch/           # app sources (feature code under DropNotch/Modules/<Feature>/)
+DropNotch/           # app sources (layout in docs/ARCHITECTURE.md §2)
+  App/               # entry point, app delegate, menu-bar item
+  Notch/             # notch panel, geometry, hover state machine, module registry
+  Modules/<Feature>/ # feature code, one folder per module
+  Services/          # one protocol + implementations per system dependency
+  Settings/          # Settings window
+  Support/           # logger categories, small shared helpers
 DropNotchTests/      # unit tests
 docs/                # FEATURE_MATRIX, ARCHITECTURE, RISKS, DECISIONS, research/
 reference/           # cloned reference apps: gitignored, never built, never copied from

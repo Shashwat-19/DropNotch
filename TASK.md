@@ -12,6 +12,8 @@ Canopy's public pages and Atoll's features were analysed, and the decisions D1�
 
 Decision numbers (D1–D10) refer to docs/DECISIONS.md. Start with the `planner` agent and send its plan to Shash. Steps a and b are verification and project setup; step a ends with a report to Shash, and no module code is built until Shash has read it.
 
+Plan for c–j approved by Shash, 2026-10-24: branches `feat/menu-bar` (c), `feat/notch-panel` (d), `feat/hover-state` (e) and `feat/module-registry` (f), merged in that order; the g tests go in the branch whose logic they test. **After `feat/hover-state` merges, stop** and hand Shash the hover device checks from step i. `feat/module-registry` waits for Shash's report.
+
 a. **Step 0: verify before building.** Done 2026-10-24 (preview-flag run partial); report in docs/research/clipboard-probe-2026-10-24.md, reviewed by Shash; decisions D7a and D7b.
    - **Clipboard warning probe (D7).** Build a throwaway probe in a scratch folder outside DropNotch/. It is not committed. It reads `NSPasteboard.general` in the background when `changeCount` changes. Record: whether macOS shows a privacy alert or prompt on the current macOS version; what triggers it; whether reading only `changeCount` and `types` avoids it. Report the result to Shash before the Clipboard module is built.
    - **Apple API claims.** Check every [I]-tagged Apple API claim in docs/ARCHITECTURE.md, docs/RISKS.md and docs/FEATURE_MATRIX.md against developer.apple.com. Re-tag each as [V: doc URL], or correct it. Anything that can only be confirmed on a device goes on the manual-check list in step i.
@@ -26,7 +28,7 @@ b. **project.yml and dependencies.** Done on branch `feat/project-config` (commi
    - `fileGroups` lists CLAUDE.md, TASK.md and docs as reference-only files in Xcode's navigator (D12). Done.
    - Run `xcodegen generate`. Done.
 
-c. **Menu-bar item and launch at login.** `NSStatusItem` with Settings and Quit. Launch at login through `SMAppService`.
+c. **Menu-bar item.** `MenuBarExtra` with Settings… and Quit (D14). Launch at login (`SMAppService`) moved to Phase 3 Settings.
 
 d. **NotchPanel.**
    - Borderless, non-activating `NSPanel` above the menu bar. Joins all Spaces and full-screen apps.
@@ -54,7 +56,7 @@ i. **Manual checks on a real notched Mac.** These cannot run in CI.
    - Clicks next to the closed notch reach the apps underneath.
    - Panel behaviour over full-screen apps and across Spaces.
    - Reposition when an external display is connected or removed.
-   - Every item from step a that could only be confirmed on a device, including:
+   - Deferred (Shash, 2026-10-24): the step a items that can only be confirmed on a device need features outside Phase 2. Each one is checked in the phase that builds its feature:
      - Automation prompts (Release build, D11): does macOS show one prompt per target app, on the first Apple Event? Not stated in Apple docs; confirm on device.
      - Privacy grants after re-signing: does an ad-hoc rebuild re-prompt or lose grants? Not stated in Apple docs; confirm on device.
      - Clipboard (D7): under "ask" (Apple's default), does reading `changeCount` or `types` alone trigger the alert? Does `changeCount` still work under Always Deny?
@@ -64,11 +66,12 @@ i. **Manual checks on a real notched Mac.** These cannot run in CI.
      - Screen capture: are our windows excluded via ScreenCaptureKit filters (Apple says not to rely on `sharingType`)?
 
 j. **Review and records.**
-   - `code-reviewer`, `performance-optimizer` and `accessibility-auditor` (the notch UI changed).
-   - `security-auditor`, because the entitlements changed in step b (CLAUDE.md).
+   - Per branch: `test-writer` and `code-reviewer`.
+   - Once, after `feat/module-registry`: `accessibility-auditor`, `performance-optimizer` and `docs-writer`.
+   - No `security-auditor` in Phase 2 (Shash, 2026-10-24): c–f change no entitlements or signing, and step b's entitlements were reviewed under D13.
    - Update docs/DECISIONS.md and docs/ARCHITECTURE.md.
 
 ## Out of scope for Phase 2
-Now Playing real sources, file tray, clipboard, and notes modules (Phase 3). MediaRemote (v0.2). Lock screen (beyond v0.2). Sparkle.
+Now Playing real sources, file tray, clipboard, and notes modules (Phase 3). MediaRemote (v0.2). Lock screen (beyond v0.2). Sparkle. Launch at login (Phase 3 Settings).
 
 Clipboard module (Phase 3), first step: re-run probe copies 4–6 (detection call and text reads) under the preview flag (`defaults write com.shashwat.ClipboardProbe EnablePasteboardPrivacyDeveloperPreview -bool yes`), with the probe's main-actor fix (D7b); delete the flag afterwards. See docs/research/clipboard-probe-2026-10-24.md §4.

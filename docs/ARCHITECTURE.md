@@ -1,6 +1,6 @@
 # Architecture
 
-Status: Phase 1 proposal, 2026-10-24. Nothing here is built yet. The only app code is the scaffold `DropNotch/DropNotchApp.swift` [V]. Once Shash approves this document, it becomes the source of truth for module layout (CLAUDE.md).
+Status: Phase 1 proposal, 2026-10-24; Phase 2 is building it branch by branch (TASK.md). Once Shash approves this document, it becomes the source of truth for module layout (CLAUDE.md).
 
 Tags: **[V]** verified (seen in this repo, or in a clean-room note under [research/](research/)); **[I]** inferred (Apple-platform knowledge not checked against Apple documentation in Phase 1, or reasoning). Design proposals are not claims and carry no tag. Every [I] item about an Apple API should be checked against Apple's documentation when Phase 2 implements it.
 
