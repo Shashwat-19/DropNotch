@@ -7,12 +7,12 @@ Tags: **[V]** seen in a log, a command's output, Apple documentation, or reporte
 ## 1. Clipboard-access probe
 
 ### Question
-From macOS 15.4, Apple says the general pasteboard "asks upon programmatic access" by default [V: https://developer.apple.com/documentation/appkit/nspasteboard/accessbehavior-swift.enum]. D7 needs to know whether a background app that watches `changeCount` and reads new items will make macOS show an alert, and which kind of read triggers it.
+From macOS 15.4, Apple says the general pasteboard's default is "to ask upon programmatic access" [V: https://developer.apple.com/documentation/appkit/nspasteboard/accessbehavior-swift.enum]. D7 needs to know whether a background app that watches `changeCount` and reads new items will make macOS show an alert, and which kind of read triggers it.
 
 ### Set-up
 - Mac: macOS 27.0.1 (build 26A434) [V: probe log].
-- Probe: a throwaway Swift app built in the session scratchpad, not in the repo. Bundle ID `com.shashwat.ClipboardProbe`, agent app (`LSUIElement`), ad-hoc signed with the hardened runtime (`flags=0x10002(adhoc,runtime)`) [V: `codesign -dvvv`]. App Nap disabled for the run so the 0.5 s timer isn't throttled.
-- Launch: `/usr/bin/open -n ClipboardProbe.app`. Its parent was `launchd` (PPID 1) and LaunchServices registered it under its own bundle ID, so macOS treated it as its own app, not as part of Terminal or iTerm2 [V: `ps`, `lsappinfo`].
+- Probe: a throwaway Swift app built in the session scratchpad, not in the repo. Bundle ID `com.shashwat.ClipboardProbe`, agent app (`LSUIElement`), ad-hoc signed with the hardened runtime (`flags=0x10002(adhoc,runtime)`) [V: `codesign -dvvv`]. App Nap disabled for the run (a `beginActivity` call in the probe source) so the 0.5 s timer isn't throttled.
+- Launch: `/usr/bin/open -n ClipboardProbe.app`. Its parent was `launchd` (PPID 1) and LaunchServices registered it under its own bundle ID [V: `ps`, `lsappinfo`]; how macOS attributes its pasteboard reads is [I].
 - Other apps: no running app's name suggested clipboard, notch, paste or island. Canopy (a notch app) was running at first; Shash quit it before the run [V: `lsappinfo`, before and after].
 - Copies: six strings ("dropnotch probe test 1" to 6) placed on the clipboard with `pbcopy`, 4 s apart, 18:12:24 to 18:12:44 local time [V: command output].
 - What the probe read, by copy number: 1–2 `changeCount` only; 3 the `types` list; 4 `detectedPatterns(for:)`, which Apple documents as not notifying the user; 5–6 the string itself. It logged lengths and timings only, never content.
@@ -28,28 +28,28 @@ From macOS 15.4, Apple says the general pasteboard "asks upon programmatic acces
 | 5 | string | 23 characters | 0.00 s | `alwaysAllow` |
 | 6 | string | 23 characters | 0.00 s | `alwaysAllow` |
 
-All six copies were seen; the probe exited normally [V: probe log]. **No alert appeared on any copy** [V: reported by Shash]. System Settings › Privacy & Security had no paste or clipboard section to inspect [V: reported by Shash].
+All six copies were seen; the log ends "done after 6 copies" [V: probe log]. **No alert appeared on any copy** [V: reported by Shash]. System Settings › Privacy & Security had no paste or clipboard section to inspect [V: reported by Shash].
 
-Earlier attempts don't count: in the first run only one of Shash's TextEdit copies reached the clipboard (the system `changeCount` stayed at 178) [V: log and a counter-only check], so that run was discarded.
+Earlier attempts don't count: in the first run (copies made by hand in TextEdit [V: reported by Shash]) the system `changeCount` stayed at 178 after the first copy [V: log and a counter-only check], so that run was discarded.
 
 ### What this does and doesn't show
-- On this Mac, today, an ad-hoc-signed background app reported `alwaysAllow` and could read clipboard text silently [V].
-- It does **not** show what happens when the setting is "ask", which Apple documents as the default. We couldn't put the probe into "ask": there was no setting to change, and we didn't find a documented way to reset it [I]. So the original question — do `changeCount` or `types` reads count as access under "ask"? — is still open.
-- Why it was `alwaysAllow` is unknown [I]. Possibilities: a different default on macOS 27, a setting on this Mac, the copy source being a command-line tool rather than an app, or how macOS treats apps without a Team ID. None is confirmed.
+- On this Mac, today, an ad-hoc-signed background app reported `alwaysAllow` and read clipboard text with no alert reported [V].
+- It does **not** show what happens when the setting is "ask", which Apple documents as the default. System Settings shows the per-app setting only for apps that have already triggered a pasteboard alert [V: https://developer.apple.com/documentation/appkit/nspasteboard/accessbehavior-swift.enum]. This probe never triggered one, so there was no setting to switch to "ask". So the original question — do `changeCount` or `types` reads count as access under "ask"? — is still open.
+- Apple documents that an app which has never triggered an alert reports `default` [V: https://developer.apple.com/documentation/appkit/nspasteboard/accessbehavior-swift.enum], so the observed `alwaysAllow` is unexplained, not just unknown [I]. Possibilities: a different default on macOS 27, a setting on this Mac, the copy source being a command-line tool rather than an app, or how macOS treats apps without a Team ID. None is confirmed.
 - One Mac, one macOS build, one signing type. A Developer ID build on another Mac may behave differently [I].
 
 ## 2. Apple-docs check of inferred claims
 
-All [I]-tagged Apple-API claims in ARCHITECTURE.md, RISKS.md, FEATURE_MATRIX.md and DECISIONS.md were checked against developer.apple.com (or support.apple.com where the developer docs don't cover it). 34 corrections were applied (commit 4862f9f). The ones that change plans:
-- **Clipboard:** "ask on programmatic access" from macOS 15.4; Always Deny fails silently; `detectedPatterns(for:)` doesn't notify but only reports matches; Apple defines no concealed or transient type (the markers are the nspasteboard.org convention) [V, URLs in RISKS.md §2].
+The [I]-tagged Apple-API claims in ARCHITECTURE.md, RISKS.md, FEATURE_MATRIX.md and DECISIONS.md were checked against developer.apple.com (or support.apple.com where the developer docs don't cover it), and about 30 lines were corrected (commit 4862f9f). These stay [I] and still need a check or a device test: `safeAreaInsets` and auxiliary-area availability (ARCHITECTURE §7), the Carbon hot-key API, own-memory reads via Mach task info, and the CoreAudio device list and system volume (FEATURE_MATRIX). The ones that change plans:
+- **Clipboard:** "ask on programmatic access" from macOS 15.4; Always Deny fails silently [V: https://developer.apple.com/documentation/appkit/nspasteboard/accessbehavior-swift.enum]; `detectedPatterns(for:)` works "without notifying the person using the app" but only reports matches [V: https://developer.apple.com/documentation/appkit/nspasteboard/detectedpatterns(for:)]; Apple defines no concealed or transient type, so the markers are the nspasteboard.org convention [V: https://developer.apple.com/documentation/appkit/nspasteboard/pasteboardtype].
 - **Screen capture:** Apple says not to use `sharingType` to hide content [V].
 - **Logging:** `os.Logger` redacts strings by default but not numbers [V].
-- **Displays:** a display ID usually stays the same only until restart [V].
-- **Remaining [I] tags (69):** these are about Atoll, Canopy or MediaRemote, design reasoning, or things only a device can confirm. The device checks are listed in TASK.md step i.
+- **Displays:** a display ID typically stays constant until the machine restarts [V: https://developer.apple.com/documentation/coregraphics/cgdirectdisplayid], so a saved display choice falls back to the built-in display when no match is found.
+- **Remaining [I] tags:** apart from the list above, these are about Atoll, Canopy or MediaRemote, design reasoning, or things only a device can confirm. The device checks are listed in TASK.md step i.
 
 ## 3. What this means for D7
 
-**Recommendation: clipboard history stays in the MVP, with three design changes.** It doesn't need to move to v0.2: the reads work, and no alert appeared here. But Apple documents "ask" as the default, so the design has to handle it rather than rely on this Mac's `alwaysAllow`.
+**Recommendation: clipboard history stays in the MVP, with three design changes.** It doesn't need to move to v0.2: reads worked under `alwaysAllow`, and no alert was reported under that setting. But Apple documents "ask" as the default, so the design has to handle it rather than rely on this Mac's `alwaysAllow`.
 
 1. **Check `accessBehavior` when the user turns clipboard history on** (macOS 15.4+, behind `#available`; the target is 14.0).
    - `alwaysAllow`: start watching.
@@ -59,3 +59,14 @@ All [I]-tagged Apple-API claims in ARCHITECTURE.md, RISKS.md, FEATURE_MATRIX.md 
 3. **Re-check `accessBehavior` on each read** and stop watching if it becomes `alwaysDeny`, because Apple says denied access fails silently [V].
 
 Still to confirm on a device under "ask" (TASK.md step i): whether reading `changeCount` or `types` alone triggers the alert, and whether `changeCount` still works under Always Deny.
+
+## 4. Preview-flag run (partial)
+
+Shash asked for a run under Apple's developer-preview flag for the pasteboard privacy alert: `defaults write com.shashwat.ClipboardProbe EnablePasteboardPrivacyDeveloperPreview -bool yes`.
+
+- **The flag works on macOS 27.0.1 (26A434):** with it set, `accessBehavior` at launch was `default` instead of `alwaysAllow` [V: probe log, two launches].
+- **Change count (copies 1–2) and types (copy 3): no alert** under the preview setting [V: probe log; no alert reported by Shash, two runs].
+- **Detection call (copy 4) and text reads (copies 5–6): untested.** In both preview runs the probe aborted at copy 4. The cause was a bug in the probe, not macOS: it called `detectedPatterns(for:)` from a Swift `Task` that wasn't on the main thread, and under `default` AppKit waited on a main-thread-only run loop and threw `NSInternalInconsistencyException` ("-[HIRunLoopSemaphore wait:] has been invoked on a secondary thread") [V: captured stderr, run 4]. Under `alwaysAllow` the same call didn't take that path. The probe was fixed (`Task { @MainActor in … }`), but testing was paused before a re-run.
+- **Follow-ups:** D7b (pasteboard calls on the main thread). Re-running copies 4–6 under the preview flag is the first step of the Clipboard module (TASK.md).
+- The flag was deleted afterwards: `defaults delete com.shashwat.ClipboardProbe EnablePasteboardPrivacyDeveloperPreview` [V: `defaults read` reports the key missing].
+
