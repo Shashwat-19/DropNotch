@@ -49,6 +49,14 @@ struct NotchGeometry: Equatable {
                                       scale: backingScale)
     }
 
+    func frame(for phase: NotchHoverStateMachine.Phase) -> CGRect {
+        switch phase {
+        case .closed: closedFrame
+        case .peek: peekFrame
+        case .open: openFrame
+        }
+    }
+
     /// AppKit's y axis points up, so a frame hanging from the top edge has `maxY == top`.
     private static func topCentred(midX: CGFloat, top: CGFloat, size: CGSize) -> CGRect {
         CGRect(x: midX - size.width / 2, y: top - size.height, width: size.width, height: size.height)
