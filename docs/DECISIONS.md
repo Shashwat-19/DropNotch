@@ -175,7 +175,7 @@ Terms for a reader new to Swift or AppKit:
 **Why:** macOS has no public notification for pasteboard changes, so polling the integer `changeCount` is the cheapest reliable check. Skipping concealed items keeps passwords from entering history. Memory-only storage keeps copied text out of preference files by default. The 25-item cap bounds memory use.
 
 **Consequences / follow-ups:**
-- Phase 2 first tests the macOS clipboard-access warning on the current macOS and reports to Shash before the module is built.
+- Phase 2 step a probe, 2026-10-24 (docs/research/clipboard-probe-2026-10-24.md): on macOS 27.0.1 an ad-hoc background app reported `accessBehavior` = `alwaysAllow`, read the change counter, types and text with no alert [V]. Behaviour under "ask" (Apple's documented default) is still untested. Proposed design changes in that report (check `accessBehavior` on enable, cheapest-read order, stop on Always Deny) await Shash's approval.
 - The marker names follow the nspasteboard.org convention. This is to be confirmed (ARCHITECTURE.md §8).
 - This poll is the only always-on timer in the MVP (ARCHITECTURE.md §9).
 

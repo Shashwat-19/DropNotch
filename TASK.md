@@ -12,7 +12,7 @@ Canopy's public pages and Atoll's features were analysed, and the decisions D1â€
 
 Decision numbers (D1â€“D10) refer to docs/DECISIONS.md. Start with the `planner` agent and send its plan to Shash. Steps a and b are verification and project setup; step a ends with a report to Shash, and no module code is built until Shash has read it.
 
-a. **Step 0: verify before building.** Report to Shash before continuing.
+a. **Step 0: verify before building.** Done 2026-10-24; report in docs/research/clipboard-probe-2026-10-24.md, awaiting Shash's review.
    - **Clipboard warning probe (D7).** Build a throwaway probe in a scratch folder outside DropNotch/. It is not committed. It reads `NSPasteboard.general` in the background when `changeCount` changes. Record: whether macOS shows a privacy alert or prompt on the current macOS version; what triggers it; whether reading only `changeCount` and `types` avoids it. Report the result to Shash before the Clipboard module is built.
    - **Apple API claims.** Check every [I]-tagged Apple API claim in docs/ARCHITECTURE.md, docs/RISKS.md and docs/FEATURE_MATRIX.md against developer.apple.com. Re-tag each as [V: doc URL], or correct it. Anything that can only be confirmed on a device goes on the manual-check list in step i.
 
