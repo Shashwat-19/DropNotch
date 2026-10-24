@@ -1,4 +1,5 @@
 import SwiftUI
+import os
 
 /// Hosts the SwiftUI notch content inside `NotchPanel` and reports hover to `NotchState`.
 final class NotchHostingView: NSHostingView<NotchRootView> {
@@ -6,7 +7,8 @@ final class NotchHostingView: NSHostingView<NotchRootView> {
 
     required init(rootView: NotchRootView) {
         super.init(rootView: rootView)
-        // NotchGeometry decides the panel's size; stop SwiftUI's content size from resizing it.
+        // NotchGeometry decides the size; no Auto Layout constraints from SwiftUI's content.
+        // This alone doesn't stop window resizing; NotchPanel's container does (D16).
         sizingOptions = []
         // `.activeAlways`: DropNotch is never the active app, and without it the area only
         // reports while it is. `.inVisibleRect`: the area follows the view as the panel
@@ -25,11 +27,21 @@ final class NotchHostingView: NSHostingView<NotchRootView> {
     // SwiftUI's own hover tracking also calls these, so only our area's events are forwarded.
     override func mouseEntered(with event: NSEvent) {
         super.mouseEntered(with: event)
+        logPointer("mouseEntered", event)
         if event.trackingArea === hoverArea { rootView.state.send(.pointerEntered) }
     }
 
     override func mouseExited(with event: NSEvent) {
         super.mouseExited(with: event)
+        logPointer("mouseExited", event)
         if event.trackingArea === hoverArea { rootView.state.send(.pointerExited) }
+    }
+
+    private func logPointer(_ name: String, _ event: NSEvent) {
+        let ours = event.trackingArea === hoverArea
+        let pointer = NSStringFromPoint(NSEvent.mouseLocation)
+        let window = NSStringFromRect(self.window?.frame ?? .zero)
+        Logger.notch.debug(
+            "\(name, privacy: .public) ours: \(ours), pointer \(pointer, privacy: .public), panel \(window, privacy: .public)")
     }
 }

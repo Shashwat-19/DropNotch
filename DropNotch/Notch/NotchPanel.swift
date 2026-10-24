@@ -19,7 +19,15 @@ final class NotchPanel: NSPanel {
         // One level above the menu bar's, so the panel draws over it.
         level = .statusBar
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
-        self.contentView = contentView
+        // An NSHostingView that is a window's contentView resizes the window to fit its
+        // SwiftUI content, even with `sizingOptions = []`. Wrapping it in a plain view
+        // keeps the frame under NotchGeometry's control (D16).
+        let container = NSView()
+        // Autoresizing only adds size changes, so start from the container's bounds.
+        contentView.frame = container.bounds
+        contentView.autoresizingMask = [.width, .height]
+        container.addSubview(contentView)
+        self.contentView = container
     }
 
     // Phase 2 has no text input, so the panel never takes keyboard focus.

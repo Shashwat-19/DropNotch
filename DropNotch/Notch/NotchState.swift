@@ -45,19 +45,25 @@ final class NotchState {
         }
         Logger.notch.debug("Notch panel on display \(id), notch: \(chosen.geometry.hasNotch)")
         geometry = chosen.geometry
-        panel.setFrame(chosen.geometry.closedFrame, display: true)
+        setPanelFrame(chosen.geometry.closedFrame, reason: "screen change")
         // Shows the panel without activating DropNotch.
         panel.orderFrontRegardless()
     }
 
     /// Called by the tracking area in `NotchHostingView` and by this class's own timer.
     func send(_ event: NotchHoverStateMachine.Event) {
-        switch hover.handle(event) {
+        let old = hover
+        let effect = hover.handle(event)
+        let summary = "\(event): \(old.phase) → \(hover.phase), inside \(old.pointerInside) → \(hover.pointerInside), "
+            + "effect \(effect.map { "\($0)" } ?? "none")"
+        Logger.notch.debug("Hover \(summary, privacy: .public)")
+        switch effect {
         case .startOpenDelay?:
             startTimer(NotchHoverStateMachine.openDelay, then: .openDelayElapsed)
         case .startExitDebounce?:
             startTimer(NotchHoverStateMachine.exitDebounce, then: .exitDebounceElapsed)
         case .cancelTimer?:
+            Logger.notch.debug("Timer cancelled")
             timer?.cancel()
         case nil:
             break
@@ -67,10 +73,13 @@ final class NotchState {
 
     private func startTimer(_ delay: Duration, then event: NotchHoverStateMachine.Event) {
         timer?.cancel()
+        let name = "\(event)"
+        Logger.notch.debug("Timer started: \(name, privacy: .public) after \(delay.description, privacy: .public)")
         // One-shot, cancellable; inherits the main actor (ARCHITECTURE.md §9).
         timer = Task { [weak self] in
             try? await Task.sleep(for: delay)
             guard !Task.isCancelled else { return }
+            Logger.notch.debug("Timer fired: \(name, privacy: .public)")
             self?.send(event)
         }
     }
@@ -80,6 +89,8 @@ final class NotchState {
     private func show(_ phase: NotchHoverStateMachine.Phase) {
         guard phase != displayedPhase, let geometry, let panel else { return }
         changeCount += 1
+        let step = "\(displayedPhase) → \(phase), change \(changeCount)"
+        Logger.notch.debug("Show \(step, privacy: .public)")
         let animation = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil : Self.spring
         if phase == .closed {
             let started = changeCount
@@ -87,18 +98,30 @@ final class NotchState {
                 displayedPhase = .closed
             } completion: { [weak self] in
                 // Skip if the pointer came back or the screen changed while the shape was shrinking.
-                guard let self, self.changeCount == started, let geometry = self.geometry else { return }
-                self.panel?.setFrame(geometry.closedFrame, display: true)
+                guard let self, self.changeCount == started, let geometry = self.geometry else {
+                    Logger.notch.debug("Close completion skipped (started at change \(started))")
+                    return
+                }
+                self.setPanelFrame(geometry.closedFrame, reason: "close completion")
             }
         } else {
             let target = geometry.frame(for: phase)
             // After re-entering during a close the panel is still larger; keep it, so the
             // pointer stays inside and the shape isn't clipped mid-animation.
             if !panel.frame.contains(target) {
-                panel.setFrame(target, display: true)
+                setPanelFrame(target, reason: "grow")
+            } else {
+                Logger.notch.debug("Grow kept larger frame \(NSStringFromRect(panel.frame), privacy: .public)")
             }
             withAnimation(animation) { displayedPhase = phase }
         }
+    }
+
+    private func setPanelFrame(_ frame: CGRect, reason: String) {
+        guard let panel else { return }
+        let change = "\(NSStringFromRect(panel.frame)) → \(NSStringFromRect(frame))"
+        Logger.notch.debug("Panel frame (\(reason, privacy: .public)): \(change, privacy: .public)")
+        panel.setFrame(frame, display: true)
     }
 }
 
