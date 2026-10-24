@@ -37,7 +37,7 @@ d. **NotchPanel.**
    - Repositions on screen-parameter changes, debounced 200 ms.
    - Displays are keyed by `CGDirectDisplayID`, never by name.
 
-e. **Hover state machine.** Closed → peek → open. 0.3 s open delay, 0.1 s exit debounce, spring animations. Uses an AppKit tracking area. No polling loop.
+e. **Hover state machine.** Closed → peek → open. 0.12 s open delay (was 0.3 s, retuned on device, D18), 0.1 s exit debounce, spring animations. Uses an AppKit tracking area. No polling loop.
 
 f. **Module protocol, registry and stub module.**
    - `NotchModule` protocol and `ModuleRegistry` (ARCHITECTURE.md §3).

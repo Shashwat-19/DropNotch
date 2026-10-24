@@ -74,8 +74,8 @@ Transient HUDs (timed overlays shown for a few seconds: battery, Bluetooth conne
 - Models are `@Observable` classes on the main actor (Observation framework, macOS 14+ [V: https://developer.apple.com/documentation/observation/observable]; matches the 14.0 target [V: project.yml]). SwiftUI views update only for the observable properties their body reads [V: https://developer.apple.com/documentation/swiftui/migrating-from-the-observable-object-protocol-to-the-observable-macro].
 - One model per module (for example `NowPlayingModel`, `TrayStore`) plus one `NotchState` for the hover state machine and layout.
 - Services expose `AsyncStream`s or async functions (CLAUDE.md). A module consumes a stream inside a `Task` it starts in `start()` and cancels in `stop()`.
-- The hover state machine (`closed → peek → open`) is a plain value type, `NotchHoverStateMachine`, so it can be unit-tested without a window. Its `handle(_:)` updates the phase and returns which timer to start or cancel; `NotchState` owns that single timer, not the views (D18).
-- **Peek** is the phase while the pointer is inside and the 0.3 s open delay runs. The shape grows a few points so the user sees the notch has noticed them. Timed HUDs (section 3) will reuse it later.
+- The hover state machine (`closed → peek → open`) is a plain value type, `NotchHoverStateMachine`, so it can be unit-tested without a window. Its `handle(_:)` updates the phase and returns which timer to start or cancel; `NotchState` owns the two timers (open delay, exit debounce), not the views (D18).
+- **Peek** is the phase while the 0.12 s open delay runs, and through the exit debounce after a brief exit. The shape grows (12 pt each side, 8 pt down) so the user sees the notch has noticed them and the pointer has a bigger target to stay inside. Timed HUDs (section 3) will reuse it later.
 
 ## 5. Persistence
 
@@ -144,7 +144,7 @@ Target: zero wake-ups while idle, apart from the clipboard poll. Intervals below
 | Timer | Interval | Runs when | Why it can't be an event |
 |---|---|---|---|
 | Clipboard `changeCount` poll | 0.5 s, tolerance 0.25 s (D7) | Clipboard module enabled and screen awake | The `changeCount` page describes only the counter; no change notification is documented [V: https://developer.apple.com/documentation/appkit/nspasteboard/changecount]. Reading one integer per tick is cheap [I: not measured]. Atoll uses 0.5 s [V]. |
-| Hover open delay | One-shot 0.3 s | Pointer enters the closed notch | Avoids opening when the pointer just passes through. Atoll's default is 0.3 s [V]. |
+| Hover open delay | One-shot 0.12 s | Pointer enters the closed notch | Avoids opening when the pointer just passes through. Atoll's default is 0.3 s [V]; that felt slow on the device (D18). |
 | Hover exit debounce | One-shot 0.1 s | Pointer leaves | Avoids flicker at the edge [V: Atoll uses 100 ms]. |
 | Peek dismissal | One-shot, 2–3 s | A peek HUD is showing | Timed by definition. |
 | Screen-change debounce | One-shot 0.2 s | Display change burst | Coalesces bursts. |

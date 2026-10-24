@@ -436,8 +436,16 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Decision:**
 - `NotchHostingView` adds one `NSTrackingArea` with `.mouseEnteredAndExited`, `.activeAlways` and `.inVisibleRect`. Its enter and exit events go to `NotchState.send(_:)`.
-- `NotchHoverStateMachine` is a value type. Its `handle(_:)` returns an effect (start the open delay, start the exit debounce, or cancel the timer). `NotchState` runs that effect with one cancellable `Task.sleep`, and starting a timer replaces the running one.
+- `NotchHoverStateMachine` is a value type. Its `handle(_:)` returns an effect: start or cancel the open delay, or start or cancel the exit debounce. `NotchState` runs each kind with its own cancellable `Task.sleep`, and starting a timer replaces a running one of the same kind.
 - Peek is the phase between the pointer entering and the open delay ending. The shape grows by `NotchGeometry.peekGrowth` (decision 2 of the Phase 2 plan, Shash).
+- A brief exit during peek doesn't restart the open delay. The delay keeps running through the exit debounce. If it ends while the pointer is outside, the notch opens as soon as the pointer comes back within the debounce, and stays closed if it doesn't.
+
+**Retuned 2026-10-25 (fix/hover-glitch, Shash):** device recordings showed hover → open taking about 0.6 s, and most peeks closing without opening.
+- Open delay: 0.3 s → 0.12 s.
+- Peek growth: (16, 4) → (24, 8) pt, so 12 pt each side and 8 pt down, a bigger target to stay inside.
+- The open delay now survives a brief exit (above). It used to share one timer with the exit debounce, so an exit cancelled it.
+- That run's log rejected pointer jitter as the cause: there were no re-entries during peek, so the change to the open delay would have saved none of the 32 failed peeks. 15 left downwards within 0.3 s, which the bigger peek helps with.
+- The other 17 exited at exactly the screen's top edge (y = maxY): a pointer pushed against the top of the screen reports y = maxY, which is outside the panel frame. Neither change fixes that. A fix that extends the panel 1 pt above the screen is proposed and awaiting approval [I: device check].
 
 **Evidence:**
 - `.activeAlways` delivers events "regardless of first-responder status, window status, or application status" [V: https://developer.apple.com/documentation/appkit/nstrackingarea/options-swift.struct/activealways].
@@ -458,7 +466,7 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 **Date:** 2026-10-24 · **Status:** Accepted (Phase 2 plan, step e)
 
 **Decision:**
-- When the notch grows (to peek or open), `NotchState` sets the panel to the larger frame first, then animates the shape with a spring (0.35 s, bounce 0.15).
+- When the notch grows (to peek or open), `NotchState` sets the panel to the larger frame first, then animates the shape with a spring (0.25 s, no bounce; was 0.35 s with bounce 0.15 until 2026-10-25, which felt slow, and its overshoot was cut flat by the panel's edges).
 - When it closes, the shape animates first. The `withAnimation` completion then shrinks the panel to the current geometry's closed frame. It does this only if nothing has changed since the close started: no phase change and no screen change, tracked by a counter.
 - When it grows while the panel is already larger than the target (re-entering during a close), the panel keeps its larger frame.
 - With Reduce Motion on, the animation is `nil`, so the change is immediate.
@@ -477,4 +485,4 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - The shape can only draw inside the panel. So the panel has to be big enough before the shape grows, and it can't shrink until the shape has finished shrinking.
 - The counter matters because the pointer can come back, or a display can be unplugged, during the close animation. Without it, an old completion would shrink the panel at the wrong moment or move it back to the old screen's frame (code-reviewer W1).
 
-**Trade-off:** for about 0.35 s after closing starts, the panel's larger, mostly transparent frame may still catch clicks and hover [I: device check; whether macOS passes clicks through fully transparent pixels is not documented]. Re-entering in that time peeks and then reopens the notch.
+**Trade-off:** for about 0.25 s after closing starts, the panel's larger, mostly transparent frame may still catch clicks and hover [I: device check; whether macOS passes clicks through fully transparent pixels is not documented]. Re-entering in that time peeks and then reopens the notch.
