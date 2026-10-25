@@ -51,7 +51,7 @@ Builds are ad-hoc signed for local use. There are no signed or notarised release
 
 DropNotch asks for a permission only when you first use the feature that needs it, never at launch.
 
-**Automation (Music, Spotify).** Needed for the play/pause, next and previous controls. macOS asks the first time you click one of these controls for Music or Spotify. The title and artist appear without this permission; only the controls need it. (Without it, a track that is already playing when DropNotch starts shows only the player's name until the next track change.)
+**Automation (Music, Spotify).** Needed for the play/pause, next and previous controls. macOS asks the first time you click one of these controls for Music or Spotify. The title and artist appear without this permission. The controls, the artwork, Music's progress bar and seeking need it. (Without it, a track that is already playing when DropNotch starts shows only the player's name until the next track change.)
 
 If you choose Don't Allow, the notch shows "Allow control of Music (or Spotify) in System Settings". To allow it later, open System Settings › Privacy & Security › Automation, find DropNotch and turn on Music or Spotify.
 
@@ -59,7 +59,9 @@ The prompt and the denied state are not yet checked on a device; this section de
 
 ## Privacy
 
-DropNotch does not include analytics or telemetry, and has no network features: nothing leaves your Mac.
+DropNotch does not include analytics or telemetry.
+
+Its one network request is for Spotify artwork: when a new Spotify track starts, it downloads that track's cover image over HTTPS from Spotify's image server (`i.scdn.co`), using the image address Spotify itself provides. Nothing else is sent, no cookies are kept, and the image is held in memory only. Music artwork comes from the Music app, with no network.
 
 Now Playing reads track details from the notifications Music and Spotify broadcast on your Mac, and sends its commands straight to the player. Titles and artists are held in memory while shown, and are never saved to disk or logged.
 

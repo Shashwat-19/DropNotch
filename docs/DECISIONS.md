@@ -629,7 +629,7 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
   3. A player that quits drops out. A state-only payload from a player that isn't known to be running is ignored: both players post one on quit, and it can arrive after `NSWorkspace`'s quit notice (code-reviewer, 2026-10-25).
   4. A running player whose state is unknown (no notification yet, no read allowed) shows only when no player has a known state; Music before Spotify. It shows the player name and controls, which is the way to the first prompt.
   5. Neither running: "Nothing playing".
-- No timers or polling. Nothing is added to ARCHITECTURE §9's timer table.
+- No timers or polling. Nothing is added to ARCHITECTURE §9's timer table. (Still true with D26: the progress bar is animated by Core Animation, not an app timer.)
 
 **Alternatives considered:**
 - The block-based `addObserver(forName:object:queue:using:)`: it can't set the suspension behaviour.
@@ -645,3 +645,75 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - Impostors: an app that reuses Music's or Spotify's bundle ID would receive our events and be named in the prompt. The events carry no user data. Checking the target's code signature is deferred; known limit.
 - Device checks 5–7, 10, 13 and 14 in TASK.md Phase 3.
 - Device check (Shash, 2026-10-25, Release build on a notched Mac): Now Playing works for Music and Spotify, with title, artist, play/pause, next and previous all correct. Switching between the two players works: checks 5 and 6 passed. Checks 1–4 and 7–16 have not been tested and remain open, to run before release.
+
+---
+
+## D25. Spotify artwork is DropNotch's first network access: one HTTPS GET per track to i.scdn.co
+
+**Date:** 2026-10-25 · **Status:** Accepted (Shash, `feat/now-playing-media` plan, decisions 2 and 7)
+
+**Decision:**
+- Spotify artwork comes from the track's `artwork url`, read by Apple Event only when Automation is already granted (D23). Its notification carries no URL [V: docs/research/now-playing-probe-2026-10-25.md]. Without the grant the view shows Spotify's app icon.
+- One GET per Spotify track id, and only if the URL is `https`, host exactly `i.scdn.co`, no user or password, port 443 or none [V: host seen by the probe, docs/research/now-playing-media-probe-2026-10-25.md].
+- `URLSession` with an ephemeral configuration: no cookie storage, no URL cache, no credential storage. Redirects are refused. Request timeout 10 s.
+- Accepted: status 200, `Content-Type` `image/jpeg` or `image/png`, at most 2 MB (the probe saw 39–61 KB). Decoded off the main thread to a small thumbnail with ImageIO, held in memory only, one per player.
+- Any failure shows the app icon. No retry until the track changes. The URL is never logged; only the outcome.
+- Music artwork needs no network: it is read from Music by Apple Event (D26).
+- What leaves the Mac: the GET request with `URLSession`'s default headers (including a User-Agent naming DropNotch and the CFNetwork and Darwin versions [I: exact header set]), the Mac's IP address, and the host name in TLS. The URL names an image Spotify itself chose for the track Spotify is playing.
+- No entitlement or Info.plist key: DropNotch is unsandboxed (D4), so the sandbox's outgoing-network entitlement doesn't apply [I: confirm on Apple's entitlement page]. The default App Transport Security rules accept a valid-TLS host [I].
+
+**Alternatives considered:**
+- Spotify's public oEmbed endpoint: no Automation grant needed, but a second host, and the request carries the track id. Rejected by Shash.
+- No Spotify artwork (app icon only). Rejected: artwork is the "song icon" for the compact branch.
+- A disk cache. Rejected: one image per player in memory is enough, and nothing about listening is written to disk.
+- An "artwork downloads" off switch now. Deferred by Shash to Phase 3 Settings.
+
+**Why:** the only request goes to the image server of the app that is already playing the track, carries nothing DropNotch knows beyond the URL Spotify gave it, and fails safely to the app icon.
+
+**Trade-offs / follow-ups:**
+- README Privacy, ARCHITECTURE §10 and RISKS §4 now describe this request.
+- Images from the network are untrusted input to ImageIO: size cap before decoding, thumbnail only; security-auditor reviews it.
+- Device check 21 (TASK.md Phase 3, branch 2): only `i.scdn.co`, at most one request per Spotify track, none for Music, none while idle.
+
+---
+
+## D26. Progress, artwork reads and seek; favourite dropped
+
+**Date:** 2026-10-25 · **Status:** Accepted (Shash, after the step 0 probe)
+
+**Decision:**
+- Units, all normalised to seconds [V: probe]:
+
+| Value | Music | Spotify |
+|---|---|---|
+| Notification duration | `Total Time` ms | `Duration` ms |
+| Notification position | none | `Playback Position` s |
+| Apple Event `pDur` | s | ms (its dictionary says seconds) |
+| Apple Event `pPos` | s | s |
+
+- `NowPlayingInfo` gains a track id (Music: `PersistentID` as unsigned upper-case hex, which equals `persistent ID`; Spotify: `Track ID`, which equals `id`), a duration, a position anchor (seconds at a time; rate fixed at 1, since scripting reports none), the Spotify artwork URL and the artwork thumbnail.
+- Reads, all only after `permission(ask: false)` returns `.ok`, so none can prompt (D23):
+  - Music: position, duration and id after every state notification (its notification has no position).
+  - Spotify: position, duration, id and artwork URL when a track id is first seen, which includes launch (its launch notification's position is unreliable [V: probe]). Other Spotify notifications carry position and duration.
+  - Both: the position each time the notch opens, because seeks by Apple Event send no notification and seeks in the player's window may not [V: probe; the second I].
+  - Both: the position once after a seek that returned `.ok`.
+  - Music artwork (`raw data` of artwork 1 of the current track) when Music's track id changes. Capped at 10 MB (the probe saw about 0.5 MB).
+- -1728 and non-number replies mean unknown, never zero.
+- Merging (`NowPlayingSelection`): a state-only payload keeps every track field and re-anchors the position where it was; a payload with the same track id keeps the artwork and URL; a new track id drops artwork, URL and position. A read is merged only if no newer report for that player arrived meanwhile, and doesn't count as a report for choosing the player on screen. Artwork is accepted only for the track id it was fetched for.
+- The bar: a thin layer animated by Core Animation from the current fraction to 1 over the remaining time, while playing; still while paused; restarted from the new anchor on every update. The app runs no timer for it [V: probe, 0 wake-ups]. It exists only while the notch is open, because the open content is removed on close (D19).
+- Seek: click or drag on the bar sends `core/setd` on `pPos` through the same click path as the other controls, so the first one may show the Automation prompt (D23). VoiceOver adjusts in 10 s steps.
+- Favourite is not built. `favorited` (`pLov`) read true for a catalogue track that Music's own menu showed as not a favourite [V: probe, Shash], so the button would show the wrong state.
+
+**Alternatives considered:**
+- `TimelineView` redrawing once a second: 0.1–0.6 % CPU and 1 s steps [V: probe]. Kept as the fallback if the layer misbehaves on the device.
+- `ProgressView(timerInterval:)`: smooth, but about 12 % CPU while visible, and its style can't be made thin [V: probe].
+- The native `Slider`: free drag and VoiceOver support, but it has a knob. Shash chose a custom thin bar.
+- Reading Spotify on every notification: unneeded, since its notifications carry position and duration (Shash).
+- Favourite with a warning, or only for library tracks: rejected; the probe could not show where `pLov` is right.
+
+**Why:** every value the bar shows comes from an event or a read the user caused, and the motion between them costs the app nothing.
+
+**Trade-offs / follow-ups:**
+- A seek made in the player's own window while the notch is open may not show until the next notification or open [I: device check 18].
+- The bar's cost inside WindowServer was not measurable on this Mac [V: probe]; performance-optimizer and device check 23.
+- Revisit favourite if a later probe finds `pLov` reliable for some tracks.

@@ -124,7 +124,7 @@ Phase 3 polish: give the open shape top corners/shoulders where it meets the men
 
 ## Phase 3
 
-Branch order (Shash, 2026-10-25): `feat/now-playing-scripting` (merged), then `feat/now-playing-media` (progress bar, artwork, favourite; plan pending approval), then `feat/now-playing-compact` (the compact slot, with a D5 revision; reuses that artwork for "song icon left, wave right"), then `feat/hotkey` (L1–L3, release blocker).
+Branch order (Shash, 2026-10-25): `feat/now-playing-scripting` (merged), then `feat/now-playing-media` (progress bar, artwork, seek; plan approved 2026-10-25; favourite dropped, D26), then `feat/now-playing-compact` (the compact slot, with a D5 revision; reuses that artwork for "song icon left, wave right"), then `feat/hotkey` (L1–L3, release blocker).
 
 ### Branch 1: `feat/now-playing-scripting` (plan approved by Shash, 2026-10-25; merged to main 2026-10-25)
 
@@ -175,3 +175,41 @@ Device checks (Release build, notched Mac). Reset grants between runs with `tccu
 14. **Open, before release.** A Spotify ad on the free account (empty or odd `Name`): the notch hides the title or shows the player name, never garbage.
 15. **Open, before release.** Release launch, and `codesign -d --entitlements -` shows only apple-events (D11, D13).
 16. **Open, before release.** Accessibility (the carry-overs from step i): VoiceOver reads the control labels and the title, Increase Contrast, Accessibility Inspector, Reduce Motion.
+
+### Branch 2: `feat/now-playing-media` (plan approved by Shash, 2026-10-25)
+
+Progress bar with seek, and artwork, in the open notch. Decisions D25 (Spotify artwork over HTTPS, the first network access) and D26 (units, reads, merging, Core Animation bar, seek; favourite dropped). Probe report: docs/research/now-playing-media-probe-2026-10-25.md. Package search (dependency-manager, 2026-10-25): no packages.
+
+Out of this branch: favourite (D26), shuffle and repeat, the compact slot (branch 3), an artwork on/off switch (Phase 3 Settings), a disk cache, retries, keeping the notch open while dragging the bar.
+
+Steps, one commit each:
+0. Probe (not committed). Done 2026-10-25; report reviewed by Shash.
+1. `docs:` probe report, D25, D26, this section; ARCHITECTURE §8–§10, README Privacy and Permissions, RISKS §2/§4, FEATURE_MATRIX.
+2. `feat:` `PlaybackPosition` and the new `NowPlayingInfo` fields + tests.
+3. `feat:` parser: track ids, durations and positions in seconds + tests.
+4. `feat:` selection: carry, re-anchor, stale reads, artwork by track id + tests.
+5. `feat:` sender: position, duration, id and artwork-URL reads; Music artwork read.
+6. `feat:` source: Music reads per state notification, Spotify reads per new track + tests.
+7. `feat:` `NowPlayingArtwork` thumbnail decoding + tests.
+8. `feat:` `ArtworkLoading` and `ArtworkDownloader` (D25) + tests with a stubbed `URLProtocol`.
+9. `feat:` source loads artwork once per track + tests.
+10. `feat:` artwork view, Core Animation progress bar, new layout.
+11. `feat:` read the position each time the notch opens.
+12. `feat:` seek: click and drag on the bar, VoiceOver adjust in 10 s steps + tests.
+13. `chore:` usage string in project.yml.
+14. Debug build and test, then the reviews. **Stop before the Release build** (Shash).
+
+Agents: `test-writer`, `code-reviewer`, `security-auditor` (network, image decoding, Apple Event writes), `performance-optimizer` (Core Animation bar, reads per notification, decoding), `accessibility-auditor` (Shash: on this branch), then `docs-writer` after the device checks.
+
+Device checks (Release build, notched Mac), numbered after branch 1's:
+17. The bar matches the player's own time to within about 1 s after play, pause, next, and 2 minutes of playing, for both players.
+18. A seek made in the player's own window shows in the notch on the next open; note whether it shows while the notch is already open.
+19. Click and drag seek on both players. The first seek without the grant prompts once. Drag past the panel edge (does the notch close mid-drag?). VoiceOver adjusts in 10 s steps.
+20. Artwork: Music library track, catalogue track, radio (app icon), a track without artwork (app icon); Spotify track, an ad (app icon); without the grant, app icons.
+21. Network (`nettop` or a firewall): only `i.scdn.co`, at most one request per Spotify track change, none for Music, none while idle. Offline: app icon, no retries.
+22. The bar moves smoothly, stops when paused, and is right after closing and reopening the notch.
+23. Energy: 0 idle wake-ups for DropNotch while open and playing, and while closed; WindowServer shows no lasting rise; display sleep with the notch open.
+24. Memory stays flat over 50 track changes.
+25. Increase Contrast, hit targets, Reduce Motion with the new layout; VoiceOver reads the bar's value.
+26. Release launch, and `codesign -d --entitlements -` shows only apple-events.
+
