@@ -79,10 +79,14 @@ final class ScriptablePlayersSource: NSObject, NowPlayingSource {
         // D26: Music's notification has no position, so read after each one that carries a track. Spotify's
         // carries position and duration, so read only for a new track id (for its artwork URL).
         guard carriesTrack else { return }
-        if info.player == .music || (info.trackID != nil && info.trackID != lastReadTrackID[info.player]) {
+        // Any change of track, an ad included, resets the once-per-track read and artwork try, so a track
+        // that comes back (repeat after an ad) is read and gets its artwork again.
+        let isNewTrack = info.trackID != lastReadTrackID[info.player]
+        if isNewTrack {
             lastReadTrackID[info.player] = info.trackID
-            refresh(info.player)
+            lastArtworkTrackID[info.player] = nil
         }
+        if info.player == .music || (isNewTrack && info.trackID != nil) { refresh(info.player) }
     }
 
     /// Reads `player`'s position and track by Apple Event and merges it if nothing newer arrived (D26).
@@ -178,6 +182,8 @@ final class ScriptablePlayersSource: NSObject, NowPlayingSource {
         guard permission == .ok, let info = await sender.readCurrent(of: player, pid: pid),
               generation == self.generation, isObserving else { return }
         selection.fetched(info)
+        // The start read already read this track, so its first notification needn't read it again.
+        lastReadTrackID[player] = info.trackID
         publish()
         loadArtwork(player, pid: pid, generation: generation)
     }

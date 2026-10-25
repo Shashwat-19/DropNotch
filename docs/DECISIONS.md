@@ -656,7 +656,7 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - Spotify artwork comes from the track's `artwork url`, read by Apple Event only when Automation is already granted (D23). Its notification carries no URL [V: docs/research/now-playing-probe-2026-10-25.md]. Without the grant the view shows Spotify's app icon.
 - One GET per Spotify track id, and only if the URL is `https`, host exactly `i.scdn.co`, no user or password, port 443 or none [V: host seen by the probe, docs/research/now-playing-media-probe-2026-10-25.md].
 - `URLSession` with an ephemeral configuration: no cookie storage, no URL cache, no credential storage. Redirects are refused. Request timeout 10 s.
-- Accepted: status 200, `Content-Type` `image/jpeg` or `image/png`, at most 2 MB (the probe saw 39–61 KB). Decoded off the main thread to a small thumbnail with ImageIO, held in memory only, one per player.
+- Accepted: status 200, a MIME type of `image/jpeg` or `image/png` as `URLSession` reports it (it infers the type from the bytes when the header is missing or names another image type [V: test-writer stub, 2026-10-25]), at most 2 MB (the probe saw 39–61 KB). Decoded off the main thread to a small thumbnail with ImageIO, held in memory only, one per player.
 - Any failure shows the app icon. No retry until the track changes. The URL is never logged; only the outcome.
 - Music artwork needs no network: it is read from Music by Apple Event (D26).
 - What leaves the Mac: the GET request with `URLSession`'s default headers (including a User-Agent naming DropNotch and the CFNetwork and Darwin versions [I: exact header set]), the Mac's IP address, and the host name in TLS. The URL names an image Spotify itself chose for the track Spotify is playing.
