@@ -60,15 +60,15 @@ struct NowPlayingSelection {
     /// The counter value of `player`'s last report. A read records it when it starts (D26).
     func stamp(for player: MediaPlayer) -> Int? { reportedAt[player] }
 
-    /// An Apple Event read after a notification, an open or a seek (D26). Merged only if no report for that
-    /// player arrived since `stamp` and it is about the same track. It isn't a report, so it can't change
-    /// which player is on screen.
+    /// An Apple Event read after a notification, an open or a seek (D26), merged only while the player is on
+    /// the same track. The track's own facts (duration, artwork URL) always merge; the position only if no
+    /// report arrived since `stamp`, because a newer report has a newer position. It isn't a report, so it
+    /// can't change which player is on screen.
     mutating func refreshed(_ read: NowPlayingInfo, stamp: Int?) {
-        guard var info = players[read.player], reportedAt[read.player] == stamp,
-              read.trackID == info.trackID else { return }
+        guard var info = players[read.player], read.trackID == info.trackID else { return }
         info.duration = read.duration ?? info.duration
-        info.position = read.position ?? info.position
         info.artworkURL = read.artworkURL ?? info.artworkURL
+        if reportedAt[read.player] == stamp { info.position = read.position ?? info.position }
         players[read.player] = info
     }
 
@@ -84,8 +84,10 @@ struct NowPlayingSelection {
     }
 
     /// The one-off read at start (D23). Dropped if a notification came first (it is newer) or the player quit.
-    mutating func fetched(_ info: NowPlayingInfo) {
-        guard players[info.player]?.state == .unknown else { return }
+    @discardableResult
+    mutating func fetched(_ info: NowPlayingInfo) -> Bool {
+        guard players[info.player]?.state == .unknown else { return false }
         report(info, carriesTrack: true)
+        return true
     }
 }

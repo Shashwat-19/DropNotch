@@ -624,4 +624,44 @@ final class ScriptablePlayersSourceTests: XCTestCase {
         XCTAssertEqual(collector.values.last??.artwork?.trackID, "a",
                        "track a is back on screen but its artwork never returns")
     }
+
+    // MARK: code-reviewer findings
+
+    func testArtworkIsFetchedWhenTheReadThatBroughtItsURLLostTheRace() async {
+        let url = URL(string: "https://i.scdn.co/image/b")!
+        let sender = FakeSender(holdsReads: true)
+        let loader = FakeArtworkLoader(data: Self.png())
+        let source = makeSource(sender, running: [.spotify], loader: loader)
+        let stream = source.updates
+        await waitForCalls(sender, count: 2)
+        await sender.releaseRead(with: nil) // the start read finds nothing
+        source.receive(NowPlayingInfo(player: .spotify, state: .playing, title: "B", trackID: "b"), carriesTrack: true)
+        await waitForCalls(sender, count: 4) // its check and read, now held
+        // A second notification for the same track arrives while the read is out.
+        source.receive(NowPlayingInfo(player: .spotify, state: .paused, title: "B", trackID: "b"), carriesTrack: true)
+        await sender.releaseRead(with: NowPlayingInfo(player: .spotify, state: .playing, title: "B", trackID: "b",
+                                                      position: PlaybackPosition(seconds: 3, at: Date()), artworkURL: url))
+        for _ in 0..<1000 where await loader.urls.isEmpty { await Task.yield() }
+        let urls = await loader.urls
+        XCTAssertEqual(urls, [url])
+        withExtendedLifetime(stream) {}
+    }
+
+    func testARelaunchOnTheSameTrackIsReadAndGetsArtworkAgain() async {
+        let url = URL(string: "https://i.scdn.co/image/a")!
+        let read = NowPlayingInfo(player: .spotify, state: .playing, title: "A", trackID: "a", artworkURL: url)
+        let sender = FakeSender(current: read)
+        let loader = FakeArtworkLoader(data: Self.png())
+        let source = makeSource(sender, running: [.spotify], loader: loader)
+        let stream = source.updates
+        for _ in 0..<1000 where await loader.urls.isEmpty { await Task.yield() }
+        source.playerRunningChanged(.spotify, isRunning: false)
+        source.playerRunningChanged(.spotify, isRunning: true)
+        source.receive(NowPlayingInfo(player: .spotify, state: .playing, title: "A", trackID: "a"), carriesTrack: true)
+        for _ in 0..<1000 where await loader.urls.count < 2 { await Task.yield() }
+        let urls = await loader.urls
+        XCTAssertEqual(urls, [url, url])
+        withExtendedLifetime(stream) {}
+    }
 }
+

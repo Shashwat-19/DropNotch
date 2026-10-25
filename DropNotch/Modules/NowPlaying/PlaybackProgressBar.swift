@@ -41,6 +41,9 @@ final class ProgressBarView: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     func update(elapsed: TimeInterval, duration: TimeInterval, isPlaying: Bool) {
+        // SwiftUI may call this again with the same values; restarting then would jump the bar back to
+        // where it was when those values were computed.
+        if let state, state.elapsed == elapsed, state.duration == duration, state.isPlaying == isPlaying { return }
         state = (elapsed, duration, isPlaying, Date())
         restart()
     }

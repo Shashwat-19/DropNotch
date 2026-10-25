@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Now Playing in the open notch: title, artist and three controls (D22–D24).
+/// Now Playing in the open notch: artwork, title, artist, the progress bar and three controls (D22–D26).
 struct NowPlayingExpandedView: View {
     let module: NowPlayingModule
     @Environment(\.openURL) private var openURL
@@ -27,7 +27,8 @@ struct NowPlayingExpandedView: View {
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
-                        if let duration = info.duration, info.position != nil {
+                        // An ad can report a zero duration: no bar rather than a dead one.
+                        if let duration = info.duration, duration > 0, info.position != nil {
                             PlaybackProgressView(info: info, duration: duration) { seconds in
                                 Task { await module.perform(.seek(to: seconds)) }
                             }

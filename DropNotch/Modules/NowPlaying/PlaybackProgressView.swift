@@ -36,6 +36,8 @@ struct PlaybackProgressView: View {
         .accessibilityValue(Text("\(Self.spoken(elapsed)) of \(Self.spoken(duration))"))
         // VoiceOver's adjust gesture (and arrow keys, once the panel can take focus: L2) moves 10 s.
         .accessibilityAdjustableAction { direction in
+            // Now, not when the view was last drawn: it isn't redrawn while the track plays on.
+            let elapsed = info.elapsed(at: Date()) ?? 0
             switch direction {
             case .increment: onSeek(min(duration, elapsed + 10))
             case .decrement: onSeek(max(0, elapsed - 10))

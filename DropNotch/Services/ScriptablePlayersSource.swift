@@ -110,7 +110,9 @@ final class ScriptablePlayersSource: NSObject, NowPlayingSource {
     /// failure leaves the app icon until the track changes.
     private func loadArtwork(_ player: MediaPlayer, pid: pid_t, generation: Int) {
         guard let info = selection.info(for: player), let trackID = info.trackID, info.artwork == nil,
-              lastArtworkTrackID[player] != trackID else { return }
+              lastArtworkTrackID[player] != trackID,
+              // Spotify's URL may come from a later read (on open): don't use up the try without one.
+              player == .music || info.artworkURL != nil else { return }
         lastArtworkTrackID[player] = trackID
         let url = info.artworkURL
         Task {
@@ -134,7 +136,14 @@ final class ScriptablePlayersSource: NSObject, NowPlayingSource {
     /// A player launched or quit. Internal for tests.
     func playerRunningChanged(_ player: MediaPlayer, isRunning: Bool) {
         guard isObserving else { return }
-        if isRunning { selection.launched(player) } else { selection.quit(player) }
+        if isRunning {
+            selection.launched(player)
+        } else {
+            selection.quit(player)
+            // A relaunch usually resumes the same track; it must be read, and get artwork, again.
+            lastReadTrackID[player] = nil
+            lastArtworkTrackID[player] = nil
+        }
         publish()
     }
 
@@ -181,9 +190,8 @@ final class ScriptablePlayersSource: NSObject, NowPlayingSource {
         Logger.nowPlaying.debug("Start check for \(player.bundleID, privacy: .public) pid \(pid): \(String(describing: permission), privacy: .public)")
         guard permission == .ok, let info = await sender.readCurrent(of: player, pid: pid),
               generation == self.generation, isObserving else { return }
-        selection.fetched(info)
-        // The start read already read this track, so its first notification needn't read it again.
-        lastReadTrackID[player] = info.trackID
+        // When used, the start read already read this track, so its first notification needn't read it again.
+        if selection.fetched(info) { lastReadTrackID[player] = info.trackID }
         publish()
         loadArtwork(player, pid: pid, generation: generation)
     }

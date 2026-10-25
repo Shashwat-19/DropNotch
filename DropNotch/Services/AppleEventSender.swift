@@ -54,9 +54,11 @@ struct AppleEventSender: AppleEventSending {
                   let state = Self.state(reply) else { return nil }
             // Between tracks Music has no current track: these reads fail (-1728) and stay nil, never zero (D26).
             let track = Self.property("pTrk", of: app)
+            // Position first, timed as it arrives: the reads after it can take a few hundred ms [V: media probe].
+            let position = Self.number(Self.get(Self.property("pPos", of: app), pid: pid))
+            let positionTime = Date()
             let title = Self.get(Self.property("pnam", of: track), pid: pid)?.stringValue
             let artist = Self.get(Self.property("pArt", of: track), pid: pid)?.stringValue
-            let position = Self.number(Self.get(Self.property("pPos", of: app), pid: pid))
             let duration = Self.number(Self.get(Self.property("pDur", of: track), pid: pid))
             // Music's persistent ID is the hex its notification's PersistentID becomes; Spotify's id
             // ("spotify:ad:…" for an ad) feeds the same ad rule as notifications (D24, D26).
@@ -66,7 +68,7 @@ struct AppleEventSender: AppleEventSending {
                 player, state, name: title, artist: artist, trackID: trackID,
                 // Spotify's duration is milliseconds, though its dictionary says seconds [V: media probe].
                 duration: PlayerNotificationParser.seconds(duration, unit: player == .spotify ? 1000 : 1),
-                position: PlayerNotificationParser.seconds(position, unit: 1))
+                position: PlayerNotificationParser.seconds(position, unit: 1), at: positionTime)
             if player == .spotify, info.trackID != nil {
                 info.artworkURL = Self.get(Self.property("aUrl", of: track), pid: pid)?.stringValue.flatMap(URL.init(string:))
             }

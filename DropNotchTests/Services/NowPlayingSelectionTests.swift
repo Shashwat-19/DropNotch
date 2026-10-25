@@ -345,4 +345,18 @@ final class NowPlayingSelectionTests: XCTestCase {
         selection.setArtwork(try artwork("a"), for: .spotify)
         XCTAssertNil(selection.current?.artwork)
     }
+
+    // code-reviewer: a read that lost the race for the position still brings the track's own facts.
+    func testAStaleReadStillAddsTheTracksDurationAndArtworkURL() {
+        selection.report(spotifyTrack("a", .playing, at: nil), carriesTrack: true, at: t0)
+        let stamp = selection.stamp(for: .spotify)
+        selection.report(spotifyTrack("a", .paused, at: nil), carriesTrack: true, at: t0)
+        var read = spotifyTrack("a", .playing, at: 42, url: "https://i.scdn.co/image/x")
+        read.duration = 210
+        selection.refreshed(read, stamp: stamp)
+        XCTAssertEqual(selection.current?.artworkURL, URL(string: "https://i.scdn.co/image/x"))
+        XCTAssertEqual(selection.current?.duration, 210)
+        XCTAssertNil(selection.current?.position, "the newer report's position stands")
+    }
 }
+

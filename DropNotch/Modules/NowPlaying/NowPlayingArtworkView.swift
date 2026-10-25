@@ -13,7 +13,7 @@ struct NowPlayingArtworkView: View {
             if let artwork {
                 Image(decorative: artwork.image, scale: 1).resizable().scaledToFill()
             } else {
-                Image(nsImage: AppIcons.icon(for: player)).resizable()
+                Image(nsImage: PlayerIcons.icon(for: player)).resizable()
             }
         }
         .frame(width: size, height: size)
@@ -25,7 +25,7 @@ struct NowPlayingArtworkView: View {
 
 /// App icons looked up once per player: `NSWorkspace` reads them from disk.
 @MainActor
-private enum AppIcons {
+private enum PlayerIcons {
     static var cache: [MediaPlayer: NSImage] = [:]
 
     static func icon(for player: MediaPlayer) -> NSImage {
