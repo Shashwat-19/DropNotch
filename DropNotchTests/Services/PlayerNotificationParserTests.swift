@@ -55,4 +55,13 @@ final class PlayerNotificationParserTests: XCTestCase {
         XCTAssertNil(PlayerNotificationParser.parse(["Player State": "Rewinding"], from: .music))
         XCTAssertNil(PlayerNotificationParser.parse(["Player State": 1], from: .music))
     }
+
+    // The read at start uses the same function, so it applies the same ad rule.
+    func testSharedTrackRuleHidesAnAdAndKeepsARealTrack() {
+        let ad = PlayerNotificationParser.track(.spotify, .playing, name: "Buy now", artist: "Brand",
+                                                trackID: "spotify:ad:000000012c1e4e8b")
+        XCTAssertEqual(ad, NowPlayingInfo(player: .spotify, state: .playing))
+        let song = PlayerNotificationParser.track(.music, .paused, name: "Song", artist: " Band ", trackID: nil)
+        XCTAssertEqual(song, NowPlayingInfo(player: .music, state: .paused, title: "Song", artist: "Band"))
+    }
 }

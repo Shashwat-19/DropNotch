@@ -15,6 +15,8 @@ struct AppleEventSender: AppleEventSending {
 
     func permission(for player: MediaPlayer, pid: pid_t, ask: Bool) async -> AppleEventOutcome {
         await Self.run {
+            // With `ask: true` this blocks until the user answers the prompt: never on the main thread.
+            dispatchPrecondition(condition: .notOnQueue(.main))
             let target = NSAppleEventDescriptor(processIdentifier: pid)
             // Consent is per target app, so one of its events stands for all of them [I] (D23).
             let event = player.event(for: .playPause)
@@ -39,13 +41,14 @@ struct AppleEventSender: AppleEventSending {
             let track = Self.property("pTrk", of: app)
             let title = Self.get(Self.property("pnam", of: track), pid: pid)?.stringValue
             let artist = Self.get(Self.property("pArt", of: track), pid: pid)?.stringValue
-            return NowPlayingInfo(player: player, state: state,
-                                  title: PlayerNotificationParser.text(title),
-                                  artist: PlayerNotificationParser.text(artist))
+            // Spotify's track id ("spotify:ad:…" for an ad) feeds the same ad rule as notifications (D24).
+            let trackID = player == .spotify ? Self.get(Self.property("ID  ", of: track), pid: pid)?.stringValue : nil
+            return PlayerNotificationParser.track(player, state, name: title, artist: artist, trackID: trackID)
         }
     }
 
-    private static func run<T: Sendable>(_ work: @escaping @Sendable () -> T) async -> T {
+    /// Runs `work` on the Apple Event queue, never the main thread. Internal so a test can check that.
+    static func run<T: Sendable>(_ work: @escaping @Sendable () -> T) async -> T {
         await withCheckedContinuation { continuation in
             queue.async { continuation.resume(returning: work()) }
         }
