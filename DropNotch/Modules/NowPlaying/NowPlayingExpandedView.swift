@@ -7,22 +7,31 @@ struct NowPlayingExpandedView: View {
 
     var body: some View {
         if let info = module.info {
-            VStack(spacing: 6) {
-                // Verbatim (a String, not a literal): track names are never looked up for translation.
-                Text(info.title ?? info.player.displayName)
-                    .font(.subheadline.weight(.semibold))
-                if module.deniedPlayer == info.player {
-                    Button(action: openAutomationSettings) {
-                        // Underlined as well as coloured, so it reads as a link without colour (L6).
-                        Text("Allow control of \(info.player.displayName) in System Settings").underline()
+            VStack(spacing: 8) {
+                HStack(spacing: 12) {
+                    NowPlayingArtworkView(artwork: info.artwork, player: info.player, size: 56)
+                    VStack(alignment: .leading, spacing: 4) {
+                        // Verbatim (a String, not a literal): track names are never looked up for translation.
+                        Text(info.title ?? info.player.displayName)
+                            .font(.subheadline.weight(.semibold))
+                        if module.deniedPlayer == info.player {
+                            Button(action: openAutomationSettings) {
+                                // Underlined as well as coloured, so it reads as a link without colour (L6).
+                                Text("Allow control of \(info.player.displayName) in System Settings").underline()
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(.link)
+                            .font(.subheadline)
+                        } else if info.title != nil, let artist = info.artist {
+                            Text(artist)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        if let duration = info.duration, info.position != nil {
+                            PlaybackProgressView(info: info, duration: duration)
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.link)
-                    .font(.subheadline)
-                } else if info.title != nil, let artist = info.artist {
-                    Text(artist)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 controls(isPlaying: info.isPlaying)
             }
