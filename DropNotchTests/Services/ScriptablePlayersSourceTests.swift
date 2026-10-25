@@ -69,13 +69,13 @@ final class ScriptablePlayersSourceTests: XCTestCase {
     }
 
     private func makeSource(_ sender: FakeSender, running: Set<MediaPlayer>,
-                            loader: FakeArtworkLoader = FakeArtworkLoader()) -> ScriptablePlayersSource {
+                            loader: any ArtworkLoading = FakeArtworkLoader()) -> ScriptablePlayersSource {
         ScriptablePlayersSource(sender: sender, artworkLoader: loader, runningPID: { running.contains($0) ? 4242 : nil },
                                 observesSystem: false)
     }
 
-    private static func png() -> Data {
-        let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 8, pixelsHigh: 8, bitsPerSample: 8, samplesPerPixel: 4,
+    private static func png(size: Int = 8) -> Data {
+        let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: size, pixelsHigh: size, bitsPerSample: 8, samplesPerPixel: 4,
                                    hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
         return rep.representation(using: .png, properties: [:])!
     }
@@ -484,5 +484,144 @@ final class ScriptablePlayersSourceTests: XCTestCase {
         XCTAssertEqual(reads.count, 1, "only the start read")
         withExtendedLifetime(stream) {}
     }
-}
 
+    // MARK: Late artwork, ads and refused seeks
+
+    /// Holds each request until `release`, oldest first, so a test can make an artwork reply late. Never the network.
+    private actor HeldArtworkLoader: ArtworkLoading {
+        private(set) var urls: [URL] = []
+        private var held: [CheckedContinuation<Data?, Never>] = []
+        var heldCount: Int { held.count }
+        func data(from url: URL) async -> Data? {
+            urls.append(url)
+            return await withCheckedContinuation { held.append($0) }
+        }
+        func release(with data: Data?) { held.removeFirst().resume(returning: data) }
+    }
+
+    /// Everything a stream yields, collected on the main actor so a test can wait without blocking on `next()`.
+    private final class Collector {
+        var values: [NowPlayingInfo?] = []
+        private var task: Task<Void, Never>?
+        init(_ stream: AsyncStream<NowPlayingInfo?>) {
+            task = Task { @MainActor [weak self] in for await value in stream { self?.values.append(value) } }
+        }
+        deinit { task?.cancel() }
+    }
+
+    /// Yields until `condition` holds, a bounded number of times; no sleeping.
+    private func until(_ condition: () async -> Bool) async {
+        for _ in 0..<10_000 {
+            if await condition() { return }
+            await Task.yield()
+        }
+    }
+
+    // Track a's artwork arrives after the player moved on to b: it must not show on b.
+    func testArtworkForATrackThatChangedWhileItLoadedIsDropped() async {
+        let url = URL(string: "https://i.scdn.co/image/a")!
+        let read = NowPlayingInfo(player: .spotify, state: .playing, title: "A", trackID: "a", artworkURL: url)
+        let sender = FakeSender(current: read)
+        let loader = HeldArtworkLoader()
+        let source = makeSource(sender, running: [.spotify], loader: loader)
+        let collector = Collector(source.updates)
+        await until { await loader.heldCount == 1 }
+        source.receive(NowPlayingInfo(player: .spotify, state: .playing, title: "B", trackID: "b"), carriesTrack: true)
+        await waitForCalls(sender, count: 4) // start check and read, then b's check and read
+        await loader.release(with: Self.png())
+        for _ in 0..<1000 { await Task.yield() }
+        source.receive(NowPlayingInfo(player: .spotify, state: .paused, title: "B", trackID: "b"), carriesTrack: true)
+        await until { collector.values.last??.state == .paused }
+        XCTAssertEqual(collector.values.last??.trackID, "b")
+        XCTAssertTrue(collector.values.allSatisfy { $0?.trackID != "b" || $0?.artwork == nil },
+                      "a's artwork never shows on b")
+        let urls = await loader.urls
+        XCTAssertEqual(urls, [url], "b's read had no URL (its Fake reply was for a), so nothing else is fetched")
+    }
+
+    // Artwork started for an old subscription must not land in a new one, even for the same track.
+    func testArtworkFromAnOldStreamIsDropped() async {
+        let url = URL(string: "https://i.scdn.co/image/a")!
+        let read = NowPlayingInfo(player: .spotify, state: .playing, title: "A", trackID: "a", artworkURL: url)
+        let loader = HeldArtworkLoader()
+        let source = makeSource(FakeSender(current: read), running: [.spotify], loader: loader)
+        let old = source.updates
+        await until { await loader.heldCount == 1 }
+        let collector = Collector(source.updates)
+        await until { await loader.heldCount == 2 }
+        await loader.release(with: Self.png(size: 8))  // the old stream's
+        await loader.release(with: Self.png(size: 16)) // the new stream's
+        await until { collector.values.contains { $0?.artwork != nil } }
+        for _ in 0..<1000 { await Task.yield() }
+        let widths = collector.values.compactMap { $0?.artwork?.image.width }
+        XCTAssertFalse(widths.isEmpty)
+        XCTAssertTrue(widths.allSatisfy { $0 == 16 }, "only the new stream's artwork: \(widths)")
+        withExtendedLifetime(old) {}
+    }
+
+    // An ad has no track id (D24), so its URL, if any, is never fetched, and its notification triggers no read.
+    func testASpotifyAdNeverFetchesArtwork() async {
+        let ad = NowPlayingInfo(player: .spotify, state: .playing, artworkURL: URL(string: "https://i.scdn.co/image/ad")!)
+        let sender = FakeSender(current: ad)
+        let loader = FakeArtworkLoader(data: Self.png())
+        let source = makeSource(sender, running: [.spotify], loader: loader)
+        let stream = source.updates
+        await waitForCalls(sender, count: 2) // the start check and read
+        source.receive(NowPlayingInfo(player: .spotify, state: .playing), carriesTrack: true)
+        source.refresh(.spotify) // the notch opening
+        await waitForCalls(sender, count: 4)
+        for _ in 0..<200 { await Task.yield() }
+        let urls = await loader.urls
+        XCTAssertEqual(urls, [])
+        let reads = await sender.calls.filter { $0 == .read(.spotify) }
+        XCTAssertEqual(reads.count, 2, "the start read and the open; none for the ad's notification")
+        withExtendedLifetime(stream) {}
+    }
+
+    func testADeniedSeekIsNotSentAndReadsNothing() async {
+        let sender = FakeSender(permission: .denied)
+        let source = makeSource(sender, running: [.music])
+        let stream = source.updates
+        await waitForCalls(sender, count: 1) // the start check
+        let outcome = await source.send(.seek(to: 30), to: .music)
+        XCTAssertEqual(outcome, .denied)
+        for _ in 0..<50 { await Task.yield() }
+        let calls = await sender.calls
+        XCTAssertEqual(calls, [.permission(.music, ask: false), .permission(.music, ask: true)])
+        withExtendedLifetime(stream) {}
+    }
+
+    // A seek to a player that has quit sends nothing and reads nothing.
+    func testASeekToAPlayerThatIsNotRunningReadsNothing() async {
+        let sender = FakeSender()
+        let source = makeSource(sender, running: [])
+        let stream = source.updates
+        let outcome = await source.send(.seek(to: 30), to: .spotify)
+        XCTAssertEqual(outcome, .notRunning)
+        for _ in 0..<50 { await Task.yield() }
+        let calls = await sender.calls
+        XCTAssertEqual(calls, [])
+        withExtendedLifetime(stream) {}
+    }
+
+    // Suspected bug: Spotify track a (artwork shown) -> an ad (no id: artwork dropped) -> track a again, as with
+    // repeat-one. `lastReadTrackID` and `lastArtworkTrackID` still say "a", so there is no read, no fetch, and even
+    // opening the notch can't bring the artwork back: the app icon shows until a different track plays.
+    func testArtworkComesBackWhenTheSameTrackReturnsAfterAnAd() async {
+        let url = URL(string: "https://i.scdn.co/image/a")!
+        let read = NowPlayingInfo(player: .spotify, state: .playing, title: "A", trackID: "a", artworkURL: url)
+        let source = makeSource(FakeSender(current: read), running: [.spotify], loader: FakeArtworkLoader(data: Self.png()))
+        let collector = Collector(source.updates)
+        await until { collector.values.last??.artwork != nil }
+        XCTAssertEqual(collector.values.last??.artwork?.trackID, "a")
+
+        source.receive(NowPlayingInfo(player: .spotify, state: .playing), carriesTrack: true) // the ad
+        await until { collector.values.last??.trackID == nil }
+        XCTAssertNil(collector.values.last??.artwork)
+        source.receive(NowPlayingInfo(player: .spotify, state: .playing, title: "A", trackID: "a"), carriesTrack: true)
+        source.refresh(.spotify) // the notch opening
+        await until { collector.values.last??.artwork != nil }
+        XCTAssertEqual(collector.values.last??.artwork?.trackID, "a",
+                       "track a is back on screen but its artwork never returns")
+    }
+}

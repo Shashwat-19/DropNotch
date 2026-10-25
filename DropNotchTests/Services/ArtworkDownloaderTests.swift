@@ -98,4 +98,72 @@ final class ArtworkDownloaderTests: XCTestCase {
                            newRequest: URLRequest(url: URL(string: "https://example.com/")!)) { followed = $0 }
         XCTAssertNil(followed)
     }
+
+    func testURLShapesThatStillNameTheHostAreAllowed() {
+        for ok in ["HTTPS://i.scdn.co/image/x", "https://i.scdn.co/image/x?size=640", "https://i.scdn.co/image/x#frag",
+                   "https://i.scdn.co"] {
+            XCTAssertTrue(ArtworkDownloader.allows(URL(string: ok)!), ok)
+        }
+    }
+
+    func testOtherHostsHiddenInURLShapesAreRefused() {
+        for bad in ["https://151.101.2.248/image/x", "https://[2a04:4e42::248]/image/x", "https://i.scdn.co./image/x",
+                    "https://scdn.co/image/x", "https://x.i.scdn.co/image/x", "https://i.scdn.co:443@example.com/image/x",
+                    "https://example.com#@i.scdn.co/", "https://example.com/?u=https://i.scdn.co/",
+                    "https://i.scdn.co:0/image/x", "https://i.scdn.co:80/image/x", "wss://i.scdn.co/image/x",
+                    "data:image/png;base64,AAAA", "//i.scdn.co/image/x", "i.scdn.co/image/x"] {
+            guard let url = URL(string: bad) else { continue } // not even a URL: nothing to request
+            XCTAssertFalse(ArtworkDownloader.allows(url), bad)
+        }
+    }
+
+    func testPNGAndContentTypeParametersAreAccepted() async {
+        for type in ["image/png", "IMAGE/JPEG", "image/jpeg; charset=binary"] {
+            Stub.headers = ["Content-Type": type]
+            let data = await downloader.data(from: good)
+            XCTAssertEqual(data, Stub.body, type)
+        }
+    }
+
+    func testOtherImageTypesAreRefused() async {
+        Stub.body = Data("GIF89a\u{01}\u{00}\u{01}\u{00}".utf8)
+        for type in ["image/gif", "image/svg+xml", "image/webp", "application/octet-stream"] {
+            Stub.headers = ["Content-Type": type]
+            let data = await downloader.data(from: good)
+            XCTAssertNil(data, type)
+        }
+        Stub.body = Data("hello".utf8)
+        Stub.headers = [:]
+        let untyped = await downloader.data(from: good)
+        XCTAssertNil(untyped, "no type and no image bytes")
+    }
+
+    // Documents what `mimeType` is: URLSession sniffs it from the body when the header is missing or
+    // another image type, so JPEG bytes pass as image/jpeg even without that header. A non-image type
+    // (text/html) is not overridden. Either way the bytes are JPEG or PNG, and the size cap still holds.
+    func testTheTypeCheckSeesTheSniffedTypeForImageBytes() async {
+        Stub.headers = [:]
+        var data = await downloader.data(from: good)
+        XCTAssertEqual(data, Stub.body, "no Content-Type, JPEG bytes")
+        Stub.headers = ["Content-Type": "image/gif"]
+        data = await downloader.data(from: good)
+        XCTAssertEqual(data, Stub.body, "labelled GIF, JPEG bytes")
+        Stub.headers = ["Content-Type": "text/html"]
+        data = await downloader.data(from: good)
+        XCTAssertNil(data, "labelled HTML, JPEG bytes")
+    }
+
+    // An honest Content-Length over the cap is refused from the header alone, however small the body.
+    func testADeclaredLengthOverTheCapIsRefused() async {
+        Stub.headers = ["Content-Type": "image/jpeg", "Content-Length": String(ArtworkDownloader.maxBytes + 1)]
+        let data = await downloader.data(from: good)
+        XCTAssertNil(data)
+    }
+
+    func testAnEmptyImageResponseIsReturnedEmpty() async {
+        Stub.body = Data()
+        let data = await downloader.data(from: good)
+        // Empty bytes then fail to decode in NowPlayingArtwork, which shows the app icon.
+        XCTAssertEqual(data, Data())
+    }
 }

@@ -40,4 +40,15 @@ final class PlaybackPositionTests: XCTestCase {
         info.position = nil
         XCTAssertNil(info.elapsed(at: anchor))
     }
+
+    // A zero duration (a stream, or a player that reported 0) pins the position at 0 instead of running on.
+    func testZeroDurationPinsAtZero() {
+        let position = PlaybackPosition(seconds: 12, at: anchor)
+        XCTAssertEqual(position.elapsed(at: anchor.addingTimeInterval(30), isPlaying: true, duration: 0), 0)
+    }
+
+    func testAPositionPastTheEndIsClamped() {
+        let position = PlaybackPosition(seconds: 250, at: anchor)
+        XCTAssertEqual(position.elapsed(at: anchor, isPlaying: false, duration: 200), 200)
+    }
 }

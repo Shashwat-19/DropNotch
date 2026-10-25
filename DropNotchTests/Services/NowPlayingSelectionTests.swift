@@ -260,5 +260,89 @@ final class NowPlayingSelectionTests: XCTestCase {
         selection.setArtwork(try artwork("b"), for: .spotify)
         XCTAssertNil(selection.current)
     }
-}
 
+    // MARK: D26: merging edge cases
+
+    // A state-only Playing after a pause anchors where the pause left it, then moves from there.
+    func testStateOnlyPlayAfterAPauseMovesOnFromWhereItStopped() {
+        selection.report(spotifyTrack("a", .paused, at: 60), carriesTrack: true, at: t0)
+        selection.report(NowPlayingInfo(player: .spotify, state: .playing), carriesTrack: false, at: t0.addingTimeInterval(30))
+        XCTAssertEqual(selection.current?.position, PlaybackPosition(seconds: 60, at: t0.addingTimeInterval(30)))
+        XCTAssertEqual(selection.current?.elapsed(at: t0.addingTimeInterval(35)), 65)
+    }
+
+    // A state-only Playing while already playing re-anchors at the moved position, so the bar doesn't jump back.
+    func testStateOnlyReportWhilePlayingKeepsThePositionMoving() {
+        selection.report(spotifyTrack("a", .playing, at: 60), carriesTrack: true, at: t0)
+        selection.report(NowPlayingInfo(player: .spotify, state: .playing), carriesTrack: false, at: t0.addingTimeInterval(10))
+        XCTAssertEqual(selection.current?.position, PlaybackPosition(seconds: 70, at: t0.addingTimeInterval(10)))
+        XCTAssertEqual(selection.current?.elapsed(at: t0.addingTimeInterval(15)), 75)
+    }
+
+    func testSameTrackReportWithANewDurationReplacesTheOldOne() {
+        selection.report(spotifyTrack("a", .playing, at: 10), carriesTrack: true, at: t0)
+        var next = spotifyTrack("a", .playing, at: nil)
+        next.duration = 210
+        selection.report(next, carriesTrack: true, at: t0)
+        XCTAssertEqual(selection.current?.duration, 210)
+    }
+
+    // Two payloads without an id (ads, streams) are not "the same track": nothing carries over.
+    func testReportsWithNoTrackIDDoNotMerge() {
+        selection.report(spotifyTrack(nil, .playing, at: 10, url: "https://i.scdn.co/image/x"), carriesTrack: true, at: t0)
+        var next = spotifyTrack(nil, .playing, at: nil)
+        next.duration = nil
+        selection.report(next, carriesTrack: true, at: t0)
+        XCTAssertNil(selection.current?.position)
+        XCTAssertNil(selection.current?.duration)
+        XCTAssertNil(selection.current?.artworkURL)
+    }
+
+    // The start read can carry Spotify's artwork URL; artwork fetched for it then lands.
+    func testStartReadWithAnArtworkURLThenItsArtwork() throws {
+        selection.launched(.spotify)
+        selection.fetched(spotifyTrack("a", .playing, at: 5, url: "https://i.scdn.co/image/x"))
+        XCTAssertEqual(selection.current?.artworkURL, URL(string: "https://i.scdn.co/image/x"))
+        let art = try artwork("a")
+        selection.setArtwork(art, for: .spotify)
+        XCTAssertEqual(selection.current?.artwork, art)
+    }
+
+    // A read only adds timing and the URL: title, artist, state and artwork stay as reported.
+    func testAReadKeepsTitleStateAndArtwork() throws {
+        selection.report(NowPlayingInfo(player: .spotify, state: .paused, title: "Song", artist: "Band", trackID: "a"),
+                         carriesTrack: true, at: t0)
+        let art = try artwork("a")
+        selection.setArtwork(art, for: .spotify)
+        selection.refreshed(NowPlayingInfo(player: .spotify, state: .playing, title: "Other", artist: "Other", trackID: "a",
+                                           duration: 200, position: PlaybackPosition(seconds: 9, at: t0)),
+                            stamp: selection.stamp(for: .spotify))
+        let current = selection.current
+        XCTAssertEqual(current?.title, "Song")
+        XCTAssertEqual(current?.artist, "Band")
+        XCTAssertEqual(current?.state, .paused)
+        XCTAssertEqual(current?.artwork, art)
+        XCTAssertEqual(current?.position, PlaybackPosition(seconds: 9, at: t0))
+        XCTAssertEqual(current?.duration, 200)
+    }
+
+    // A read whose position or duration came back unknown (-1728, a non-number) keeps what was known.
+    func testAReadWithUnknownValuesErasesNothing() {
+        selection.report(spotifyTrack("a", .playing, at: 30, url: "https://i.scdn.co/image/x"), carriesTrack: true, at: t0)
+        selection.refreshed(NowPlayingInfo(player: .spotify, state: .playing, trackID: "a"), stamp: selection.stamp(for: .spotify))
+        XCTAssertEqual(selection.current?.position, PlaybackPosition(seconds: 30, at: t0))
+        XCTAssertEqual(selection.current?.duration, 200)
+        XCTAssertEqual(selection.current?.artworkURL, URL(string: "https://i.scdn.co/image/x"))
+    }
+
+    func testAReadForAPlayerNeverSeenIsDropped() {
+        selection.refreshed(spotifyTrack("a", .playing, at: 1), stamp: nil)
+        XCTAssertNil(selection.current)
+    }
+
+    func testArtworkForAPlayerWithNoTrackIDIsDropped() throws {
+        selection.report(spotifyTrack(nil, .playing, at: 0), carriesTrack: true, at: t0)
+        selection.setArtwork(try artwork("a"), for: .spotify)
+        XCTAssertNil(selection.current?.artwork)
+    }
+}

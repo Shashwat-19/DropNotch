@@ -136,5 +136,36 @@ final class PlayerNotificationParserTests: XCTestCase {
         XCTAssertEqual(info.duration, 30)
         XCTAssertEqual(info.position, PlaybackPosition(seconds: 2, at: now))
     }
-}
 
+    // MARK: D26: number shapes
+
+    // Bridged payloads can carry Int, Int64 or Double NSNumbers for the same key.
+    func testNumbersOfEitherShapeConvert() throws {
+        let music: [AnyHashable: Any] = ["Player State": "Playing", "Name": "Song", "Total Time": 182_109.0]
+        XCTAssertEqual(try XCTUnwrap(try XCTUnwrap(PlayerNotificationParser.parse(music, from: .music)).info.duration),
+                       182.109, accuracy: 0.0001)
+        let now = Date(timeIntervalSinceReferenceDate: 1)
+        let spotify: [AnyHashable: Any] = ["Player State": "Playing", "Name": "Song", "Track ID": "spotify:track:x",
+                                           "Duration": 205_800.0, "Playback Position": NSNumber(value: 68)]
+        let info = try XCTUnwrap(PlayerNotificationParser.parse(spotify, from: .spotify, at: now)).info
+        XCTAssertEqual(info.duration, 205.8)
+        XCTAssertEqual(info.position, PlaybackPosition(seconds: 68, at: now))
+    }
+
+    // An id above Int64.max (bridged as UInt64) still reads as the same 16-digit hex.
+    func testMusicIdAboveInt64MaxIsTheSameHex() {
+        XCTAssertEqual(PlayerNotificationParser.musicTrackID(NSNumber(value: UInt64.max)), "FFFFFFFFFFFFFFFF")
+        XCTAssertEqual(PlayerNotificationParser.musicTrackID(NSNumber(value: 0xA1)), "00000000000000A1")
+    }
+
+    func testSpotifyTrackIdThatIsNotTextIsUnknown() throws {
+        let payload: [AnyHashable: Any] = ["Player State": "Playing", "Name": "Song", "Track ID": 42]
+        XCTAssertNil(try XCTUnwrap(PlayerNotificationParser.parse(payload, from: .spotify)).info.trackID)
+    }
+
+    // Music's notification never carries a position, even if a payload has Spotify's key.
+    func testMusicIgnoresAPlaybackPositionKey() throws {
+        let payload: [AnyHashable: Any] = ["Player State": "Playing", "Name": "Song", "Playback Position": 30.0]
+        XCTAssertNil(try XCTUnwrap(PlayerNotificationParser.parse(payload, from: .music)).info.position)
+    }
+}
