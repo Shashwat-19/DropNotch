@@ -716,5 +716,5 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Trade-offs / follow-ups:**
 - A seek made in the player's own window while the notch is open may not show until the next notification or open [I: device check 18].
-- The bar's cost inside WindowServer was not measurable on this Mac [V: probe]; performance-optimizer and device check 23.
+- The bar's animation is capped at 10 fps: uncapped it added about 12 points of WindowServer CPU, capped about 3 [V: performance-optimizer harness, 2026-10-25]. The elapsed-time text updates about once a second while open and playing (about 0.5 % app CPU), and screen sleep now closes the notch so neither runs while the display sleeps (ARCHITECTURE §9).
 - Revisit favourite if a later probe finds `pLov` reliable for some tracks.

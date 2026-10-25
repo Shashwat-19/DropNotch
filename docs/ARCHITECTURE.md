@@ -143,7 +143,7 @@ Target: zero wake-ups while idle, apart from the clipboard poll. Intervals below
 | File tray | Drag-and-drop callbacks |
 | Notes | Text-change callbacks |
 | Settings | `UserDefaults`/Observation changes |
-| Screen sleep, lock, wake | `NSWorkspace` screens-did-sleep/wake notifications [V: https://developer.apple.com/documentation/appkit/nsworkspace/screensdidsleepnotification]; they pause the clipboard poll and animations. No screen-lock notification is in Apple's NSWorkspace reference; the documented session notifications cover user switching [V: https://developer.apple.com/documentation/appkit/nsworkspace/sessiondidresignactivenotification], so the MVP pauses on screen sleep only; lock detection is checked in Phase 2 step a |
+| Screen sleep, lock, wake | `NSWorkspace` screens-did-sleep/wake notifications [V: https://developer.apple.com/documentation/appkit/nsworkspace/screensdidsleepnotification]; they close the notch, which removes its open content (D19) and so stops the progress animation and elapsed time, and will pause the clipboard poll once it exists. No screen-lock notification is in Apple's NSWorkspace reference; the documented session notifications cover user switching [V: https://developer.apple.com/documentation/appkit/nsworkspace/sessiondidresignactivenotification], so the MVP pauses on screen sleep only; lock detection is checked in Phase 2 step a |
 | v0.2: battery | IOKit power-source run-loop source [V] |
 | v0.2: Bluetooth connect | IOBluetooth connect/disconnect registration [V: documented API exists; Atoll doesn't use it] |
 | v0.2: calendar | EventKit store-changed notification [V] |
@@ -159,10 +159,11 @@ Target: zero wake-ups while idle, apart from the clipboard poll. Intervals below
 | Peek dismissal | One-shot, 2–3 s | A peek HUD is showing | Timed by definition. |
 | Screen-change debounce | One-shot 0.2 s | Display change burst | Coalesces bursts. |
 | Notes autosave | One-shot 1 s after last keystroke | Typing in notes | Batches disk writes. |
-| Now-playing progress bar (D26) | No app timer: one Core Animation animation, restarted on each update | Open notch **and** playing | Progress is extrapolated from the last anchor; the render server draws the motion [V: probe, 0 app wake-ups]. Fallback if it misbehaves: `TimelineView` at 1 Hz. |
+| Now-playing progress bar (D26) | No app timer: one Core Animation animation per update, capped at 10 fps with `preferredFrameRateRange` | Open notch **and** playing | Progress is extrapolated from the last anchor and the render server draws the motion: 0 app wake-ups [V: harness, 2026-10-25]. Uncapped it redrew at the display rate and added about 12 points of WindowServer CPU; at 10 fps about 3 [V: harness, 60 Hz display]. The bar moves about 2 px/s on a 3-minute track [I: device check 22]. Fallback if it misbehaves: `TimelineView` at 1 Hz. |
+| Now-playing elapsed time (D26) | About 1 Hz, driven by SwiftUI (`Text(timerInterval:pauseTime:)`) | Open notch **and** playing; still while paused; gone when the notch closes (D19), including on screen sleep | A clock has to change every second. Each tick is a SwiftUI layout of the notch's hosting view: about 0.5 % app CPU [V: harness, 2026-10-25]. It keeps ticking while its window is hidden, so closing the notch on screen sleep is what stops it. |
 | Decorative waveform (planned, `feat/now-playing-compact`) | ≤ 30 fps animation | Compact view visible **and** playing **and** not Low Power Mode | Animation. Static bars otherwise. |
 
-Now Playing today (track info and controls, D22–D24) adds no timers and no polling. Music's bursts of two states are not debounced; a one-shot 150 ms debounce would be added here only if device check 10 shows a flicker (D24).
+The Now Playing source adds no timers and no polling; the open view adds the two rows above (D26). Music's bursts of two states are not debounced; a one-shot 150 ms debounce would be added here only if device check 10 shows a flicker (D24).
 
 Not allowed: any repeating timer while idle, a hover polling loop, a memory watchdog, a Bluetooth poll. These are the loops Atoll runs that we avoid [V: research/atoll-system-shell.md B12].
 

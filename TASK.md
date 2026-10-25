@@ -207,8 +207,8 @@ Device checks (Release build, notched Mac), numbered after branch 1's:
 19. Click and drag seek on both players. The first seek without the grant prompts once. Drag past the panel edge (does the notch close mid-drag?). VoiceOver adjusts in 10 s steps.
 20. Artwork: Music library track, catalogue track, radio (app icon), a track without artwork (app icon); Spotify track, an ad (app icon); without the grant, app icons.
 21. Network (`nettop` or a firewall): only `i.scdn.co`, at most one request per Spotify track change, none for Music, none while idle. Offline: app icon, no retries.
-22. The bar moves smoothly, stops when paused, and is right after closing and reopening the notch.
-23. Energy: 0 idle wake-ups for DropNotch while open and playing, and while closed; WindowServer shows no lasting rise; display sleep with the notch open.
+22. The bar moves smoothly (it is drawn at 10 fps), stops when paused, and is right after closing and reopening the notch.
+23. Energy: 0 wake-ups while closed and while paused; about 1 a second while open and playing (the elapsed time); WindowServer within about 3 points of its baseline; display sleep with the notch open closes it.
 24. Memory stays flat over 50 track changes.
 25. Increase Contrast, hit targets, Reduce Motion with the new layout; VoiceOver reads the bar's value.
 26. Release launch, and `codesign -d --entitlements -` shows only apple-events.
