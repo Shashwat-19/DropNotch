@@ -97,4 +97,46 @@ final class NowPlayingSelectionTests: XCTestCase {
         selection.fetched(NowPlayingInfo(player: .music, state: .playing))
         XCTAssertNil(selection.current)
     }
+
+    // A first notification can arrive before NSWorkspace's launch notice; it shows, and the notice keeps it.
+    func testReportFromAPlayerNotMarkedLaunchedShowsAndALaterLaunchKeepsIt() {
+        report(.spotify, .playing, "Song")
+        XCTAssertEqual(selection.current?.title, "Song")
+        selection.launched(.spotify)
+        XCTAssertEqual(selection.current, NowPlayingInfo(player: .spotify, state: .playing, title: "Song", artist: "a"))
+    }
+
+    func testStateOnlyReportFromAPlayerWithNoTrackYetHasNoTitle() {
+        selection.report(NowPlayingInfo(player: .music, state: .stopped), carriesTrack: false)
+        XCTAssertEqual(selection.current, NowPlayingInfo(player: .music, state: .stopped))
+    }
+
+    func testRepeatedQuitIsHarmless() {
+        report(.music, .paused)
+        selection.quit(.spotify)
+        selection.quit(.music)
+        selection.quit(.music)
+        XCTAssertNil(selection.current)
+        report(.music, .paused)
+        XCTAssertEqual(selection.current?.player, .music)
+    }
+
+    func testFetchWithNoTrackShowsTheStateOnly() {
+        selection.launched(.music)
+        selection.fetched(NowPlayingInfo(player: .music, state: .playing))
+        XCTAssertEqual(selection.current, NowPlayingInfo(player: .music, state: .playing))
+    }
+
+    // A fetch counts as a report, so a fetched Playing beats a paused player that reported earlier.
+    func testFetchedPlayingTakesOverFromAPausedPlayer() {
+        report(.spotify, .paused)
+        selection.launched(.music)
+        selection.fetched(NowPlayingInfo(player: .music, state: .playing, title: "Fetched"))
+        XCTAssertEqual(selection.current?.player, .music)
+    }
+
+    func testFetchForAPlayerNeverLaunchedIsDropped() {
+        selection.fetched(NowPlayingInfo(player: .spotify, state: .playing, title: "Song"))
+        XCTAssertNil(selection.current)
+    }
 }

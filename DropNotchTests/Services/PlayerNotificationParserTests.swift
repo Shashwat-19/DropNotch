@@ -64,4 +64,18 @@ final class PlayerNotificationParserTests: XCTestCase {
         let song = PlayerNotificationParser.track(.music, .paused, name: "Song", artist: " Band ", trackID: nil)
         XCTAssertEqual(song, NowPlayingInfo(player: .music, state: .paused, title: "Song", artist: "Band"))
     }
+
+    // Only a string Track ID can mark an ad; anything else keeps the track.
+    func testNonStringTrackIDIsNotAnAd() throws {
+        let payload: [AnyHashable: Any] = ["Player State": "Playing", "Name": "Song", "Artist": "Band", "Track ID": 1234]
+        let result = try XCTUnwrap(PlayerNotificationParser.parse(payload, from: .spotify))
+        XCTAssertEqual(result.info, NowPlayingInfo(player: .spotify, state: .playing, title: "Song", artist: "Band"))
+    }
+
+    // A `Name` key that isn't a string still means "a track payload": it replaces the old title with none.
+    func testNonStringNameCarriesATrackWithNoTitle() throws {
+        let result = try XCTUnwrap(PlayerNotificationParser.parse(["Player State": "Paused", "Name": NSNull()], from: .music))
+        XCTAssertEqual(result.info, NowPlayingInfo(player: .music, state: .paused))
+        XCTAssertTrue(result.carriesTrack)
+    }
 }
