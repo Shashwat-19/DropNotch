@@ -1,12 +1,16 @@
 import SwiftUI
 
-/// Stub Now Playing module (D2, D21): consumes a `NowPlayingSource` and shows a placeholder.
+/// Now Playing (D2, D22–D24): shows what a `NowPlayingSource` reports and sends its commands.
 @MainActor
 @Observable
 final class NowPlayingModule: NotchModule {
     let id = "now-playing"
     let title: LocalizedStringResource = "Now Playing"
     private(set) var info: NowPlayingInfo?
+    /// A command is in flight, or the Automation prompt is up. The controls are disabled meanwhile.
+    private(set) var isSending = false
+    /// The player that refused Automation on the last click (D23). A click that gets through clears it.
+    private(set) var deniedPlayer: MediaPlayer?
 
     private let source: any NowPlayingSource
     // Not UI state, so Observation should skip it (`@Observable` only tracks `var`s).
@@ -20,11 +24,7 @@ final class NowPlayingModule: NotchModule {
 
     func compactView(slot: CompactSlot) -> AnyView { AnyView(EmptyView()) }
 
-    func expandedView() -> AnyView {
-        AnyView(Text("Nothing playing")
-            .font(.caption)
-            .foregroundStyle(.white.opacity(0.6)))
-    }
+    func expandedView() -> AnyView { AnyView(NowPlayingExpandedView(module: self)) }
 
     func settingsView() -> AnyView { AnyView(EmptyView()) }
 
@@ -40,5 +40,21 @@ final class NowPlayingModule: NotchModule {
         task?.cancel()
         task = nil
         info = nil
+        isSending = false
+        deniedPlayer = nil
+    }
+
+    /// Sends `command` to the player on screen. The state change comes back as a notification, so
+    /// nothing here guesses the new state.
+    func perform(_ command: PlaybackCommand) async {
+        guard let player = info?.player, !isSending else { return }
+        isSending = true
+        let outcome = await source.send(command, to: player)
+        isSending = false
+        switch outcome {
+        case .denied: deniedPlayer = player
+        case .ok: deniedPlayer = nil
+        default: break
+        }
     }
 }

@@ -16,7 +16,12 @@ struct NotchRootView: View {
             // vanishes at once on close, so the text never pokes out of the shrinking shape (D19).
             .overlay {
                 if state.displayedPhase == .open, let module = registry.expandedModules.first {
-                    module.expandedView().transition(.asymmetric(insertion: .opacity, removal: .identity))
+                    module.expandedView()
+                        // Start below the closed notch, so nothing sits under the camera housing.
+                        .padding(.top, state.geometry?.closedFrame.height ?? 0)
+                        // The shape is always black, so its content uses dark colours in light mode too (L5).
+                        .environment(\.colorScheme, .dark)
+                        .transition(.asymmetric(insertion: .opacity, removal: .identity))
                 }
             }
             // The panel reaches above the screen (D20); keep the shape below the screen's top.
