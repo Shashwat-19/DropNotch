@@ -15,6 +15,9 @@ final class NowPlayingModule: NotchModule {
     private let source: any NowPlayingSource
     // Not UI state, so Observation should skip it (`@Observable` only tracks `var`s).
     @ObservationIgnored private var task: Task<Void, Never>?
+    /// Numbers each click. `stop()` and newer clicks move it on, so a reply that arrives late (the
+    /// Automation prompt can stay up indefinitely) can't undo what happened since.
+    @ObservationIgnored private var currentClick = 0
 
     init(source: any NowPlayingSource) {
         self.source = source
@@ -42,6 +45,7 @@ final class NowPlayingModule: NotchModule {
         info = nil
         isSending = false
         deniedPlayer = nil
+        currentClick += 1
     }
 
     /// Sends `command` to the player on screen. The state change comes back as a notification, so
@@ -49,7 +53,10 @@ final class NowPlayingModule: NotchModule {
     func perform(_ command: PlaybackCommand) async {
         guard let player = info?.player, !isSending else { return }
         isSending = true
+        currentClick += 1
+        let click = currentClick
         let outcome = await source.send(command, to: player)
+        guard click == currentClick else { return }
         isSending = false
         switch outcome {
         case .denied: deniedPlayer = player

@@ -19,16 +19,20 @@ final class ScriptablePlayersSource: NSObject, NowPlayingSource {
     private var lastPublished: NowPlayingInfo?
     /// Bumped per subscription, so a late reply or `onTermination` from an old stream can't touch the new one.
     private var generation = 0
+    /// false in tests, so a real player's notifications or launch can't reach a test's stream.
+    private let observesSystem: Bool
 
     init(sender: any AppleEventSending = AppleEventSender(),
          runningPID: @escaping (MediaPlayer) -> pid_t? = {
              NSRunningApplication.runningApplications(withBundleIdentifier: $0.bundleID).first?.processIdentifier
-         }) {
+         },
+         observesSystem: Bool = true) {
         self.sender = sender
         self.runningPID = runningPID
+        self.observesSystem = observesSystem
     }
 
-    /// Whether observers are installed. Internal for tests.
+    /// Whether a stream is live. Internal for tests.
     var isObserving: Bool { continuation != nil }
 
     /// Each read starts observing for a new stream (ending the previous one); the observers go when it ends.
@@ -74,6 +78,16 @@ final class ScriptablePlayersSource: NSObject, NowPlayingSource {
 
     private func startObserving(generation: Int) {
         selection = NowPlayingSelection()
+        if observesSystem { addSystemObservers() }
+        for player in MediaPlayer.allCases {
+            guard let pid = runningPID(player) else { continue }
+            selection.launched(player)
+            Task { await fetchCurrent(player, pid: pid, generation: generation) }
+        }
+        publish()
+    }
+
+    private func addSystemObservers() {
         for player in MediaPlayer.allCases {
             // `.deliverImmediately`: AppKit may hold distributed notifications back while the app is
             // inactive, and DropNotch almost always is (D24).
@@ -86,12 +100,6 @@ final class ScriptablePlayersSource: NSObject, NowPlayingSource {
                               name: NSWorkspace.didLaunchApplicationNotification, object: nil)
         workspace.addObserver(self, selector: #selector(appQuit(_:)),
                               name: NSWorkspace.didTerminateApplicationNotification, object: nil)
-        for player in MediaPlayer.allCases {
-            guard let pid = runningPID(player) else { continue }
-            selection.launched(player)
-            Task { await fetchCurrent(player, pid: pid, generation: generation) }
-        }
-        publish()
     }
 
     private func stopObserving() {
