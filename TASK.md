@@ -178,6 +178,8 @@ Device checks (Release build, notched Mac). Reset grants between runs with `tccu
 
 ### Branch 2: `feat/now-playing-media` (plan approved by Shash, 2026-10-25)
 
+**Status (2026-10-25):** steps 0–14 done; Debug clean build and tests pass (212 tests, 0 failures, run by the lead). Reviews done, required fixes applied: test-writer (artwork after an ad), code-reviewer (lost races, relaunch, VoiceOver base, a name shared with Atoll), security-auditor (JPEG/PNG only, size limits, host as written), performance-optimizer (10 fps bar, elapsed-time §9 row, screen sleep closes the notch), accessibility-auditor (live VoiceOver value, announced denial, 24 pt link, 40 % track). Waiting for Shash's Release build and device checks 17–26; docs-writer after those.
+
 Progress bar with seek, and artwork, in the open notch. Decisions D25 (Spotify artwork over HTTPS, the first network access) and D26 (units, reads, merging, Core Animation bar, seek; favourite dropped). Probe report: docs/research/now-playing-media-probe-2026-10-25.md. Package search (dependency-manager, 2026-10-25): no packages.
 
 Out of this branch: favourite (D26), shuffle and repeat, the compact slot (branch 3), an artwork on/off switch (Phase 3 Settings), a disk cache, retries, keeping the notch open while dragging the bar.
