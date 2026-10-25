@@ -12,9 +12,8 @@ final class NotchPanel: NSPanel {
         super.init(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel],
                    backing: .buffered, defer: false)
         // A borderless window shows no title, but VoiceOver reads it; without one the panel
-        // would be an unnamed window on every Space (accessibility-auditor R1, Shash 2026-10-25).
+        // would be an unnamed window on every Space (D21).
         title = "DropNotch"
-        setAccessibilityLabel("DropNotch")
         isOpaque = false
         backgroundColor = .clear
         hasShadow = false

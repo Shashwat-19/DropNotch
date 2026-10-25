@@ -52,6 +52,5 @@ final class NotchPanelTests: XCTestCase {
     func testPanelHasAnAccessibleName() {
         let panel = NotchPanel(contentView: NSView())
         XCTAssertEqual(panel.title, "DropNotch")
-        XCTAssertEqual(panel.accessibilityLabel(), "DropNotch")
     }
 }

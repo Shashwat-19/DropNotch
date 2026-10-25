@@ -531,7 +531,9 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Trade-offs / follow-ups:**
 - The protocol's `compactView(slot:)` and `settingsView()` have no caller yet: the closed panel is exactly the notch (D5), so there is no room for compact content until the closed frame can widen.
-- Device check: the placeholder text appears when the shape opens, and nothing flickers or shifts during the grow or shrink (D19). Unverified; tests don't cover rendering.
+- Panel name (Shash, 2026-10-25): `NotchPanel.title` is "DropNotch", so VoiceOver meets a named window instead of an unnamed one on every Space. Alternative: hide the panel from VoiceOver, rejected because the open notch will hold real content. `setAccessibilityLabel` is not set as well: it would be redundant, and VoiceOver might read the name twice [I: not checked on a device]. What VoiceOver announces is unverified.
+- Device check (passed on a notched Mac, 2026-10-25, by recording): six centred opens, the placeholder centred inside the shape, no spill on close. Reduce Motion and Accessibility Inspector were not tested; they move to the Phase 3 accessibility checks (TASK.md).
+- Original device check: the placeholder text appears when the shape opens, and nothing flickers or shifts during the grow or shrink (D19). Unverified; tests don't cover rendering.
 - Later lists from the reviews are in TASK.md (Phase 3 carry-overs) and RISKS.md §4.
 
 **Review (TASK.md step j):**

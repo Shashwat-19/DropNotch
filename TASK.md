@@ -8,13 +8,13 @@ Run a reverse-engineering analysis (REA) of Canopy and Atoll, turn it into a fea
 ## Phase 1: Analysis (done, 2026-10-24)
 Canopy's public pages and Atoll's features were analysed, and the decisions D1–D10 were approved by Shash. Outputs: docs/FEATURE_MATRIX.md, docs/ARCHITECTURE.md, docs/RISKS.md, docs/DECISIONS.md and docs/research/.
 
-## Phase 2: Foundation (in progress; plan approved 2026-10-24)
+## Phase 2: Foundation (done, 2026-10-25; plan approved 2026-10-24)
 
 Decision numbers (D1–D14) refer to docs/DECISIONS.md. Start with the `planner` agent and send its plan to Shash. Steps a and b are verification and project setup; step a ends with a report to Shash, and no module code is built until Shash has read it.
 
 Plan for c–j approved by Shash, 2026-10-24: branches `feat/menu-bar` (c), `feat/notch-panel` (d), `feat/hover-state` (e) and `feat/module-registry` (f), merged in that order; the g tests go in the branch whose logic they test. **After `feat/hover-state` merges, stop** and hand Shash the hover device checks from step i. `feat/module-registry` waits for Shash's report.
 
-**Status (2026-10-25):** c, d and e are on main. The d–e checks passed on a notched Mac on 2026-10-25, after the fixes on `fix/hover-glitch`: the D16 correction, the D18 retune, the D19 canvas and D20. The notch opens centred in about 0.2–0.3 s, every deliberate hover opened it, sweeps didn't, and resting at the top edge kept it open. **Branch 4, `feat/module-registry` (step f; decision D21), is implemented on `feat/module-registry`. The step j reviews for it are done (code-reviewer, test-writer, accessibility-auditor, performance-optimizer, docs-writer); the device check is next, then merge.** Two D20 device checks are still open; they are listed in step i.
+**Status (2026-10-25):** c, d and e are on main. The d–e checks passed on a notched Mac on 2026-10-25, after the fixes on `fix/hover-glitch`: the D16 correction, the D18 retune, the D19 canvas and D20. The notch opens centred in about 0.2–0.3 s, every deliberate hover opened it, sweeps didn't, and resting at the top edge kept it open. **Phase 2 is done.** Branch 4, `feat/module-registry` (step f; D21), passed its step j reviews (code-reviewer, test-writer, accessibility-auditor, performance-optimizer, docs-writer) and its device check on a notched Mac (6 centred opens, placeholder centred, no spill on close), and is on main. **Next: Phase 3, not started.** Carried into Phase 3's accessibility checks, not yet tested: Reduce Motion (no flash or clipped frame; toggling mid-session), the Accessibility Inspector, and what VoiceOver announces for the panel. Two D20 device checks are still open; they are listed in step i.
 
 a. **Step 0: verify before building.** Done 2026-10-24 (preview-flag run partial); report in docs/research/clipboard-probe-2026-10-24.md, reviewed by Shash; decisions D7a and D7b.
    - **Clipboard warning probe (D7).** Build a throwaway probe in a scratch folder outside DropNotch/. It is not committed. It reads `NSPasteboard.general` in the background when `changeCount` changes. Record: whether macOS shows a privacy alert or prompt on the current macOS version; what triggers it; whether reading only `changeCount` and `types` avoids it. Report the result to Shash before the Clipboard module is built.
@@ -74,7 +74,7 @@ i. **Manual checks on a real notched Mac.** These cannot run in CI.
    - Module placeholder (D21):
      - "Nothing playing" appears when the shape opens, doesn't flicker, and disappears at once on close without poking outside the shrinking shape.
      - With Reduce Motion on, hover open and close show no flash or clipped frame, and toggling the setting mid-session works.
-     - VoiceOver: note what it announces for the panel while closed and open. The accessibility-auditor suggested naming the panel "DropNotch" or hiding it from VoiceOver. Undecided: ask Shash.
+     - VoiceOver: the panel is named "DropNotch" (Shash, 2026-10-25; D21). Note what VoiceOver announces for it, closed and open. Not tested yet; moved to the Phase 3 accessibility checks.
    - Menu-bar Settings… opens Settings in front, with keyboard focus, while another app is frontmost (D14). ⌘Q in the Settings window quits.
    - Deferred (Shash, 2026-10-24): the step a items that can only be confirmed on a device need features outside Phase 2. Each one is checked in the phase that builds its feature:
      - Automation prompts (Release build, D11): does macOS show one prompt per target app, on the first Apple Event? Not stated in Apple docs; confirm on device.
