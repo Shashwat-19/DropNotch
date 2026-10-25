@@ -9,12 +9,15 @@ final class NowPlayingModuleTests: XCTestCase {
         /// When true, each send waits for `release`, oldest first: a command in flight or a prompt that is up.
         var holdsReplies = false
         private(set) var sent: [String] = []
+        private(set) var refreshed: [MediaPlayer] = []
         private var held: [CheckedContinuation<AppleEventOutcome, Never>] = []
 
         init(stream: AsyncStream<NowPlayingInfo?>) { self.stream = stream }
 
         var updates: AsyncStream<NowPlayingInfo?> { stream }
         var heldCount: Int { held.count }
+
+        func refresh(_ player: MediaPlayer) { refreshed.append(player) }
 
         func send(_ command: PlaybackCommand, to player: MediaPlayer) async -> AppleEventOutcome {
             sent.append("\(command) \(player)")
@@ -172,4 +175,18 @@ final class NowPlayingModuleTests: XCTestCase {
         await new.value
         XCTAssertFalse(module.isSending)
     }
+
+    func testOpeningReadsThePositionOfThePlayerOnScreen() async {
+        let (module, source) = await moduleShowing(NowPlayingInfo(player: .spotify, state: .playing))
+        module.didOpen()
+        XCTAssertEqual(source.refreshed, [.spotify])
+    }
+
+    func testOpeningWithNothingOnScreenReadsNothing() {
+        let source = FakeSource(stream: AsyncStream { _ in })
+        let module = NowPlayingModule(source: source)
+        module.didOpen()
+        XCTAssertEqual(source.refreshed, [])
+    }
 }
+

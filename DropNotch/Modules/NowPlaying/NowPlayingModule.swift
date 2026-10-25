@@ -48,6 +48,13 @@ final class NowPlayingModule: NotchModule {
         currentClick += 1
     }
 
+    /// The notch opened: re-read the position, because a seek made in the player may not have sent a
+    /// notification (D26).
+    func didOpen() {
+        guard let player = info?.player else { return }
+        source.refresh(player)
+    }
+
     /// Sends `command` to the player on screen. The state change comes back as a notification, so
     /// nothing here guesses the new state.
     func perform(_ command: PlaybackCommand) async {

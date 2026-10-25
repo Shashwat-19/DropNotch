@@ -40,6 +40,8 @@ struct NowPlayingExpandedView: View {
             // One group named after the module, so VoiceOver announces where the controls belong (L4).
             .accessibilityElement(children: .contain)
             .accessibilityLabel(Text(module.title))
+            // The open content is inserted each time the notch opens (D19), so this runs once per open.
+            .onAppear { module.didOpen() }
         } else {
             Text("Nothing playing")
                 .font(.subheadline)

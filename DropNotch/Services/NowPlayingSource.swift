@@ -7,4 +7,6 @@ protocol NowPlayingSource {
     var updates: AsyncStream<NowPlayingInfo?> { get }
     /// May show the system Automation prompt for `player` the first time (D23).
     func send(_ command: PlaybackCommand, to player: MediaPlayer) async -> AppleEventOutcome
+    /// Re-reads `player`'s position, where the source can and the user already allowed it; never prompts (D26).
+    func refresh(_ player: MediaPlayer)
 }

@@ -2,4 +2,5 @@
 struct NoNowPlayingSource: NowPlayingSource {
     var updates: AsyncStream<NowPlayingInfo?> { AsyncStream { _ in } }
     func send(_ command: PlaybackCommand, to player: MediaPlayer) async -> AppleEventOutcome { .notRunning }
+    func refresh(_ player: MediaPlayer) {}
 }
