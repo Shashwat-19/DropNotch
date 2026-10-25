@@ -59,4 +59,25 @@ final class NowPlayingArtworkTests: XCTestCase {
         XCTAssertEqual(artwork, artwork)
         XCTAssertNotEqual(artwork, try XCTUnwrap(NowPlayingArtwork(trackID: "b", data: data)))
     }
+
+    // security-auditor M1: only JPEG and PNG reach a decoder, whatever the bytes claim to be.
+    func testOnlyJPEGAndPNGAreDecoded() throws {
+        let rep = try XCTUnwrap(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 16, pixelsHigh: 16, bitsPerSample: 8,
+                                                 samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                                 colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0))
+        for (type, decodes) in [(NSBitmapImageRep.FileType.png, true), (.jpeg, true), (.tiff, false), (.gif, false), (.bmp, false)] {
+            let data = try XCTUnwrap(rep.representation(using: type, properties: [:]))
+            XCTAssertEqual(NowPlayingArtwork(trackID: "a", data: data) != nil, decodes, "\(type)")
+        }
+    }
+
+    // security-auditor L5: a huge image is refused from its header.
+    func testImagesLargerThanTheSourceLimitAreRefused() throws {
+        let side = NowPlayingArtwork.maxSourcePixels + 1
+        let rep = try XCTUnwrap(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: side, pixelsHigh: 1, bitsPerSample: 8,
+                                                 samplesPerPixel: 1, hasAlpha: false, isPlanar: false,
+                                                 colorSpaceName: .deviceWhite, bytesPerRow: 0, bitsPerPixel: 0))
+        XCTAssertNil(NowPlayingArtwork(trackID: "a", data: try XCTUnwrap(rep.representation(using: .png, properties: [:]))))
+    }
 }
+

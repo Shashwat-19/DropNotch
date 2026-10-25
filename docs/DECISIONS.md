@@ -672,7 +672,8 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Trade-offs / follow-ups:**
 - README Privacy, ARCHITECTURE §10 and RISKS §4 now describe this request.
-- Images from the network are untrusted input to ImageIO: size cap before decoding, thumbnail only; security-auditor reviews it.
+- Images are untrusted input to ImageIO, from the network and from Music's embedded artwork alike. Only JPEG and PNG (as ImageIO identifies the bytes) are decoded, images over 8192 px on a side are refused from their header, and decoding goes straight to a thumbnail (security-auditor M1, L5, 2026-10-25).
+- Spoofing: a local unsandboxed process flooding Music or Spotify notifications with new track ids makes DropNotch read the player once per notification (and Music's artwork once per id). The reads can't choose the artwork URL or show the spoofer's image; known limit, like D24's.
 - Device check 21 (TASK.md Phase 3, branch 2): only `i.scdn.co`, at most one request per Spotify track, none for Music, none while idle.
 
 ---

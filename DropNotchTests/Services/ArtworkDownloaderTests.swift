@@ -140,7 +140,8 @@ final class ArtworkDownloaderTests: XCTestCase {
 
     // Documents what `mimeType` is: URLSession sniffs it from the body when the header is missing or
     // another image type, so JPEG bytes pass as image/jpeg even without that header. A non-image type
-    // (text/html) is not overridden. Either way the bytes are JPEG or PNG, and the size cap still holds.
+    // (text/html) is not overridden. This check is a first filter only: `NowPlayingArtwork` decides the
+    // format from the bytes and decodes nothing but JPEG and PNG.
     func testTheTypeCheckSeesTheSniffedTypeForImageBytes() async {
         Stub.headers = [:]
         var data = await downloader.data(from: good)

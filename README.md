@@ -61,7 +61,7 @@ The prompt and the denied state are not yet checked on a device; this section de
 
 DropNotch does not include analytics or telemetry.
 
-Its one network request is for Spotify artwork: when a new Spotify track starts, it downloads that track's cover image over HTTPS from Spotify's image server (`i.scdn.co`), using the image address Spotify itself provides. Nothing else is sent, no cookies are kept, and the image is held in memory only. Music artwork comes from the Music app, with no network.
+Its one network request is for Spotify artwork: when a new Spotify track starts, it downloads that track's cover image over HTTPS from Spotify's image server (`i.scdn.co`), using the image address Spotify itself provides. The request carries the standard headers macOS adds (a User-Agent naming DropNotch and the macOS networking versions, your preferred languages), and Spotify's server sees your IP address; nothing else is sent, no cookies are kept, and the image is held in memory only. Music artwork comes from the Music app, with no network.
 
 Now Playing reads track details from the notifications Music and Spotify broadcast on your Mac, and sends its commands straight to the player. Titles and artists are held in memory while shown, and are never saved to disk or logged.
 

@@ -82,9 +82,11 @@ struct AppleEventSender: AppleEventSending {
             guard Self.belongs(pid, to: player) else { return nil }
             let artwork = Self.element("cArt", index: 1, of: Self.property("pTrk", of: NSAppleEventDescriptor.null()))
             // `raw data`: the file's own bytes (JPEG on the probe), about 0.5 MB [V: media probe].
-            guard let data = Self.get(Self.property("pRaw", of: artwork), pid: pid)?.data,
-                  !data.isEmpty, data.count <= Self.maxArtworkBytes else { return nil }
-            return data
+            // The size is checked before `.data` copies the bytes out of the reply (security-auditor L4).
+            guard let reply = Self.get(Self.property("pRaw", of: artwork), pid: pid),
+                  case let size = withExtendedLifetime(reply, { AEGetDescDataSize(reply.aeDesc) }),
+                  size > 0, size <= Self.maxArtworkBytes else { return nil }
+            return reply.data
         }
     }
 

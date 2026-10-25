@@ -9,6 +9,12 @@ struct NowPlayingArtwork: Equatable {
 
     /// Longest side in pixels: the 56 pt artwork at 2×, with room to spare.
     static let maxPixelSize = 128
+    /// ImageIO recognises formats from the bytes, whatever the label said. Only these two are decoded:
+    /// artwork is JPEG or PNG [V: both probes], and other decoders are attack surface (security-auditor M1).
+    static let formats: Set<String> = ["public.jpeg", "public.png"]
+    /// Larger images are refused from their header, before decoding: a 16000 px PNG under 1 MB took
+    /// over a second to scale down (security-auditor L5).
+    static let maxSourcePixels = 8192
 
     /// Decodes `data` (from Music, or Spotify's image server) into a thumbnail; nil if it isn't an image.
     /// ImageIO scales while decoding, so the full-size image is never held. Can be slow: never call it
@@ -21,6 +27,11 @@ struct NowPlayingArtwork: Equatable {
             kCGImageSourceThumbnailMaxPixelSize: Self.maxPixelSize,
         ] as CFDictionary
         guard let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary),
+              let format = CGImageSourceGetType(source) as String?, Self.formats.contains(format),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let width = properties[kCGImagePropertyPixelWidth] as? Int,
+              let height = properties[kCGImagePropertyPixelHeight] as? Int,
+              max(width, height) <= Self.maxSourcePixels,
               let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options) else { return nil }
         self.trackID = trackID
         self.image = image

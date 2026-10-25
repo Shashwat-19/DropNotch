@@ -101,7 +101,9 @@ final class ScriptablePlayersSource: NSObject, NowPlayingSource {
                   generation == self.generation, isObserving else { return }
             selection.refreshed(read, stamp: stamp)
             publish()
-            loadArtwork(player, pid: pid, generation: generation)
+            // Only when the read confirms the track on screen: Music's artwork read gets whatever is current
+            // by then, which after a fast skip is another track (security-auditor L1).
+            if read.trackID == selection.info(for: player)?.trackID { loadArtwork(player, pid: pid, generation: generation) }
         }
     }
 

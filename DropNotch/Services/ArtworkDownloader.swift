@@ -29,7 +29,8 @@ struct ArtworkDownloader: ArtworkLoading {
     /// `https://i.scdn.co/...` and nothing else: no other scheme, host, port, or user name, which could
     /// hide a different host (`https://i.scdn.co@example.com/`).
     static func allows(_ url: URL) -> Bool {
-        url.scheme?.lowercased() == "https" && url.host?.lowercased() == allowedHost
+        // The host as written: a percent-encoded host isn't decoded into a match (security-auditor L3).
+        url.scheme?.lowercased() == "https" && url.host(percentEncoded: true)?.lowercased() == allowedHost
             && url.user == nil && url.password == nil && (url.port == nil || url.port == 443)
     }
 
