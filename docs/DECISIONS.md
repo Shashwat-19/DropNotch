@@ -512,3 +512,25 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - Moves that change nothing aren't logged, because they arrive many times a second. During a sweep each move still restarts the timer (a cancel and a new `Task`) and logs it. That's about 120 a second, but only for the length of the sweep. It's a performance-optimizer item for the Phase 2 pass.
 
 **Trade-off:** if a display is arranged directly above the notched screen, the 1 pt overhang lies on that display's bottom row. A pointer resting there over the notch could peek or open it [I: device check, RISKS §4].
+
+## D21. The registry owns the enabled flag; Now Playing is a stub behind `NowPlayingSource`
+
+**Date:** 2026-10-25 · **Status:** Accepted (Shash; dropping `isEnabled` from `NotchModule` approved as Phase 2 decision 3)
+
+**Decision:**
+- `NotchModule` is the protocol in ARCHITECTURE.md §3 without `isEnabled`. `ModuleRegistry` keeps `enabledIDs` and saves each flag in `UserDefaults` under `module.<id>.enabled` (on when absent). `setEnabled(_:_:)` is the only writer; it calls `start()` or `stop()` only while the registry is running, so a disabled module, or any module before launch finishes, runs nothing.
+- Layout slots (D8) are three properties on the registry: `compactLeftID`, `compactRightID`, `tabOrder`. They have defaults only: no persistence or editing until Phase 3 Settings.
+- `NowPlayingModule` reads an `AsyncStream<NowPlayingInfo?>` from a `NowPlayingSource` in a `Task` that `start()` creates and `stop()` cancels. `NoNowPlayingSource` never yields, so the view always shows "Nothing playing". The protocol has no playback commands yet.
+- `NotchRootView` shows the first enabled module's `expandedView()` over the open shape.
+
+**Alternatives considered:**
+- Keep `isEnabled` on each module, as the first sketch had. Rejected: the module would have to tell the registry and the view when it changes, which means a second flag or manual observation.
+- `ForEach` over `any NotchModule` for tabs. Not needed until there is a tab bar.
+
+**Why:** One owner of the flag is simpler to test and makes the view update through Observation. The stub exercises the full start, consume and stop path without a permission prompt.
+
+**Trade-offs / follow-ups:**
+- The protocol's `compactView(slot:)` and `settingsView()` have no caller yet: the closed panel is exactly the notch (D5), so there is no room for compact content until the closed frame can widen.
+- Device check: the placeholder text appears when the shape opens, and nothing flickers or shifts during the grow or shrink (D19). Unverified; tests don't cover rendering.
+- Not run yet for this branch: `code-reviewer`; after the branch, once: `accessibility-auditor`, `performance-optimizer`, `docs-writer` (TASK.md step j).
+
