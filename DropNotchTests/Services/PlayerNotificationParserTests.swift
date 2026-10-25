@@ -7,7 +7,8 @@ final class PlayerNotificationParserTests: XCTestCase {
         let payload: [AnyHashable: Any] = ["Player State": "Playing", "Name": "Song", "Artist": "Band",
                                            "Album": "Record", "Total Time": 200_000]
         let result = try XCTUnwrap(PlayerNotificationParser.parse(payload, from: .music))
-        XCTAssertEqual(result.info, NowPlayingInfo(player: .music, state: .playing, title: "Song", artist: "Band"))
+        XCTAssertEqual(result.info, NowPlayingInfo(player: .music, state: .playing, title: "Song", artist: "Band",
+                                                   duration: 200))
         XCTAssertTrue(result.carriesTrack)
     }
 
@@ -87,4 +88,53 @@ final class PlayerNotificationParserTests: XCTestCase {
         XCTAssertEqual(result.info.title?.count, PlayerNotificationParser.maxTextLength)
         XCTAssertEqual(result.info.artist?.count, PlayerNotificationParser.maxTextLength)
     }
+
+    // MARK: D26: ids, durations and positions (shapes and units from the media probe)
+
+    func testMusicDurationIsMillisecondsAndIdIsUnsignedHex() throws {
+        let payload: [AnyHashable: Any] = ["Player State": "Playing", "Name": "Song",
+                                           "Total Time": NSNumber(value: Int64(182_109)),
+                                           "PersistentID": NSNumber(value: Int64(-5_741_257_159_933_803_605))]
+        let info = try XCTUnwrap(PlayerNotificationParser.parse(payload, from: .music)).info
+        XCTAssertEqual(try XCTUnwrap(info.duration), 182.109, accuracy: 0.0001)
+        XCTAssertEqual(info.trackID, String(format: "%016llX", UInt64(bitPattern: -5_741_257_159_933_803_605)))
+        XCTAssertEqual(info.trackID?.count, 16)
+        XCTAssertNil(info.position, "Music's notification has no position")
+    }
+
+    func testSpotifyDurationIsMillisecondsAndPositionIsSecondsAnchoredAtArrival() throws {
+        let now = Date(timeIntervalSinceReferenceDate: 500)
+        let payload: [AnyHashable: Any] = ["Player State": "Paused", "Name": "Song",
+                                           "Duration": NSNumber(value: Int64(205_800)), "Playback Position": 68.758,
+                                           "Track ID": "spotify:track:abc"]
+        let info = try XCTUnwrap(PlayerNotificationParser.parse(payload, from: .spotify, at: now)).info
+        XCTAssertEqual(info.duration, 205.8)
+        XCTAssertEqual(info.position, PlaybackPosition(seconds: 68.758, at: now))
+        XCTAssertEqual(info.trackID, "spotify:track:abc")
+    }
+
+    func testBadNumbersAreUnknownNotZero() {
+        for bad: Any in ["123", Double.nan, Double.infinity, -1.0, NSNull()] {
+            XCTAssertNil(PlayerNotificationParser.seconds(bad, unit: 1), "\(bad)")
+        }
+        XCTAssertNil(PlayerNotificationParser.seconds(nil, unit: 1000))
+        XCTAssertEqual(PlayerNotificationParser.seconds(0, unit: 1000), 0)
+    }
+
+    func testMusicIdThatIsNotANumberIsUnknown() throws {
+        let payload: [AnyHashable: Any] = ["Player State": "Playing", "Name": "Song", "PersistentID": "ABC"]
+        XCTAssertNil(try XCTUnwrap(PlayerNotificationParser.parse(payload, from: .music)).info.trackID)
+    }
+
+    func testAnAdHasNoTrackIdButKeepsItsTiming() throws {
+        let now = Date(timeIntervalSinceReferenceDate: 9)
+        let payload: [AnyHashable: Any] = ["Player State": "Playing", "Name": "Buy", "Track ID": "spotify:ad:1",
+                                           "Duration": 30_000, "Playback Position": 2.0]
+        let info = try XCTUnwrap(PlayerNotificationParser.parse(payload, from: .spotify, at: now)).info
+        XCTAssertNil(info.trackID)
+        XCTAssertNil(info.title)
+        XCTAssertEqual(info.duration, 30)
+        XCTAssertEqual(info.position, PlaybackPosition(seconds: 2, at: now))
+    }
 }
+
