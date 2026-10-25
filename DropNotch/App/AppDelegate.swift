@@ -4,7 +4,7 @@ import AppKit
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let notchState = NotchState()
-    private let registry = ModuleRegistry(modules: [NowPlayingModule(source: NoNowPlayingSource())])
+    private let registry = ModuleRegistry(modules: [NowPlayingModule(source: ScriptablePlayersSource())])
     private var screenObserver: ScreenObserver?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
