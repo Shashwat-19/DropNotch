@@ -153,4 +153,82 @@ final class NowPlayingSelectionTests: XCTestCase {
         selection.fetched(NowPlayingInfo(player: .spotify, state: .playing, title: "Song"))
         XCTAssertNil(selection.current)
     }
+
+    // MARK: D26: track fields, re-anchoring and reads
+
+    private let t0 = Date(timeIntervalSinceReferenceDate: 1_000)
+
+    private func spotifyTrack(_ id: String?, _ state: NowPlayingInfo.State, at seconds: TimeInterval?,
+                              url: String? = nil) -> NowPlayingInfo {
+        NowPlayingInfo(player: .spotify, state: state, title: "t", trackID: id, duration: 200,
+                       position: seconds.map { PlaybackPosition(seconds: $0, at: t0) },
+                       artworkURL: url.flatMap(URL.init(string:)))
+    }
+
+    func testStateOnlyReportKeepsTrackFieldsAndFreezesThePositionWhereItWas() {
+        selection.report(spotifyTrack("a", .playing, at: 60, url: "https://i.scdn.co/image/x"), carriesTrack: true, at: t0)
+        selection.report(NowPlayingInfo(player: .spotify, state: .paused), carriesTrack: false, at: t0.addingTimeInterval(5))
+        let current = selection.current
+        XCTAssertEqual(current?.trackID, "a")
+        XCTAssertEqual(current?.duration, 200)
+        XCTAssertEqual(current?.artworkURL, URL(string: "https://i.scdn.co/image/x"))
+        XCTAssertEqual(current?.position, PlaybackPosition(seconds: 65, at: t0.addingTimeInterval(5)))
+        XCTAssertEqual(current?.elapsed(at: t0.addingTimeInterval(60)), 65, "paused: the bar stays where it stopped")
+    }
+
+    func testSameTrackKeepsWhatThePayloadLacks() {
+        selection.report(spotifyTrack("a", .playing, at: 10, url: "https://i.scdn.co/image/x"), carriesTrack: true, at: t0)
+        // Music-style payload: same track, no position or URL.
+        var next = spotifyTrack("a", .paused, at: nil)
+        next.duration = nil
+        selection.report(next, carriesTrack: true, at: t0.addingTimeInterval(3))
+        XCTAssertEqual(selection.current?.position, PlaybackPosition(seconds: 13, at: t0.addingTimeInterval(3)))
+        XCTAssertEqual(selection.current?.duration, 200)
+        XCTAssertNotNil(selection.current?.artworkURL)
+    }
+
+    func testANewTrackDropsTheOldPositionAndArtworkURL() {
+        selection.report(spotifyTrack("a", .playing, at: 10, url: "https://i.scdn.co/image/x"), carriesTrack: true, at: t0)
+        selection.report(spotifyTrack("b", .playing, at: nil), carriesTrack: true, at: t0)
+        XCTAssertNil(selection.current?.position)
+        XCTAssertNil(selection.current?.artworkURL)
+    }
+
+    func testAReadMergesWhenNothingNewerArrived() {
+        selection.report(spotifyTrack("a", .playing, at: nil), carriesTrack: true, at: t0)
+        let stamp = selection.stamp(for: .spotify)
+        selection.refreshed(spotifyTrack("a", .playing, at: 42, url: "https://i.scdn.co/image/x"), stamp: stamp)
+        XCTAssertEqual(selection.current?.position, PlaybackPosition(seconds: 42, at: t0))
+        XCTAssertEqual(selection.current?.artworkURL, URL(string: "https://i.scdn.co/image/x"))
+    }
+
+    func testAReadIsDroppedAfterANewerReportOrForAnotherTrack() {
+        selection.report(spotifyTrack("a", .playing, at: nil), carriesTrack: true, at: t0)
+        let stamp = selection.stamp(for: .spotify)
+        selection.report(spotifyTrack("a", .paused, at: nil), carriesTrack: true, at: t0)
+        selection.refreshed(spotifyTrack("a", .playing, at: 42), stamp: stamp)
+        XCTAssertNil(selection.current?.position, "a newer report arrived while the read was out")
+
+        let fresh = selection.stamp(for: .spotify)
+        selection.refreshed(spotifyTrack("b", .playing, at: 42), stamp: fresh)
+        XCTAssertNil(selection.current?.position, "the read was about another track")
+    }
+
+    func testAReadDoesNotChangeWhichPlayerIsShown() {
+        report(.music, .playing)
+        report(.spotify, .paused)
+        selection.refreshed(NowPlayingInfo(player: .spotify, state: .playing, title: "t", artist: "a",
+                                           position: PlaybackPosition(seconds: 1, at: t0)),
+                            stamp: selection.stamp(for: .spotify))
+        XCTAssertEqual(selection.current?.player, .music)
+    }
+
+    func testAReadForAPlayerThatQuitIsDropped() {
+        selection.report(spotifyTrack("a", .playing, at: nil), carriesTrack: true, at: t0)
+        let stamp = selection.stamp(for: .spotify)
+        selection.quit(.spotify)
+        selection.refreshed(spotifyTrack("a", .playing, at: 42), stamp: stamp)
+        XCTAssertNil(selection.current)
+    }
 }
+

@@ -1,3 +1,5 @@
+import Foundation
+
 /// Which player the notch shows (D24). A pure value type: the source feeds it events and reads `current`.
 struct NowPlayingSelection {
     private var players: [MediaPlayer: NowPlayingInfo] = [:]
@@ -27,19 +29,48 @@ struct NowPlayingSelection {
         reportedAt[player] = nil
     }
 
-    /// A notification. With `carriesTrack: false` (a state-only payload) the last title and artist stay.
-    mutating func report(_ info: NowPlayingInfo, carriesTrack: Bool) {
+    /// A notification. With `carriesTrack: false` (a state-only payload) every track field stays (D24, D26).
+    /// For the same track, what the payload didn't carry (Music sends no position) stays too; a new track
+    /// starts with only what the payload carried.
+    mutating func report(_ info: NowPlayingInfo, carriesTrack: Bool, at now: Date = Date()) {
         var info = info
+        let last = players[info.player]
         if !carriesTrack {
             // A state-only payload for a player that isn't known to be running is most likely its quit
             // notice arriving after NSWorkspace's; keeping it would leave a player that never clears (D24).
-            guard let last = players[info.player] else { return }
-            info.title = last.title
-            info.artist = last.artist
+            guard let last else { return }
+            let state = info.state
+            info = last
+            info.state = state
+            info.position = Self.anchor(last, at: now)
+        } else if let last, info.trackID != nil, info.trackID == last.trackID {
+            info.duration = info.duration ?? last.duration
+            info.position = info.position ?? Self.anchor(last, at: now)
+            info.artworkURL = info.artworkURL ?? last.artworkURL
         }
         players[info.player] = info
         clock += 1
         reportedAt[info.player] = clock
+    }
+
+    /// The counter value of `player`'s last report. A read records it when it starts (D26).
+    func stamp(for player: MediaPlayer) -> Int? { reportedAt[player] }
+
+    /// An Apple Event read after a notification, an open or a seek (D26). Merged only if no report for that
+    /// player arrived since `stamp` and it is about the same track. It isn't a report, so it can't change
+    /// which player is on screen.
+    mutating func refreshed(_ read: NowPlayingInfo, stamp: Int?) {
+        guard var info = players[read.player], reportedAt[read.player] == stamp,
+              read.trackID == info.trackID else { return }
+        info.duration = read.duration ?? info.duration
+        info.position = read.position ?? info.position
+        info.artworkURL = read.artworkURL ?? info.artworkURL
+        players[read.player] = info
+    }
+
+    /// Where the last position has got to by `now`, as a new anchor: frozen if it was paused.
+    private static func anchor(_ info: NowPlayingInfo, at now: Date) -> PlaybackPosition? {
+        info.elapsed(at: now).map { PlaybackPosition(seconds: $0, at: now) }
     }
 
     /// The one-off read at start (D23). Dropped if a notification came first (it is newer) or the player quit.
