@@ -7,7 +7,10 @@ protocol AppleEventSending: Sendable {
     /// the system Automation prompt and waits for the answer.
     func permission(for player: MediaPlayer, pid: pid_t, ask: Bool) async -> AppleEventOutcome
     func send(_ command: PlaybackCommand, to player: MediaPlayer, pid: pid_t) async -> AppleEventOutcome
-    /// The player's state, title and artist, or nil if the state can't be read. Call it only after
-    /// `permission(ask: false)` returned `.ok`, so it can't prompt.
+    /// The player's state and track (title, artist, id, duration, position; Spotify's artwork URL), or nil
+    /// if the state can't be read. Call it only after `permission(ask: false)` returned `.ok`, so it can't prompt.
     func readCurrent(of player: MediaPlayer, pid: pid_t) async -> NowPlayingInfo?
+    /// Music's artwork bytes for the current track (nil for Spotify, none, or too large). Same rule as
+    /// `readCurrent`: only after `permission(ask: false)` returned `.ok`.
+    func readArtwork(of player: MediaPlayer, pid: pid_t) async -> Data?
 }

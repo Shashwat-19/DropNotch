@@ -41,6 +41,8 @@ final class ScriptablePlayersSourceTests: XCTestCase {
             return sendResult
         }
 
+        func readArtwork(of player: MediaPlayer, pid: pid_t) async -> Data? { nil }
+
         func readCurrent(of player: MediaPlayer, pid: pid_t) async -> NowPlayingInfo? {
             calls.append(.read(player))
             guard holdsReads else { return current }

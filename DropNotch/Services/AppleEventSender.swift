@@ -46,14 +46,50 @@ struct AppleEventSender: AppleEventSending {
             let app = NSAppleEventDescriptor.null()
             guard let reply = Self.get(Self.property("pPlS", of: app), pid: pid),
                   let state = Self.state(reply) else { return nil }
-            // A stopped player may have no current track; those reads then fail and stay nil.
+            // Between tracks Music has no current track: these reads fail (-1728) and stay nil, never zero (D26).
             let track = Self.property("pTrk", of: app)
             let title = Self.get(Self.property("pnam", of: track), pid: pid)?.stringValue
             let artist = Self.get(Self.property("pArt", of: track), pid: pid)?.stringValue
-            // Spotify's track id ("spotify:ad:…" for an ad) feeds the same ad rule as notifications (D24).
-            let trackID = player == .spotify ? Self.get(Self.property("ID  ", of: track), pid: pid)?.stringValue : nil
-            return PlayerNotificationParser.track(player, state, name: title, artist: artist, trackID: trackID)
+            let position = Self.number(Self.get(Self.property("pPos", of: app), pid: pid))
+            let duration = Self.number(Self.get(Self.property("pDur", of: track), pid: pid))
+            // Music's persistent ID is the hex its notification's PersistentID becomes; Spotify's id
+            // ("spotify:ad:…" for an ad) feeds the same ad rule as notifications (D24, D26).
+            let trackID = Self.get(Self.property(player == .music ? "pPIS" : "ID  ", of: track), pid: pid)?
+                .stringValue.map { player == .music ? $0.uppercased() : $0 }
+            var info = PlayerNotificationParser.track(
+                player, state, name: title, artist: artist, trackID: trackID,
+                // Spotify's duration is milliseconds, though its dictionary says seconds [V: media probe].
+                duration: PlayerNotificationParser.seconds(duration, unit: player == .spotify ? 1000 : 1),
+                position: PlayerNotificationParser.seconds(position, unit: 1))
+            if player == .spotify, info.trackID != nil {
+                info.artworkURL = Self.get(Self.property("aUrl", of: track), pid: pid)?.stringValue.flatMap(URL.init(string:))
+            }
+            return info
         }
+    }
+
+    func readArtwork(of player: MediaPlayer, pid: pid_t) async -> Data? {
+        guard player == .music else { return nil }
+        return await Self.run {
+            guard Self.belongs(pid, to: player) else { return nil }
+            let artwork = Self.element("cArt", index: 1, of: Self.property("pTrk", of: NSAppleEventDescriptor.null()))
+            // `raw data`: the file's own bytes (JPEG on the probe), about 0.5 MB [V: media probe].
+            guard let data = Self.get(Self.property("pRaw", of: artwork), pid: pid)?.data,
+                  !data.isEmpty, data.count <= Self.maxArtworkBytes else { return nil }
+            return data
+        }
+    }
+
+    /// Music artwork above this is dropped before decoding (D26).
+    static let maxArtworkBytes = 10 * 1024 * 1024
+
+    /// A reply's number, or nil when the reply isn't numeric (Music answers `pPos` with a non-number
+    /// between tracks [V: media probe]). Internal for tests.
+    static func number(_ descriptor: NSAppleEventDescriptor?) -> Double? {
+        guard let descriptor,
+              ["doub", "sing", "long", "shor", "comp", "magn"].map(FourCharCode.init(code:)).contains(descriptor.descriptorType)
+        else { return nil }
+        return descriptor.doubleValue
     }
 
     /// Runs `work` on the Apple Event queue, never the main thread. Internal so a test can check that.
@@ -96,6 +132,17 @@ struct AppleEventSender: AppleEventSending {
         let event = event(AEEventClass(kAECoreSuite), AEEventID(kAEGetData), pid: pid)
         event.setParam(specifier, forKeyword: AEKeyword(keyDirectObject))
         return send(event).result
+    }
+
+    /// The object specifier for "<class> <index> of <container>", what `artwork 1 of current track`
+    /// compiles to. Internal for tests.
+    static func element(_ className: String, index: Int32, of container: NSAppleEventDescriptor) -> NSAppleEventDescriptor {
+        let specifier = NSAppleEventDescriptor.record()
+        specifier.setDescriptor(NSAppleEventDescriptor(typeCode: FourCharCode(code: className)), forKeyword: AEKeyword(keyAEDesiredClass))
+        specifier.setDescriptor(NSAppleEventDescriptor(enumCode: DescType(formAbsolutePosition)), forKeyword: AEKeyword(keyAEKeyForm))
+        specifier.setDescriptor(NSAppleEventDescriptor(int32: index), forKeyword: AEKeyword(keyAEKeyData))
+        specifier.setDescriptor(container, forKeyword: AEKeyword(keyAEContainer))
+        return specifier.coerce(toDescriptorType: DescType(typeObjectSpecifier)) ?? specifier
     }
 
     /// The object specifier for "<property> of <container>", which is what AppleScript's
