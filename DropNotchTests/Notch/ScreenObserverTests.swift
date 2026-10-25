@@ -30,4 +30,19 @@ final class ScreenObserverTests: XCTestCase {
         XCTAssertEqual(calls, 1)
         withExtendedLifetime(observer) {}
     }
+
+    // Sleep closes the notch through the same path, so the progress animation and elapsed time stop.
+    @MainActor
+    func testScreenSleepAndWakeCallOnChange() async throws {
+        var calls = 0
+        let observer = ScreenObserver { calls += 1 }
+        NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.screensDidSleepNotification, object: nil)
+        try await Task.sleep(for: .milliseconds(400))
+        XCTAssertEqual(calls, 1)
+        NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.screensDidWakeNotification, object: nil)
+        try await Task.sleep(for: .milliseconds(400))
+        XCTAssertEqual(calls, 2)
+        withExtendedLifetime(observer) {}
+    }
 }
+

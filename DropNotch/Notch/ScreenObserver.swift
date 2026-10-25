@@ -1,7 +1,8 @@
 import AppKit
 
-/// Calls `onChange` once a burst of display-configuration changes has settled
-/// (200 ms one-shot debounce, ARCHITECTURE.md §9).
+/// Calls `onChange` once a burst of display-configuration changes has settled (200 ms one-shot
+/// debounce, ARCHITECTURE.md §9), and on screen sleep and wake: `onChange` closes the notch, which
+/// removes its open content (D19) and so stops the progress animation and elapsed time.
 @MainActor
 final class ScreenObserver: NSObject {
     private let onChange: @MainActor () -> Void
@@ -14,6 +15,11 @@ final class ScreenObserver: NSObject {
         NotificationCenter.default.addObserver(self, selector: #selector(screenParametersChanged(_:)),
                                                name: NSApplication.didChangeScreenParametersNotification,
                                                object: nil)
+        // Sleep and wake are posted on NSWorkspace's own notification centre, not the default one.
+        for name in [NSWorkspace.screensDidSleepNotification, NSWorkspace.screensDidWakeNotification] {
+            NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(screenParametersChanged(_:)),
+                                                              name: name, object: nil)
+        }
     }
 
     @objc private func screenParametersChanged(_ notification: Notification) {

@@ -79,6 +79,9 @@ final class ProgressBarView: NSView {
         animation.fromValue = width
         animation.toValue = endWidth
         animation.duration = state.duration - elapsed
+        // The bar moves about 2 px a second; drawn at the display rate it cost WindowServer about 12 points
+        // of CPU, at 10 fps about 3 [V: performance-optimizer harness, 2026-10-25].
+        animation.preferredFrameRateRange = CAFrameRateRange(minimum: 10, maximum: 10, preferred: 10)
         fill.add(animation, forKey: "progress")
     }
 }

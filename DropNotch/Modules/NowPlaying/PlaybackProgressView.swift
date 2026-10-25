@@ -23,7 +23,8 @@ struct PlaybackProgressView: View {
             }
             // The bar is 4 pt; the 24 pt frame is the click and drag target (L7).
             .frame(height: 24)
-            // SwiftUI updates this text itself, once a second, only while it is on screen and playing.
+            // SwiftUI updates this text about once a second while the view exists and is playing, visible or
+            // not; closing the notch (including on screen sleep) removes it (ARCHITECTURE §9).
             (Text(timerInterval: start...start.addingTimeInterval(duration), pauseTime: info.isPlaying ? nil : now,
                   countsDown: false, showsHours: false)
                 + Text(verbatim: " / " + Duration.seconds(duration).formatted(.time(pattern: .minuteSecond))))
