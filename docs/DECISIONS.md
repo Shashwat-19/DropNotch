@@ -52,7 +52,7 @@ Terms for a reader new to Swift or AppKit:
 - The waveform is decorative. It animates only while something is playing and the view is visible, and it stays static in Low Power Mode.
 - Every source sits behind a `NowPlayingSource` protocol, so a MediaRemote-based source can be added in v0.2.
 - The `com.apple.security.automation.apple-events` entitlement (needed under the hardened runtime to send Apple Events to other apps such as Music and Spotify; not needed for same-team processes [V: https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.security.automation.apple-events]) and the `NSAppleEventsUsageDescription` key are added through `project.yml` in Phase 2.
-- The usage text ("DropNotch sends play, pause and skip commands to Music and Spotify…") describes commands that don't exist yet. Re-check it whenever the Now Playing feature changes.
+- The usage text ("DropNotch sends play, pause and skip commands to Music and Spotify…") describes commands that don't exist yet. Re-check it whenever the Now Playing feature changes. (2026-10-25: the commands exist, and the text now also covers reading the current track; D23.)
 
 **Alternatives considered:**
 - MediaRemote through `ungive/mediaremote-adapter` now. This covers any app, but depends on a workaround for a private framework.
@@ -409,7 +409,7 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - `sizingOptions = []` stops SwiftUI adding size constraints, and the container stops it resizing the window, so only `NotchGeometry` sets the frame.
 - A fixed open-size panel with click-through was considered instead and rejected: reliable click-through needs `ignoresMouseEvents`, which also silences the tracking area, so it would need a global mouse-moved monitor (against D5 and D18).
 - `.ignoresSafeArea()` matters because the panel sits over the camera housing. SwiftUI would otherwise push the content down out of the safe area [I: device check].
-- ARCHITECTURE §6's `acceptsFirstMouse` override isn't added yet, because Phase 2 has no clickable controls.
+- ARCHITECTURE §6's `acceptsFirstMouse` override isn't added yet, because Phase 2 has no clickable controls. (Added 2026-10-25 with the Now Playing controls, `NotchHostingView`.)
 
 ## D17. The notch display is chosen from `NSScreen.screens` and kept by display ID
 
@@ -644,3 +644,4 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - Spoofing (security-auditor, 2026-10-25): distributed notifications carry no sender, so any local process can post these names. Notifications for a player that isn't running are dropped, and text is trimmed and capped at 256 characters. A spoofed notification while the player is running can still change what the notch shows (and so whether the button reads Play or Pause). Known limit.
 - Impostors: an app that reuses Music's or Spotify's bundle ID would receive our events and be named in the prompt. The events carry no user data. Checking the target's code signature is deferred; known limit.
 - Device checks 5–7, 10, 13 and 14 in TASK.md Phase 3.
+- Device check (Shash, 2026-10-25, Release build on a notched Mac): Now Playing works for Music and Spotify, with title, artist, play/pause, next and previous all correct. Switching between the two players works: checks 5 and 6 passed. Checks 1–4 and 7–16 have not been tested and remain open, to run before release.

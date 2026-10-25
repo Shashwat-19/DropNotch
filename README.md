@@ -1,10 +1,15 @@
 # DropNotch
 
-DropNotch is an open-source macOS utility that turns the MacBook notch into a productivity surface. The planned features are now-playing controls, a file tray with AirDrop, clipboard history and quick notes. The panel is meant to expand on hover or a hotkey and stay minimal otherwise. None of these features works yet.
+DropNotch is an open-source macOS utility that turns the MacBook notch into a productivity surface. The notch opens when you hover over it and stays minimal otherwise.
+
+What works today:
+- Now Playing for Apple Music and Spotify: the open notch shows the current title and artist, with play/pause, next and previous controls.
+
+Planned, not built yet: a progress bar and artwork for Now Playing, a compact view beside the closed notch, a hotkey to open the notch, a file tray with AirDrop, clipboard history and quick notes.
 
 ## Status
 
-Pre-alpha. The project is at the foundation stage and has no usable features. The plans are in:
+Pre-alpha. Some checks are still outstanding, including how the Automation permission behaves (see [Permissions](#permissions)). The plans are in:
 
 - [docs/FEATURE_MATRIX.md](docs/FEATURE_MATRIX.md)
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
@@ -42,9 +47,21 @@ The first build fetches the KeyboardShortcuts Swift package, which Xcode resolve
 
 Builds are ad-hoc signed for local use. There are no signed or notarised releases yet.
 
+## Permissions
+
+DropNotch asks for a permission only when you first use the feature that needs it, never at launch.
+
+**Automation (Music, Spotify).** Needed for the play/pause, next and previous controls. macOS asks the first time you click one of these controls for Music or Spotify. The title and artist appear without this permission; only the controls need it. (Without it, a track that is already playing when DropNotch starts shows only the player's name until the next track change.)
+
+If you choose Don't Allow, the notch shows "Allow control of Music (or Spotify) in System Settings". To allow it later, open System Settings › Privacy & Security › Automation, find DropNotch and turn on Music or Spotify.
+
+The prompt and the denied state are not yet checked on a device; this section describes the intended behaviour.
+
 ## Privacy
 
-DropNotch does not include analytics or telemetry.
+DropNotch does not include analytics or telemetry, and has no network features: nothing leaves your Mac.
+
+Now Playing reads track details from the notifications Music and Spotify broadcast on your Mac, and sends its commands straight to the player. Titles and artists are held in memory while shown, and are never saved to disk or logged.
 
 ## Contributing
 

@@ -21,7 +21,8 @@ DropNotch/
   Notch/          NotchPanel, NotchHostingView, NotchGeometry, NotchHoverStateMachine, NotchState,
                   NotchRootView, ScreenObserver, NotchModule (protocol + CompactSlot), ModuleRegistry
   Modules/
-    NowPlaying/   NowPlayingModule, NowPlayingExpandedView (D22–D24). Planned: compact view (next branch), settings view
+    NowPlaying/   NowPlayingModule, NowPlayingExpandedView (D22–D24). Planned: progress bar and artwork
+                  (feat/now-playing-media), compact view (feat/now-playing-compact), settings view
     FileTray/     (planned) tray views, TrayStore
     Clipboard/    (planned) history views, ClipboardHistoryStore
     Notes/        (planned) notes views, NotesStore
@@ -31,7 +32,7 @@ DropNotch/
                   AppleEventSending, AppleEventSender, ScriptablePlayersSource.
                   Planned: MediaRemote (v0.2), PasteboardWatcher, BluetoothBatteryProvider (later), …
   Settings/       Settings window, launch at login (Phase 3), layout editor, per-module settings host
-  Support/        Logger categories, file locations, small shared helpers (FourCharCode+Code)
+  Support/        Logger categories, small shared helpers (FourCharCode+Code). Planned: file locations (section 5)
 DropNotchTests/   mirrors the folders above
 ```
 
@@ -103,7 +104,7 @@ Configuration (all public AppKit; Atoll uses the same flags [V: research/atoll-s
 - Transparent: not opaque, clear background, no shadow, not movable, `hidesOnDeactivate = false`.
 - Level: `.statusBar`, one above the main-menu level, so the panel draws over the menu bar (D16; Atoll uses main-menu + 3 [V]).
 - Collection behaviour: can join all Spaces, full-screen auxiliary, stationary, ignores window cycling [V: same flags in Atoll].
-- Hosts SwiftUI through a small `NSHostingView` subclass with `sizingOptions = []`, placed inside a plain `NSView` container that is the panel's `contentView`, so the frames come from `NotchGeometry` only. As the `contentView` itself, the hosting view would resize the window to its content (D16). The panel reaches 1 pt above the screen so the top pixel row counts as inside (D20). The hosting view keeps the open frame's size and sits top-centred in the clipping container, so the panel grows and shrinks around it without SwiftUI re-laying out the shape (D19). Once the panel has clickable controls, the subclass overrides `acceptsFirstMouse(for:)` to return true, so one click works without activating the window first. (In AppKit, the first click on an inactive window normally only activates it.) [V: Atoll does the same]
+- Hosts SwiftUI through a small `NSHostingView` subclass with `sizingOptions = []`, placed inside a plain `NSView` container that is the panel's `contentView`, so the frames come from `NotchGeometry` only. As the `contentView` itself, the hosting view would resize the window to its content (D16). The panel reaches 1 pt above the screen so the top pixel row counts as inside (D20). The hosting view keeps the open frame's size and sits top-centred in the clipping container, so the panel grows and shrinks around it without SwiftUI re-laying out the shape (D19). The subclass overrides `acceptsFirstMouse(for:)` to return true, so one click on a control works without activating the window first. (In AppKit, the first click on an inactive window normally only activates it.) [V: Atoll does the same]
 - Can become key only while open and a text field needs input (notes). Closed and peek states never take key focus. In Phase 2 the panel never becomes key (D16).
 - App runs as an agent app (`LSUIElement`), set in project.yml [V: https://developer.apple.com/documentation/bundleresources/information-property-list/lsuielement].
 
@@ -122,7 +123,7 @@ Closed-state hit testing (**D5, accepted**). A window with `ignoresMouseEvents` 
 
 ## 8. Module-specific design notes (MVP)
 
-- **Now Playing (D2):** MVP providers are Apple Music and Spotify. Each listens to its player's distributed notification (event-driven) and sends commands with Apple Events, which needs one Automation prompt per player, on the first click on a control (D23) [V: Atoll's technique; prompt timing I]. Position between updates is extrapolated from (position, timestamp, rate), never polled [V: Atoll's stream notes describe the same anchor rule]. Sending an Apple Event to a player that isn't running launches it, so commands are sent only when `NSWorkspace` reports the player is running, and are addressed to its pid (D22) [I: security-auditor note; device check 4, TASK.md Phase 3]. MediaRemote is a v0.2 optional provider behind the same protocol.
+- **Now Playing (D2):** MVP providers are Apple Music and Spotify. Each listens to its player's distributed notification (event-driven) and sends commands with raw Apple Events (D22), which needs one Automation prompt per player, on the first click on a control (D23) [V: Atoll's technique; prompt timing I]. A silent permission check at start never prompts (D23). Sending an Apple Event to a player that isn't running launches it, so commands are sent only to a running player (`NSRunningApplication`), addressed to its pid, and the pid is re-checked just before each send (D22) [I: security-auditor note; device check 4, TASK.md Phase 3]. Planned for the progress bar (`feat/now-playing-media`): position between updates is extrapolated from (position, timestamp, rate), never polled [V: Atoll's stream notes describe the same anchor rule]. MediaRemote is a v0.2 optional provider behind the same protocol.
 - **File tray:** AppKit drag destination on the open panel; also on the closed panel, so dragging a file onto the notch opens the tray. Items are stored per D6. AirDrop through `NSSharingService(named: .sendViaAirDrop)` [V: public API used by Atoll]. Quick Look thumbnails are generated off the main thread.
 - **Clipboard history:** `PasteboardWatcher` service reads `NSPasteboard.general.changeCount` on a timer (section 9). Content is read only when the count changes [V: Atoll does the same]. Items whose types include the concealed or transient markers (`org.nspasteboard.ConcealedType`, `org.nspasteboard.TransientType`, `org.nspasteboard.AutoGeneratedType`) are skipped [I: nspasteboard.org convention; Apple defines no concealed or transient type, https://developer.apple.com/documentation/appkit/nspasteboard/pasteboardtype]. From macOS 15.4 the general pasteboard asks the user on programmatic access [V: https://developer.apple.com/documentation/appkit/nspasteboard/accessbehavior-swift.enum]; see RISKS.md §2 and the D7 probe. Content is never logged. Re-copy writes to the pasteboard; the user pastes.
 - **Quick notes:** text editor in the expanded view, saved to files with a debounce.
@@ -138,7 +139,7 @@ Target: zero wake-ups while idle, apart from the clipboard poll. Intervals below
 |---|---|
 | Hover open/close | AppKit tracking area enter/exit on the notch panel |
 | Screen changes | `didChangeScreenParametersNotification` (+ 200 ms one-shot debounce) |
-| Now playing (Music, Spotify) | The player's distributed notification on track or state change [V] |
+| Now playing (Music, Spotify) | The player's distributed notification on track or state change [V: probe, docs/research/now-playing-probe-2026-10-25.md]; `NSWorkspace` launch and quit notifications. Adds no timers (D24) |
 | File tray | Drag-and-drop callbacks |
 | Notes | Text-change callbacks |
 | Settings | `UserDefaults`/Observation changes |
@@ -158,8 +159,10 @@ Target: zero wake-ups while idle, apart from the clipboard poll. Intervals below
 | Peek dismissal | One-shot, 2–3 s | A peek HUD is showing | Timed by definition. |
 | Screen-change debounce | One-shot 0.2 s | Display change burst | Coalesces bursts. |
 | Notes autosave | One-shot 1 s after last keystroke | Typing in notes | Batches disk writes. |
-| Now-playing progress bar | Redraw at 1 Hz (SwiftUI `TimelineView`) | Expanded view visible **and** playing | Progress is extrapolated; redraws only while someone is looking. |
-| Decorative waveform | ≤ 30 fps animation | Compact view visible **and** playing **and** not Low Power Mode | Animation. Static bars otherwise. |
+| Now-playing progress bar (planned, `feat/now-playing-media`) | Redraw at 1 Hz (SwiftUI `TimelineView`) | Expanded view visible **and** playing | Progress is extrapolated; redraws only while someone is looking. |
+| Decorative waveform (planned, `feat/now-playing-compact`) | ≤ 30 fps animation | Compact view visible **and** playing **and** not Low Power Mode | Animation. Static bars otherwise. |
+
+Now Playing today (track info and controls, D22–D24) adds no timers and no polling. Music's bursts of two states are not debounced; a one-shot 150 ms debounce would be added here only if device check 10 shows a flicker (D24).
 
 Not allowed: any repeating timer while idle, a hover polling loop, a memory watchdog, a Bluetooth poll. These are the loops Atoll runs that we avoid [V: research/atoll-system-shell.md B12].
 
