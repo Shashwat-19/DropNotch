@@ -66,7 +66,11 @@ final class NowPlayingModule: NotchModule {
         guard click == currentClick else { return }
         isSending = false
         switch outcome {
-        case .denied: deniedPlayer = player
+        case .denied:
+            deniedPlayer = player
+            // The artist line silently becomes the System Settings link; say so to VoiceOver (WCAG 4.1.3).
+            AccessibilityNotification.Announcement(
+                String(localized: "Allow control of \(player.displayName) in System Settings")).post()
         case .ok: deniedPlayer = nil
         default: break
         }

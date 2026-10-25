@@ -8,12 +8,24 @@ struct PlaybackProgressView: View {
     let onSeek: (TimeInterval) -> Void
     /// While dragging: where the pointer is, as seconds. The bar follows it instead of the player.
     @State private var dragSeconds: TimeInterval?
+    /// After a VoiceOver adjust: the position asked for. The seek lands later, so this is what VoiceOver
+    /// speaks, and the next adjust's base, until the player's new position arrives.
+    @State private var seekTarget: TimeInterval?
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverOn
 
     var body: some View {
-        let now = Date()
+        // The bar and the time text move on their own. Only for VoiceOver is the whole view redrawn, once a
+        // second while playing, so the spoken position is current; otherwise this timeline is paused.
+        TimelineView(.animation(minimumInterval: 1, paused: !(voiceOverOn && info.isPlaying))) { context in
+            content(now: context.date)
+        }
+        .onChange(of: info.position) { seekTarget = nil }
+    }
+
+    private func content(now: Date) -> some View {
         let elapsed = info.elapsed(at: now) ?? 0
         let start = now.addingTimeInterval(-elapsed)
-        HStack(spacing: 8) {
+        return HStack(spacing: 8) {
             // The gesture needs the bar's width to turn a pointer position into seconds.
             GeometryReader { geometry in
                 PlaybackProgressBar(elapsed: dragSeconds ?? elapsed, duration: duration,
@@ -34,16 +46,20 @@ struct PlaybackProgressView: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("Playback position"))
-        .accessibilityValue(Text("\(Self.spoken(elapsed)) of \(Self.spoken(duration))"))
-        // VoiceOver's adjust gesture (and arrow keys, once the panel can take focus: L2) moves 10 s.
+        .accessibilityValue(Text("\(Self.spoken(seekTarget ?? elapsed)) of \(Self.spoken(duration))"))
+        // VoiceOver adjust only, 10 s a step. Arrow keys need focusable and onKeyPress once the panel can
+        // take focus (L2, feat/hotkey).
         .accessibilityAdjustableAction { direction in
-            // Now, not when the view was last drawn: it isn't redrawn while the track plays on.
-            let elapsed = info.elapsed(at: Date()) ?? 0
+            // From now (or from an adjust still on its way), not from when the view was last drawn.
+            let base = seekTarget ?? info.elapsed(at: Date()) ?? 0
+            let target: TimeInterval
             switch direction {
-            case .increment: onSeek(min(duration, elapsed + 10))
-            case .decrement: onSeek(max(0, elapsed - 10))
-            @unknown default: break
+            case .increment: target = min(duration, base + 10)
+            case .decrement: target = max(0, base - 10)
+            @unknown default: return
             }
+            seekTarget = target
+            onSeek(target)
         }
     }
 

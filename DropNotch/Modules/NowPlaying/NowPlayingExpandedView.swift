@@ -18,6 +18,9 @@ struct NowPlayingExpandedView: View {
                             Button(action: openAutomationSettings) {
                                 // Underlined as well as coloured, so it reads as a link without colour (L6).
                                 Text("Allow control of \(info.player.displayName) in System Settings").underline()
+                                    // A 24 pt target (L7): it is the only way out of the denied state.
+                                    .frame(minHeight: 24, alignment: .leading)
+                                    .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                             .foregroundStyle(.link)

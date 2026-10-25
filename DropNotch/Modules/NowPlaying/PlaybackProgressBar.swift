@@ -62,8 +62,9 @@ final class ProgressBarView: NSView {
         // Our own sublayers animate every change implicitly; these jumps must be instant.
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        // The notch is always black (L5); Increase Contrast gets a brighter track (L6).
-        let trackAlpha = NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast ? 0.5 : 0.25
+        // The notch is always black (L5). 40 % white is 3.7:1 against it (WCAG 1.4.11's 3:1); Increase
+        // Contrast gets 50 % (L6).
+        let trackAlpha = NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast ? 0.5 : 0.4
         track.backgroundColor = NSColor.white.withAlphaComponent(trackAlpha).cgColor
         fill.backgroundColor = NSColor.white.cgColor
         track.frame = CGRect(x: 0, y: (bounds.height - height) / 2, width: bounds.width, height: height)
