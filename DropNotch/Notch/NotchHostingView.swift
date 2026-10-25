@@ -28,6 +28,10 @@ final class NotchHostingView: NSHostingView<NotchRootView> {
         fatalError("NotchHostingView is created in code only")
     }
 
+    // AppKit normally spends the first click on an inactive window activating it. DropNotch is never
+    // active, so without this every control would need two clicks.
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
     // SwiftUI's own hover tracking also calls these, so only our area's events are forwarded.
     override func mouseEntered(with event: NSEvent) {
         super.mouseEntered(with: event)
