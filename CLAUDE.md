@@ -50,6 +50,7 @@ Once docs/ARCHITECTURE.md exists it is the source of truth for module layout. Ke
 - Never edit DropNotch.xcodeproj; it is generated and gitignored. Change project.yml (targets, Info.plist keys such as LSUIElement, entitlements, build settings, Swift packages under `packages:`) and run `xcodegen generate`.
 - Package.resolved lives inside the gitignored .xcodeproj, so pin packages with `exactVersion:` in project.yml.
 - Ask Shash before adding any dependency.
+- Before planning each new feature, dependency-manager searches for maintained Swift packages under MIT, BSD or Apache-2.0 that cover it, and reports licence, maintenance, size and how much work it saves. Never GPL. Shash approves each package before it's added.
 - Private or undocumented APIs (MediaRemote, IOBluetooth battery keys, SkyLight) sit behind a protocol in Services/ with a fallback, so a macOS update disables one feature instead of crashing the app.
 - Energy: event-driven by default. Every timer or polling loop needs an interval and a justification in docs/ARCHITECTURE.md. Nothing blocking on the main thread.
 - Privacy: no analytics or telemetry. Clipboard history skips concealed/transient pasteboard types, stays on the Mac and is never logged. Request each permission only when the feature that needs it is first enabled.
@@ -80,11 +81,11 @@ Once docs/ARCHITECTURE.md exists it is the source of truth for module layout. Ke
 | performance-optimizer | New timers, observers, animations or background work; before releases |
 | accessibility-auditor | Any change to notch or settings UI |
 | docs-writer | Setup, behaviour, permissions or architecture changed |
-| dependency-manager | Before adding any package; before releases |
+| dependency-manager | Before planning each new feature (package search); before adding any package; before releases |
 | cicd-agent | GitHub Actions build/test/release workflows |
 | changelog-agent | Before tagging a release |
 
-Feature workflow: planner → implement → test-writer → code-reviewer → security-auditor / performance-optimizer / accessibility-auditor where relevant → docs-writer.
+Feature workflow: dependency-manager (package search) → planner → implement → test-writer → code-reviewer → security-auditor / performance-optimizer / accessibility-auditor where relevant → docs-writer.
 
 ## Current focus
 See TASK.md.
