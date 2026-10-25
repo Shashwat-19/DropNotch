@@ -64,6 +64,8 @@ final class ScriptablePlayersSource: NSObject, NowPlayingSource {
         // Shows the system prompt the first time; after the user has answered it returns at once (D23).
         var outcome = await sender.permission(for: player, pid: pid, ask: true)
         if outcome == .ok { outcome = await sender.send(command, to: player, pid: pid) }
+        // A seek by Apple Event sends no notification [V: media probe], so read the new position (D26).
+        if case .seek = command, outcome == .ok { refresh(player) }
         Logger.nowPlaying.info("Command to \(player.bundleID, privacy: .public) pid \(pid): \(String(describing: outcome), privacy: .public)")
         return outcome
     }

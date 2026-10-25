@@ -188,5 +188,20 @@ final class NowPlayingModuleTests: XCTestCase {
         module.didOpen()
         XCTAssertEqual(source.refreshed, [])
     }
+
+    func testSeekGoesThroughTheSameClickPath() async {
+        let (module, source) = await moduleShowing(NowPlayingInfo(player: .music, state: .playing))
+        source.outcome = .denied
+        await module.perform(.seek(to: 42))
+        XCTAssertEqual(source.sent, ["seek(to: 42.0) music"])
+        XCTAssertEqual(module.deniedPlayer, .music, "a refused seek shows the same System Settings link")
+    }
+
+    func testPointerPositionBecomesSecondsWithinTheTrack() {
+        XCTAssertEqual(PlaybackProgressView.seconds(at: 50, width: 200, duration: 180), 45)
+        XCTAssertEqual(PlaybackProgressView.seconds(at: -20, width: 200, duration: 180), 0)
+        XCTAssertEqual(PlaybackProgressView.seconds(at: 260, width: 200, duration: 180), 180)
+        XCTAssertEqual(PlaybackProgressView.seconds(at: 10, width: 0, duration: 180), 0)
+    }
 }
 

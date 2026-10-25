@@ -456,5 +456,33 @@ final class ScriptablePlayersSourceTests: XCTestCase {
         XCTAssertEqual(artworkReads, [])
         withExtendedLifetime(stream) {}
     }
+
+    // MARK: D26: seek
+
+    func testASuccessfulSeekReadsTheNewPosition() async {
+        let sender = FakeSender()
+        let source = makeSource(sender, running: [.spotify])
+        let stream = source.updates
+        await waitForCalls(sender, count: 2) // the start check and read
+        let outcome = await source.send(.seek(to: 30), to: .spotify)
+        XCTAssertEqual(outcome, .ok)
+        await waitForCalls(sender, count: 6)
+        let calls = await sender.calls.suffix(4)
+        XCTAssertEqual(Array(calls), [.permission(.spotify, ask: true), .send(.seek(to: 30), .spotify),
+                                      .permission(.spotify, ask: false), .read(.spotify)])
+        withExtendedLifetime(stream) {}
+    }
+
+    func testAFailedSeekReadsNothing() async {
+        let sender = FakeSender(send: .timedOut)
+        let source = makeSource(sender, running: [.spotify])
+        let stream = source.updates
+        await waitForCalls(sender, count: 2)
+        _ = await source.send(.seek(to: 30), to: .spotify)
+        for _ in 0..<50 { await Task.yield() }
+        let reads = await sender.calls.filter { $0 == .read(.spotify) }
+        XCTAssertEqual(reads.count, 1, "only the start read")
+        withExtendedLifetime(stream) {}
+    }
 }
 

@@ -31,17 +31,22 @@ enum MediaPlayer: CaseIterable {
 
     /// The Apple Event for a command, from the player's scripting dictionary (`sdef`).
     func event(for command: PlaybackCommand) -> (eventClass: AEEventClass, eventID: AEEventID) {
+        // Seeking sets the `player position` property: the standard "set data" event (D26).
+        if case .seek = command { return (FourCharCode(code: "core"), FourCharCode(code: "setd")) }
         let suite = self == .music ? "hook" : "spfy"
         let id = switch command {
         case .playPause: "PlPs"
         case .next: "Next"
         // Music's "back track" restarts the current track first, like a Previous button (D22).
         case .previous: self == .music ? "Back" : "Prev"
+        case .seek: preconditionFailure("handled above")
         }
         return (FourCharCode(code: suite), FourCharCode(code: id))
     }
 }
 
-enum PlaybackCommand {
+enum PlaybackCommand: Equatable {
     case playPause, next, previous
+    /// Seconds from the start of the track.
+    case seek(to: TimeInterval)
 }

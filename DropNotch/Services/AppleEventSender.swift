@@ -36,7 +36,13 @@ struct AppleEventSender: AppleEventSending {
         let event = player.event(for: command)
         return await Self.run {
             guard Self.belongs(pid, to: player) else { return .notRunning }
-            return Self.send(Self.event(event.eventClass, event.eventID, pid: pid)).outcome
+            let appleEvent = Self.event(event.eventClass, event.eventID, pid: pid)
+            if case .seek(let seconds) = command {
+                // "set player position to <seconds>"; both players accept it [V: media probe] (D26).
+                appleEvent.setParam(Self.property("pPos", of: NSAppleEventDescriptor.null()), forKeyword: AEKeyword(keyDirectObject))
+                appleEvent.setParam(NSAppleEventDescriptor(double: seconds), forKeyword: AEKeyword(keyAEData))
+            }
+            return Self.send(appleEvent).outcome
         }
     }
 

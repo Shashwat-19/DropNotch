@@ -26,4 +26,13 @@ final class MediaPlayerTests: XCTestCase {
         XCTAssertEqual(MediaPlayer.music.notificationName.rawValue, "com.apple.Music.playerInfo")
         XCTAssertEqual(MediaPlayer.spotify.notificationName.rawValue, "com.spotify.client.PlaybackStateChanged")
     }
+
+    func testSeekIsASetDataEventForEitherPlayer() {
+        for player in MediaPlayer.allCases {
+            let event = player.event(for: .seek(to: 30))
+            XCTAssertEqual(event.eventClass, FourCharCode(code: "core"))
+            XCTAssertEqual(event.eventID, FourCharCode(code: "setd"))
+        }
+    }
 }
+
