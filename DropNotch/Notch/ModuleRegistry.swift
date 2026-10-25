@@ -21,6 +21,7 @@ final class ModuleRegistry {
     @ObservationIgnored private var isRunning = false
 
     init(modules: [any NotchModule], defaults: UserDefaults = .standard) {
+        precondition(Set(modules.map(\.id)).count == modules.count, "Module ids must be unique")
         self.modules = modules
         self.defaults = defaults
         // A module with no saved flag is on.

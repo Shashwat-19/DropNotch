@@ -8,7 +8,8 @@ final class NowPlayingModule: NotchModule {
     let title: LocalizedStringResource = "Now Playing"
     private(set) var info: NowPlayingInfo?
 
-    @ObservationIgnored private let source: any NowPlayingSource
+    private let source: any NowPlayingSource
+    // Not UI state, so Observation should skip it (`@Observable` only tracks `var`s).
     @ObservationIgnored private var task: Task<Void, Never>?
 
     init(source: any NowPlayingSource) {

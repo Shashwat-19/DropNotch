@@ -27,8 +27,9 @@ final class ModuleRegistryTests: XCTestCase {
     }
 
     override func tearDown() {
-        suites.forEach { UserDefaults().removePersistentDomain(forName: $0) }
+        suites.forEach { UserDefaults(suiteName: $0)?.removePersistentDomain(forName: $0) }
         suites = []
+        super.tearDown()
     }
 
     func testStartAndStopRunOnlyEnabledModulesAndOnlyOnce() {

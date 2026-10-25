@@ -12,11 +12,11 @@ struct NotchRootView: View {
         UnevenRoundedRectangle(bottomLeadingRadius: radius, bottomTrailingRadius: radius)
             .fill(.black)
             .frame(width: size.width, height: size.height)
-            // Placeholder until tabs exist: the first enabled module (D21). Only while open, so
-            // a close needs no content animation (D19).
+            // Placeholder until tabs exist: the first enabled module (D21). Fades in on open and
+            // vanishes at once on close, so the text never pokes out of the shrinking shape (D19).
             .overlay {
                 if state.displayedPhase == .open, let module = registry.expandedModules.first {
-                    module.expandedView().transition(.opacity)
+                    module.expandedView().transition(.asymmetric(insertion: .opacity, removal: .identity))
                 }
             }
             // The panel reaches above the screen (D20); keep the shape below the screen's top.
