@@ -54,6 +54,9 @@ struct NowPlayingSelection {
         reportedAt[info.player] = clock
     }
 
+    /// What `player` last reported, merged with its reads.
+    func info(for player: MediaPlayer) -> NowPlayingInfo? { players[player] }
+
     /// The counter value of `player`'s last report. A read records it when it starts (D26).
     func stamp(for player: MediaPlayer) -> Int? { reportedAt[player] }
 

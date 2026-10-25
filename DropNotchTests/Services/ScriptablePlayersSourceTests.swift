@@ -1,3 +1,4 @@
+import AppKit
 import XCTest
 @testable import DropNotch
 
@@ -9,18 +10,21 @@ final class ScriptablePlayersSourceTests: XCTestCase {
             case permission(MediaPlayer, ask: Bool)
             case send(PlaybackCommand, MediaPlayer)
             case read(MediaPlayer)
+            case artwork(MediaPlayer)
         }
 
         private(set) var calls: [Call] = []
         private let permissionResult: AppleEventOutcome
         private let sendResult: AppleEventOutcome
         private let current: NowPlayingInfo?
+        private let artworkData: Data?
         /// When true, each read waits for `releaseRead`, oldest first, so a test can make a reply late.
         private let holdsReads: Bool
         private var heldReads: [CheckedContinuation<NowPlayingInfo?, Never>] = []
 
         init(permission: AppleEventOutcome = .ok, send: AppleEventOutcome = .ok,
-             current: NowPlayingInfo? = nil, holdsReads: Bool = false) {
+             current: NowPlayingInfo? = nil, holdsReads: Bool = false, artwork: Data? = nil) {
+            artworkData = artwork
             permissionResult = permission
             sendResult = send
             self.current = current
@@ -41,7 +45,10 @@ final class ScriptablePlayersSourceTests: XCTestCase {
             return sendResult
         }
 
-        func readArtwork(of player: MediaPlayer, pid: pid_t) async -> Data? { nil }
+        func readArtwork(of player: MediaPlayer, pid: pid_t) async -> Data? {
+            calls.append(.artwork(player))
+            return artworkData
+        }
 
         func readCurrent(of player: MediaPlayer, pid: pid_t) async -> NowPlayingInfo? {
             calls.append(.read(player))
@@ -50,8 +57,27 @@ final class ScriptablePlayersSourceTests: XCTestCase {
         }
     }
 
-    private func makeSource(_ sender: FakeSender, running: Set<MediaPlayer>) -> ScriptablePlayersSource {
-        ScriptablePlayersSource(sender: sender, runningPID: { running.contains($0) ? 4242 : nil }, observesSystem: false)
+    /// Records each URL and answers with `data`. Never the network.
+    private actor FakeArtworkLoader: ArtworkLoading {
+        private(set) var urls: [URL] = []
+        private let data: Data?
+        init(data: Data? = nil) { self.data = data }
+        func data(from url: URL) async -> Data? {
+            urls.append(url)
+            return data
+        }
+    }
+
+    private func makeSource(_ sender: FakeSender, running: Set<MediaPlayer>,
+                            loader: FakeArtworkLoader = FakeArtworkLoader()) -> ScriptablePlayersSource {
+        ScriptablePlayersSource(sender: sender, artworkLoader: loader, runningPID: { running.contains($0) ? 4242 : nil },
+                                observesSystem: false)
+    }
+
+    private static func png() -> Data {
+        let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 8, pixelsHigh: 8, bitsPerSample: 8, samplesPerPixel: 4,
+                                   hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+        return rep.representation(using: .png, properties: [:])!
     }
 
     private func waitForCalls(_ sender: FakeSender, count: Int) async {
@@ -361,6 +387,74 @@ final class ScriptablePlayersSourceTests: XCTestCase {
         for _ in 0..<3 where latest??.position != read.position { latest = await runningUpdates.next() }
         XCTAssertEqual(latest??.position, PlaybackPosition(seconds: 70, at: at))
         XCTAssertEqual(latest??.duration, 180)
+    }
+
+    // MARK: D25/D26: artwork once per track
+
+    private func nextWithArtwork(_ updates: inout AsyncStream<NowPlayingInfo?>.Iterator) async -> NowPlayingInfo? {
+        for _ in 0..<6 {
+            guard let value = await updates.next() else { return nil }
+            if value?.artwork != nil { return value }
+        }
+        return nil
+    }
+
+    func testSpotifyArtworkIsFetchedOnceFromTheReadURL() async {
+        let url = URL(string: "https://i.scdn.co/image/a")!
+        let read = NowPlayingInfo(player: .spotify, state: .playing, title: "Song", trackID: "a", artworkURL: url)
+        let loader = FakeArtworkLoader(data: Self.png())
+        let source = makeSource(FakeSender(current: read), running: [.spotify], loader: loader)
+        var updates = source.updates.makeAsyncIterator()
+        let shown = await nextWithArtwork(&updates)
+        XCTAssertEqual(shown?.artwork?.trackID, "a")
+        source.receive(NowPlayingInfo(player: .spotify, state: .paused, title: "Song", trackID: "a"), carriesTrack: true)
+        for _ in 0..<100 { await Task.yield() }
+        let urls = await loader.urls
+        XCTAssertEqual(urls, [url])
+    }
+
+    func testMusicArtworkIsReadFromMusicOncePerTrack() async {
+        let read = NowPlayingInfo(player: .music, state: .playing, title: "Song", trackID: "A1")
+        let sender = FakeSender(current: read, artwork: Self.png())
+        let loader = FakeArtworkLoader()
+        let source = makeSource(sender, running: [.music], loader: loader)
+        var updates = source.updates.makeAsyncIterator()
+        let shown = await nextWithArtwork(&updates)
+        XCTAssertEqual(shown?.artwork?.trackID, "A1")
+        source.receive(NowPlayingInfo(player: .music, state: .paused, title: "Song", trackID: "A1"), carriesTrack: true)
+        for _ in 0..<100 { await Task.yield() }
+        let artworkReads = await sender.calls.filter { $0 == .artwork(.music) }
+        XCTAssertEqual(artworkReads.count, 1)
+        let urls = await loader.urls
+        XCTAssertEqual(urls, [], "Music artwork never touches the network")
+    }
+
+    func testAFailedFetchIsNotRetriedForTheSameTrack() async {
+        let url = URL(string: "https://i.scdn.co/image/a")!
+        let read = NowPlayingInfo(player: .spotify, state: .playing, title: "Song", trackID: "a", artworkURL: url)
+        let loader = FakeArtworkLoader(data: nil)
+        let source = makeSource(FakeSender(current: read), running: [.spotify], loader: loader)
+        let stream = source.updates
+        for _ in 0..<100 { await Task.yield() }
+        source.receive(NowPlayingInfo(player: .spotify, state: .playing, title: "Song", trackID: "a"), carriesTrack: true)
+        for _ in 0..<100 { await Task.yield() }
+        let urls = await loader.urls
+        XCTAssertEqual(urls, [url])
+        withExtendedLifetime(stream) {}
+    }
+
+    func testNoArtworkWithoutAnExistingGrant() async {
+        let loader = FakeArtworkLoader(data: Self.png())
+        let sender = FakeSender(permission: .needsConsent, artwork: Self.png())
+        let source = makeSource(sender, running: [.music, .spotify], loader: loader)
+        let stream = source.updates
+        source.receive(NowPlayingInfo(player: .spotify, state: .playing, trackID: "a"), carriesTrack: true)
+        for _ in 0..<100 { await Task.yield() }
+        let urls = await loader.urls
+        XCTAssertEqual(urls, [])
+        let artworkReads = await sender.calls.filter { $0 == .artwork(.music) }
+        XCTAssertEqual(artworkReads, [])
+        withExtendedLifetime(stream) {}
     }
 }
 
