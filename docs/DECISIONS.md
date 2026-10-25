@@ -561,7 +561,7 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 | Previous | `hookBack` (restarts the track, then goes back; Shash) | `spfyPrev` |
 | Read | `core`/`getd` on `pPlS`, and `pnam`/`pArt` of `pTrk` | same, plus `ID  ` of `pTrk` (the track id, for the ad rule in D24; `sdef` type text) |
 
-- Each event is addressed to the pid of the running `NSRunningApplication`, never to the bundle ID, so a player that quit between the check and the send isn't relaunched [I: device check 4].
+- Each event is addressed to the pid of the running `NSRunningApplication`, never to the bundle ID, so a player that quit between the check and the send isn't relaunched [I: device check 4]. On the Apple Event queue, just before each permission check, send or read, the pid is checked to still belong to the player's bundle ID: the prompt can stay up for minutes, and a quit player's pid could be reused (security-auditor L1, 2026-10-25).
 - Sent with `sendEvent(options: .waitForReply, timeout: 2)` on one serial `DispatchQueue`, so commands stay in order and nothing blocks the main thread. Bridged to async with `withCheckedContinuation`.
 - The reply's error number is checked as well as the thrown error [I: whether `sendEvent` throws for a handler error isn't stated in Apple's docs].
 
@@ -585,6 +585,7 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - At start, for each running player, `AEDeterminePermissionToAutomateTarget(…, askUserIfNeeded: false)` runs on the Apple Event queue. It never prompts. Only if it returns `noErr` is the current state and track read (D22). Otherwise nothing is sent and the module waits for the player's next notification (D24).
 - The first click on a control calls it with `askUserIfNeeded: true` on the same queue, then sends. That call blocks until the user answers the system prompt [I], so it never runs on the main thread. Controls are disabled while a command is in flight. Every later click calls it again, so a grant turned on in System Settings works without a relaunch [I: device check 2].
 - The permission check uses the play/pause event for the target app; Automation consent is per target app [I].
+- Every event is sent with `kAEDoNotPromptForUserConsent`, so a send or read fails with -1744 instead of prompting, and only `permission(ask: true)` after a click can show the prompt (security-auditor M1, 2026-10-25) [I: from the SDK header `AppleEvents.h`; not seen on a device].
 - No custom screen before the system prompt: the prompt shows our `NSAppleEventsUsageDescription`, and the click that triggers it is the explanation.
 - "First enabled" in CLAUDE.md and ARCHITECTURE §10 means first use here: Now Playing is on by default (D21), so asking when it is enabled would mean asking at launch.
 - Outcomes, mapped by one pure function:
@@ -640,4 +641,6 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Trade-offs / follow-ups:**
 - The notification names and keys are undocumented and can change with a player update (RISKS §4). If they change, track info stops arriving; controls still work.
+- Spoofing (security-auditor, 2026-10-25): distributed notifications carry no sender, so any local process can post these names. Notifications for a player that isn't running are dropped, and text is trimmed and capped at 256 characters. A spoofed notification while the player is running can still change what the notch shows (and so whether the button reads Play or Pause). Known limit.
+- Impostors: an app that reuses Music's or Spotify's bundle ID would receive our events and be named in the prompt. The events carry no user data. Checking the target's code signature is deferred; known limit.
 - Device checks 5–7, 10, 13 and 14 in TASK.md Phase 3.
