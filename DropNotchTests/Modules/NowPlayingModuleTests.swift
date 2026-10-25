@@ -6,6 +6,7 @@ final class NowPlayingModuleTests: XCTestCase {
     private struct FakeSource: NowPlayingSource {
         let stream: AsyncStream<NowPlayingInfo?>
         var updates: AsyncStream<NowPlayingInfo?> { stream }
+        func send(_ command: PlaybackCommand, to player: MediaPlayer) async -> AppleEventOutcome { .ok }
     }
 
     func testStartConsumesUpdatesAndStopClearsThem() async throws {
