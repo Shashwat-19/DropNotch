@@ -32,7 +32,7 @@ final class NotchPanelTests: XCTestCase {
         // Whole points: a real window snaps its frame to the pixels of whatever display the
         // test runs on; here that turned a 37.5 pt height into 38.
         let geometry = notched(inset: 38, scale: 1)
-        let hosting = NotchHostingView(rootView: NotchRootView(state: NotchState()))
+        let hosting = NotchHostingView(rootView: NotchRootView(state: NotchState(), registry: ModuleRegistry(modules: [])))
         let panel = NotchPanel(contentView: hosting)
         let canvas = geometry.panelFrame(for: .open)
         for phase in [NotchHoverStateMachine.Phase.peek, .open, .closed] {
