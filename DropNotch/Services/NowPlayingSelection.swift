@@ -30,7 +30,10 @@ struct NowPlayingSelection {
     /// A notification. With `carriesTrack: false` (a state-only payload) the last title and artist stay.
     mutating func report(_ info: NowPlayingInfo, carriesTrack: Bool) {
         var info = info
-        if !carriesTrack, let last = players[info.player] {
+        if !carriesTrack {
+            // A state-only payload for a player that isn't known to be running is most likely its quit
+            // notice arriving after NSWorkspace's; keeping it would leave a player that never clears (D24).
+            guard let last = players[info.player] else { return }
             info.title = last.title
             info.artist = last.artist
         }

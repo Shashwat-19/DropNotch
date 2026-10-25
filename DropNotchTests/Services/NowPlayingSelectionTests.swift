@@ -106,7 +106,21 @@ final class NowPlayingSelectionTests: XCTestCase {
         XCTAssertEqual(selection.current, NowPlayingInfo(player: .spotify, state: .playing, title: "Song", artist: "a"))
     }
 
-    func testStateOnlyReportFromAPlayerWithNoTrackYetHasNoTitle() {
+    func testStateOnlyReportFromAPlayerNotKnownToBeRunningIsIgnored() {
+        selection.report(NowPlayingInfo(player: .music, state: .stopped), carriesTrack: false)
+        XCTAssertNil(selection.current)
+    }
+
+    // Both players send a state-only payload on quit; it can arrive after NSWorkspace's quit notice.
+    func testQuitNoticeArrivingAfterTheQuitDoesNotBringThePlayerBack() {
+        report(.spotify, .playing, "Song")
+        selection.quit(.spotify)
+        selection.report(NowPlayingInfo(player: .spotify, state: .stopped), carriesTrack: false)
+        XCTAssertNil(selection.current)
+    }
+
+    func testStateOnlyReportFromALaunchedPlayerWithNoTrackHasNoTitle() {
+        selection.launched(.music)
         selection.report(NowPlayingInfo(player: .music, state: .stopped), carriesTrack: false)
         XCTAssertEqual(selection.current, NowPlayingInfo(player: .music, state: .stopped))
     }

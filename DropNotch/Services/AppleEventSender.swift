@@ -71,7 +71,8 @@ struct AppleEventSender: AppleEventSending {
             }
             return (.ok, reply.paramDescriptor(forKeyword: AEKeyword(keyDirectObject)))
         } catch {
-            return (AppleEventOutcome(status: OSStatus((error as NSError).code)), nil)
+            // `truncatingIfNeeded`: a plain conversion would crash on a code outside Int32.
+            return (AppleEventOutcome(status: OSStatus(truncatingIfNeeded: (error as NSError).code)), nil)
         }
     }
 
