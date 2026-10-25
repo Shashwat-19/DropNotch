@@ -39,7 +39,8 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         # Agent app: no Dock icon or app menu.
         LSUIElement: true
-        NSAppleEventsUsageDescription: DropNotch sends play, pause and skip commands to Music and Spotify when you use the controls in the notch.
+        # Covers the one-off read of the current track at start (D23) as well as the controls.
+        NSAppleEventsUsageDescription: DropNotch shows the current track from Music and Spotify, and sends play, pause and skip commands when you use the controls in the notch.
     # No App Sandbox (D4). Under the hardened runtime, sending Apple Events to other apps
     # (Music, Spotify) needs this entitlement (D2).
     entitlements:
