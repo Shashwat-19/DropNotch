@@ -53,7 +53,7 @@ final class ScriptablePlayersSource: NSObject, NowPlayingSource {
         // Shows the system prompt the first time; after the user has answered it returns at once (D23).
         var outcome = await sender.permission(for: player, pid: pid, ask: true)
         if outcome == .ok { outcome = await sender.send(command, to: player, pid: pid) }
-        Logger.nowPlaying.info("Command to \(player.bundleID, privacy: .public): \(String(describing: outcome), privacy: .public)")
+        Logger.nowPlaying.info("Command to \(player.bundleID, privacy: .public) pid \(pid): \(String(describing: outcome), privacy: .public)")
         return outcome
     }
 
@@ -106,7 +106,7 @@ final class ScriptablePlayersSource: NSObject, NowPlayingSource {
     private func fetchCurrent(_ player: MediaPlayer, pid: pid_t, generation: Int) async {
         // `ask: false`: never a prompt at start; read only if the user allowed it before.
         let permission = await sender.permission(for: player, pid: pid, ask: false)
-        Logger.nowPlaying.debug("Start check for \(player.bundleID, privacy: .public): \(String(describing: permission), privacy: .public)")
+        Logger.nowPlaying.debug("Start check for \(player.bundleID, privacy: .public) pid \(pid): \(String(describing: permission), privacy: .public)")
         guard permission == .ok, let info = await sender.readCurrent(of: player, pid: pid),
               generation == self.generation, isObserving else { return }
         selection.fetched(info)
