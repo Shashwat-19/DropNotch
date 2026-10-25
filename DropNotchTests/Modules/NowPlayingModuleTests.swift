@@ -21,4 +21,21 @@ final class NowPlayingModuleTests: XCTestCase {
         XCTAssertNil(module.info)
         XCTAssertFalse(module.hasCompactContent)
     }
+
+    // Cancelling the consuming task terminates the stream, which is observable without any sleeping.
+    func testStopEndsStreamConsumptionSoLaterUpdatesAreIgnored() async throws {
+        let (stream, continuation) = AsyncStream.makeStream(of: NowPlayingInfo?.self)
+        let ended = expectation(description: "stream consumption ended")
+        continuation.onTermination = { _ in ended.fulfill() }
+        let module = NowPlayingModule(source: FakeSource(stream: stream))
+        module.start()
+        continuation.yield(NowPlayingInfo(title: "t", artist: "a", isPlaying: true))
+        for _ in 0..<1000 where module.info == nil { await Task.yield() }
+        XCTAssertNotNil(module.info)
+        module.stop()
+        await fulfillment(of: [ended], timeout: 5)
+        continuation.yield(NowPlayingInfo(title: "late", artist: "a", isPlaying: true))
+        for _ in 0..<50 { await Task.yield() }
+        XCTAssertNil(module.info)
+    }
 }

@@ -95,4 +95,69 @@ final class ModuleRegistryTests: XCTestCase {
         registry.setEnabled("a", false)
         XCTAssertNil(registry.compactModule(for: .left))
     }
+
+    func testInitStartsAndStopsNothing() {
+        let a = FakeModule("a"), b = FakeModule("b")
+        _ = ModuleRegistry(modules: [a, b], defaults: makeDefaults())
+        XCTAssertEqual([a.starts, a.stops, b.starts, b.stops], [0, 0, 0, 0])
+    }
+
+    func testStartStartsEveryEnabledModuleOnce() {
+        let a = FakeModule("a"), b = FakeModule("b")
+        let registry = ModuleRegistry(modules: [a, b], defaults: makeDefaults())
+        registry.start()
+        XCTAssertEqual([a.starts, b.starts], [1, 1])
+    }
+
+    func testEnablingAnEnabledModuleIsANoOp() {
+        let a = FakeModule("a")
+        let defaults = makeDefaults()
+        let registry = ModuleRegistry(modules: [a], defaults: defaults)
+        registry.start()
+        registry.setEnabled("a", true)
+        XCTAssertEqual([a.starts, a.stops], [1, 0])
+        XCTAssertNil(defaults.object(forKey: "module.a.enabled"))
+    }
+
+    func testStopBeforeStartStopsNothing() {
+        let a = FakeModule("a")
+        ModuleRegistry(modules: [a], defaults: makeDefaults()).stop()
+        XCTAssertEqual(a.stops, 0)
+    }
+
+    // Disabling already stopped it, so stop() must not stop it a second time.
+    func testStopSkipsModuleDisabledWhileRunning() {
+        let a = FakeModule("a"), b = FakeModule("b")
+        let registry = ModuleRegistry(modules: [a, b], defaults: makeDefaults())
+        registry.start()
+        registry.setEnabled("a", false)
+        registry.stop()
+        XCTAssertEqual([a.stops, b.stops], [1, 1])
+    }
+
+    func testToggleSavesFlagAndBothValuesSurviveANewRegistry() {
+        let defaults = makeDefaults()
+        let first = ModuleRegistry(modules: [FakeModule("a"), FakeModule("b")], defaults: defaults)
+        first.setEnabled("a", false)
+        first.setEnabled("b", false)
+        first.setEnabled("b", true)
+        XCTAssertEqual(defaults.object(forKey: "module.a.enabled") as? Bool, false)
+        XCTAssertEqual(defaults.object(forKey: "module.b.enabled") as? Bool, true)
+        let second = ModuleRegistry(modules: [FakeModule("a"), FakeModule("b")], defaults: defaults)
+        XCTAssertEqual(second.enabledIDs, ["b"])
+    }
+
+    func testCompactModuleIsNilForAnUnknownID() {
+        let registry = ModuleRegistry(modules: [FakeModule("a")], defaults: makeDefaults())
+        registry.compactLeftID = "nope"
+        registry.compactRightID = "nope"
+        XCTAssertNil(registry.compactModule(for: .left))
+        XCTAssertNil(registry.compactModule(for: .right))
+    }
+
+    func testExpandedModulesIgnoreUnknownTabOrderIDs() {
+        let registry = ModuleRegistry(modules: [FakeModule("a")], defaults: makeDefaults())
+        registry.tabOrder = ["nope", "a"]
+        XCTAssertEqual(registry.expandedModules.map(\.id), ["a"])
+    }
 }
