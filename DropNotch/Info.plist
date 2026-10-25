@@ -23,6 +23,6 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>DropNotch shows the current track from Music and Spotify, and sends play, pause and skip commands when you use the controls in the notch.</string>
+	<string>DropNotch shows the current track, its artwork and progress from Music and Spotify, and sends play, pause, skip and seek commands when you use the controls in the notch.</string>
 </dict>
 </plist>
