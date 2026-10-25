@@ -286,4 +286,81 @@ final class ScriptablePlayersSourceTests: XCTestCase {
         XCTAssertEqual(seen, [NowPlayingInfo(player: .spotify, state: .playing, title: "Song"),
                               NowPlayingInfo(player: .spotify, state: .paused, title: "Song")])
     }
+
+    // MARK: D26: reads after notifications
+
+    private func reads(_ sender: FakeSender) async -> [FakeSender.Call] {
+        await sender.calls.filter { if case .read = $0 { true } else { false } }
+    }
+
+    func testMusicIsReadAfterEachNotificationThatCarriesATrack() async {
+        let at = Date()
+        let read = NowPlayingInfo(player: .music, state: .playing, title: "Song", trackID: "A1",
+                                  duration: 180, position: PlaybackPosition(seconds: 70, at: at))
+        let sender = FakeSender(current: read)
+        let source = makeSource(sender, running: [.music])
+        var updates = source.updates.makeAsyncIterator()
+        _ = await updates.next() // unknown, from start
+        await waitForCalls(sender, count: 2) // the start check and read
+        source.receive(NowPlayingInfo(player: .music, state: .playing, title: "Song", trackID: "A1"), carriesTrack: true)
+        source.receive(NowPlayingInfo(player: .music, state: .stopped), carriesTrack: false)
+        source.receive(NowPlayingInfo(player: .music, state: .paused, title: "Song", trackID: "A1"), carriesTrack: true)
+        await waitForCalls(sender, count: 6)
+        let calls = await reads(sender)
+        XCTAssertEqual(calls.count, 3, "start, and the two payloads with a track; not the state-only one")
+    }
+
+    func testSpotifyIsReadOncePerTrack() async {
+        let sender = FakeSender()
+        let source = makeSource(sender, running: [.spotify])
+        let stream = source.updates // kept: a dropped stream ends observing
+        await waitForCalls(sender, count: 2) // the start check and read
+        for id in ["a", "a", "b", "b", "a"] {
+            source.receive(NowPlayingInfo(player: .spotify, state: .playing, trackID: id), carriesTrack: true)
+        }
+        source.receive(NowPlayingInfo(player: .spotify, state: .playing), carriesTrack: true) // an ad: no id
+        await waitForCalls(sender, count: 8)
+        for _ in 0..<50 { await Task.yield() }
+        let calls = await reads(sender)
+        XCTAssertEqual(calls.count, 4, "start, then a, b and a again; never for a repeat or an ad")
+        withExtendedLifetime(stream) {}
+    }
+
+    func testNoReadWithoutAnExistingGrant() async {
+        let sender = FakeSender(permission: .needsConsent)
+        let source = makeSource(sender, running: [.music])
+        let stream = source.updates
+        source.receive(NowPlayingInfo(player: .music, state: .playing, trackID: "A1"), carriesTrack: true)
+        await waitForCalls(sender, count: 2)
+        for _ in 0..<50 { await Task.yield() }
+        let calls = await sender.calls
+        XCTAssertEqual(calls, [.permission(.music, ask: false), .permission(.music, ask: false)])
+        withExtendedLifetime(stream) {}
+    }
+
+    func testAReadMergesThePositionIntoTheStream() async {
+        let at = Date()
+        let read = NowPlayingInfo(player: .music, state: .playing, title: "Song", trackID: "A1",
+                                  duration: 180, position: PlaybackPosition(seconds: 70, at: at))
+        let sender = FakeSender(current: read)
+        let source = makeSource(sender, running: [])
+        var updates = source.updates.makeAsyncIterator()
+        source.receive(NowPlayingInfo(player: .music, state: .playing, title: "Song", trackID: "A1"), carriesTrack: true)
+        _ = await updates.next() // the notification itself
+        source.refresh(.music) // not running: nothing happens
+        let calls = await sender.calls
+        XCTAssertEqual(calls, [])
+
+        let running = makeSource(sender, running: [.music])
+        var runningUpdates = running.updates.makeAsyncIterator()
+        _ = await runningUpdates.next() // unknown, from start
+        _ = await runningUpdates.next() // the start read
+        running.receive(NowPlayingInfo(player: .music, state: .playing, title: "Song", trackID: "A1"), carriesTrack: true)
+        // The notification re-anchors the start read's position at its own arrival; the read then lands.
+        var latest = await runningUpdates.next()
+        for _ in 0..<3 where latest??.position != read.position { latest = await runningUpdates.next() }
+        XCTAssertEqual(latest??.position, PlaybackPosition(seconds: 70, at: at))
+        XCTAssertEqual(latest??.duration, 180)
+    }
 }
+

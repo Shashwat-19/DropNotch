@@ -17,6 +17,8 @@ final class ScriptablePlayersSource: NSObject, NowPlayingSource {
     private var selection = NowPlayingSelection()
     private var continuation: AsyncStream<NowPlayingInfo?>.Continuation?
     private var lastPublished: NowPlayingInfo?
+    /// The track id each player was last read for, so Spotify is read once per track (D26).
+    private var lastReadTrackID: [MediaPlayer: String] = [:]
     /// Bumped per subscription, so a late reply or `onTermination` from an old stream can't touch the new one.
     private var generation = 0
     /// false in tests, so a real player's notifications or launch can't reach a test's stream.
@@ -67,6 +69,28 @@ final class ScriptablePlayersSource: NSObject, NowPlayingSource {
         Logger.nowPlaying.debug("\(info.player.bundleID, privacy: .public) reported \(String(describing: info.state), privacy: .public)")
         selection.report(info, carriesTrack: carriesTrack)
         publish()
+        // D26: Music's notification has no position, so read after each one that carries a track. Spotify's
+        // carries position and duration, so read only for a new track id (for its artwork URL).
+        guard carriesTrack else { return }
+        if info.player == .music || (info.trackID != nil && info.trackID != lastReadTrackID[info.player]) {
+            lastReadTrackID[info.player] = info.trackID
+            refresh(info.player)
+        }
+    }
+
+    /// Reads `player`'s position and track by Apple Event and merges it if nothing newer arrived (D26).
+    /// Only with a grant the user already gave, so it never prompts (D23).
+    func refresh(_ player: MediaPlayer) {
+        guard isObserving, let pid = runningPID(player) else { return }
+        let stamp = selection.stamp(for: player)
+        let generation = generation
+        Task {
+            guard await sender.permission(for: player, pid: pid, ask: false) == .ok,
+                  let read = await sender.readCurrent(of: player, pid: pid),
+                  generation == self.generation, isObserving else { return }
+            selection.refreshed(read, stamp: stamp)
+            publish()
+        }
     }
 
     /// A player launched or quit. Internal for tests.
@@ -78,6 +102,7 @@ final class ScriptablePlayersSource: NSObject, NowPlayingSource {
 
     private func startObserving(generation: Int) {
         selection = NowPlayingSelection()
+        lastReadTrackID = [:]
         if observesSystem { addSystemObservers() }
         for player in MediaPlayer.allCases {
             guard let pid = runningPID(player) else { continue }
