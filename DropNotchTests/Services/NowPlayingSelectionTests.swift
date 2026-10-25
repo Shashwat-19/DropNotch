@@ -1,3 +1,4 @@
+import AppKit
 import XCTest
 @testable import DropNotch
 
@@ -228,6 +229,35 @@ final class NowPlayingSelectionTests: XCTestCase {
         let stamp = selection.stamp(for: .spotify)
         selection.quit(.spotify)
         selection.refreshed(spotifyTrack("a", .playing, at: 42), stamp: stamp)
+        XCTAssertNil(selection.current)
+    }
+
+    // MARK: D26: artwork belongs to its track
+
+    private func artwork(_ id: String) throws -> NowPlayingArtwork {
+        let rep = try XCTUnwrap(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 4, pixelsHigh: 4, bitsPerSample: 8,
+                                                 samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                                 colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0))
+        return try XCTUnwrap(NowPlayingArtwork(trackID: id, data: try XCTUnwrap(rep.representation(using: .png, properties: [:]))))
+    }
+
+    func testArtworkIsKeptForItsTrackThroughPausesAndRepeats() throws {
+        selection.report(spotifyTrack("a", .playing, at: 0), carriesTrack: true, at: t0)
+        let art = try artwork("a")
+        selection.setArtwork(art, for: .spotify)
+        selection.report(NowPlayingInfo(player: .spotify, state: .paused), carriesTrack: false, at: t0)
+        selection.report(spotifyTrack("a", .playing, at: 5), carriesTrack: true, at: t0)
+        XCTAssertEqual(selection.current?.artwork, art)
+        selection.report(spotifyTrack("b", .playing, at: 0), carriesTrack: true, at: t0)
+        XCTAssertNil(selection.current?.artwork, "a new track drops the old artwork")
+    }
+
+    func testArtworkForATrackThatIsNoLongerCurrentIsDropped() throws {
+        selection.report(spotifyTrack("b", .playing, at: 0), carriesTrack: true, at: t0)
+        selection.setArtwork(try artwork("a"), for: .spotify)
+        XCTAssertNil(selection.current?.artwork)
+        selection.quit(.spotify)
+        selection.setArtwork(try artwork("b"), for: .spotify)
         XCTAssertNil(selection.current)
     }
 }

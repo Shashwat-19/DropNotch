@@ -20,6 +20,8 @@ struct NowPlayingInfo: Equatable {
     var position: PlaybackPosition?
     /// Spotify only, read by Apple Event; fetched once per track (D25). Never log.
     var artworkURL: URL?
+    /// The thumbnail for `trackID`, once read (Music) or fetched (Spotify); nil shows the app icon.
+    var artwork: NowPlayingArtwork?
 
     var isPlaying: Bool { state == .playing }
 

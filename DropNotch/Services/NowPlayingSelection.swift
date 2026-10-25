@@ -47,6 +47,7 @@ struct NowPlayingSelection {
             info.duration = info.duration ?? last.duration
             info.position = info.position ?? Self.anchor(last, at: now)
             info.artworkURL = info.artworkURL ?? last.artworkURL
+            info.artwork = info.artwork ?? last.artwork
         }
         players[info.player] = info
         clock += 1
@@ -66,6 +67,12 @@ struct NowPlayingSelection {
         info.position = read.position ?? info.position
         info.artworkURL = read.artworkURL ?? info.artworkURL
         players[read.player] = info
+    }
+
+    /// Artwork arrives after its track's notification: kept only if that player is still on the same track.
+    mutating func setArtwork(_ artwork: NowPlayingArtwork, for player: MediaPlayer) {
+        guard players[player]?.trackID == artwork.trackID else { return }
+        players[player]?.artwork = artwork
     }
 
     /// Where the last position has got to by `now`, as a new anchor: frozen if it was paused.
