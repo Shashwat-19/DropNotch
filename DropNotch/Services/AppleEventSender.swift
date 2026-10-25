@@ -1,5 +1,5 @@
+import AppKit
 import CoreServices
-import Foundation
 
 /// The real `AppleEventSending`: raw Apple Events built with `NSAppleEventDescriptor` (D22).
 ///
@@ -12,11 +12,16 @@ struct AppleEventSender: AppleEventSending {
     private static let queue = DispatchQueue(label: "com.shashwat.DropNotch.apple-events", qos: .userInitiated)
     /// A local reply takes milliseconds; give up on a hung player instead of queueing clicks behind it.
     private static let timeout: TimeInterval = 2
+    /// Wait for the reply, and fail with errAEEventWouldRequireUserConsent instead of prompting, so only
+    /// `permission(ask: true)` after a click can show the prompt (D23). The flag has no Swift case.
+    private static let sendOptions = NSAppleEventDescriptor.SendOptions(
+        rawValue: NSAppleEventDescriptor.SendOptions.waitForReply.rawValue | UInt(kAEDoNotPromptForUserConsent))
 
     func permission(for player: MediaPlayer, pid: pid_t, ask: Bool) async -> AppleEventOutcome {
         await Self.run {
             // With `ask: true` this blocks until the user answers the prompt: never on the main thread.
             dispatchPrecondition(condition: .notOnQueue(.main))
+            guard Self.belongs(pid, to: player) else { return .notRunning }
             let target = NSAppleEventDescriptor(processIdentifier: pid)
             // Consent is per target app, so one of its events stands for all of them [I] (D23).
             let event = player.event(for: .playPause)
@@ -29,11 +34,15 @@ struct AppleEventSender: AppleEventSending {
 
     func send(_ command: PlaybackCommand, to player: MediaPlayer, pid: pid_t) async -> AppleEventOutcome {
         let event = player.event(for: command)
-        return await Self.run { Self.send(Self.event(event.eventClass, event.eventID, pid: pid)).outcome }
+        return await Self.run {
+            guard Self.belongs(pid, to: player) else { return .notRunning }
+            return Self.send(Self.event(event.eventClass, event.eventID, pid: pid)).outcome
+        }
     }
 
     func readCurrent(of player: MediaPlayer, pid: pid_t) async -> NowPlayingInfo? {
         await Self.run {
+            guard Self.belongs(pid, to: player) else { return nil }
             let app = NSAppleEventDescriptor.null()
             guard let reply = Self.get(Self.property("pPlS", of: app), pid: pid),
                   let state = Self.state(reply) else { return nil }
@@ -54,6 +63,12 @@ struct AppleEventSender: AppleEventSending {
         }
     }
 
+    /// Whether `pid` is still the player's. The Automation prompt can stay up for minutes; if the player
+    /// quits meanwhile, its pid could be reused by another process.
+    private static func belongs(_ pid: pid_t, to player: MediaPlayer) -> Bool {
+        NSRunningApplication(processIdentifier: pid)?.bundleIdentifier == player.bundleID
+    }
+
     private static func event(_ eventClass: AEEventClass, _ eventID: AEEventID, pid: pid_t) -> NSAppleEventDescriptor {
         NSAppleEventDescriptor(eventClass: eventClass, eventID: eventID,
                                targetDescriptor: NSAppleEventDescriptor(processIdentifier: pid),
@@ -64,7 +79,7 @@ struct AppleEventSender: AppleEventSending {
     /// Sends one event and waits for the reply. On success, also returns the reply's result.
     private static func send(_ event: NSAppleEventDescriptor) -> (outcome: AppleEventOutcome, result: NSAppleEventDescriptor?) {
         do {
-            let reply = try event.sendEvent(options: .waitForReply, timeout: timeout)
+            let reply = try event.sendEvent(options: sendOptions, timeout: timeout)
             // An error from the player's handler comes back inside the reply, not as a thrown error [I] (D22).
             if let code = reply.paramDescriptor(forKeyword: AEKeyword(keyErrorNumber))?.int32Value, code != noErr {
                 return (AppleEventOutcome(status: code), nil)

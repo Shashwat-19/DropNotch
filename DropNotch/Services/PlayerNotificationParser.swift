@@ -23,11 +23,14 @@ enum PlayerNotificationParser {
     }
 
     /// Trimmed text, or nil when it is missing, not a string, or empty, so the view never shows a blank title.
+    /// Capped, because any local process can post these notifications with any text.
     private static func text(_ value: Any?) -> String? {
         guard let text = (value as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
               !text.isEmpty else { return nil }
-        return text
+        return String(text.prefix(maxTextLength))
     }
+
+    static let maxTextLength = 256
 
     private static func state(_ value: Any?) -> NowPlayingInfo.State? {
         switch value as? String {

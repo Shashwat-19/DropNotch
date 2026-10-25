@@ -132,7 +132,12 @@ final class ScriptablePlayersSource: NSObject, NowPlayingSource {
     @objc nonisolated private func playerChanged(_ notification: Notification) {
         guard let player = MediaPlayer.allCases.first(where: { $0.notificationName == notification.name }),
               let parsed = PlayerNotificationParser.parse(notification.userInfo, from: player) else { return }
-        Task { @MainActor in self.receive(parsed.info, carriesTrack: parsed.carriesTrack) }
+        Task { @MainActor in
+            // Any local process can post these names. One for a player that isn't running would show
+            // a player that never clears, because no quit notice will come for it.
+            guard self.runningPID(player) != nil else { return }
+            self.receive(parsed.info, carriesTrack: parsed.carriesTrack)
+        }
     }
 
     @objc nonisolated private func appLaunched(_ notification: Notification) {

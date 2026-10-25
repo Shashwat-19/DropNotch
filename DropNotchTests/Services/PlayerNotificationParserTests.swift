@@ -78,4 +78,13 @@ final class PlayerNotificationParserTests: XCTestCase {
         XCTAssertEqual(result.info, NowPlayingInfo(player: .music, state: .paused))
         XCTAssertTrue(result.carriesTrack)
     }
+
+    // Any local process can post these notifications, so text is capped.
+    func testLongTextIsCapped() throws {
+        let long = String(repeating: "a", count: 10_000)
+        let result = try XCTUnwrap(PlayerNotificationParser.parse(["Player State": "Playing", "Name": "  " + long, "Artist": long],
+                                                                  from: .music))
+        XCTAssertEqual(result.info.title?.count, PlayerNotificationParser.maxTextLength)
+        XCTAssertEqual(result.info.artist?.count, PlayerNotificationParser.maxTextLength)
+    }
 }
