@@ -48,7 +48,7 @@ Terms for a reader new to Swift or AppKit:
 **Decision:**
 - The MVP's Now Playing covers Apple Music and Spotify only.
 - Track changes arrive through each player's distributed notification. This is event-driven, so there is no polling.
-- Playback controls are sent with Apple Events (AppleScript).
+- Playback controls are sent with Apple Events (AppleScript). Refined by D22: raw Apple Events to the running app's pid, not AppleScript.
 - The waveform is decorative. It animates only while something is playing and the view is visible, and it stays static in Low Power Mode.
 - Every source sits behind a `NowPlayingSource` protocol, so a MediaRemote-based source can be added in v0.2.
 - The `com.apple.security.automation.apple-events` entitlement (needed under the hardened runtime to send Apple Events to other apps such as Music and Spotify; not needed for same-team processes [V: https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.security.automation.apple-events]) and the `NSAppleEventsUsageDescription` key are added through `project.yml` in Phase 2.
@@ -520,7 +520,7 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 **Decision:**
 - `NotchModule` is the protocol in ARCHITECTURE.md §3 without `isEnabled`. `ModuleRegistry` keeps `enabledIDs` and saves each flag in `UserDefaults` under `module.<id>.enabled` (on when absent). `setEnabled(_:_:)` is the only writer; it calls `start()` or `stop()` only while the registry is running, so a disabled module, or any module before launch finishes, runs nothing.
 - Layout slots (D8) are three properties on the registry: `compactLeftID`, `compactRightID`, `tabOrder`. They have defaults only: no persistence or editing until Phase 3 Settings.
-- `NowPlayingModule` reads an `AsyncStream<NowPlayingInfo?>` from a `NowPlayingSource` in a `Task` that `start()` creates and `stop()` cancels. `NoNowPlayingSource` never yields, so the view always shows "Nothing playing". The protocol has no playback commands yet.
+- `NowPlayingModule` reads an `AsyncStream<NowPlayingInfo?>` from a `NowPlayingSource` in a `Task` that `start()` creates and `stop()` cancels. `NoNowPlayingSource` never yields, so the view always shows "Nothing playing". In Phase 2 the protocol had no playback commands; Phase 3 adds `send(_:to:)` and the Music and Spotify source (D22–D24).
 - `NotchRootView` shows the first enabled module's `expandedView()` over the open shape.
 
 **Alternatives considered:**
@@ -544,3 +544,100 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - `docs-writer`: ARCHITECTURE.md §2, §3 and §9 updated to match the code.
 - Unverified: the device check above; the 56-test figure and the measurements are as reported by those agents, not re-run by `docs-writer`.
 
+
+---
+
+## D22. Player commands are raw Apple Events sent to the running app's pid
+
+**Date:** 2026-10-25 · **Status:** Accepted (Shash, Phase 3 plan). Refines D2's "Apple Events (AppleScript)".
+
+**Decision:**
+- Commands and the one-off read at start are built with `NSAppleEventDescriptor` from the event codes in each app's scripting dictionary [V: `sdef`, docs/research/now-playing-probe-2026-10-25.md]:
+
+| | Music | Spotify |
+|---|---|---|
+| Play/pause | `hookPlPs` | `spfyPlPs` |
+| Next | `hookNext` | `spfyNext` |
+| Previous | `hookBack` (restarts the track, then goes back; Shash) | `spfyPrev` |
+| Read | `core`/`getd` on `pPlS`, and `pnam`/`pArt` of `pTrk` | same |
+
+- Each event is addressed to the pid of the running `NSRunningApplication`, never to the bundle ID, so a player that quit between the check and the send isn't relaunched [I: device check 4].
+- Sent with `sendEvent(options: .waitForReply, timeout: 2)` on one serial `DispatchQueue`, so commands stay in order and nothing blocks the main thread. Bridged to async with `withCheckedContinuation`.
+- The reply's error number is checked as well as the thrown error [I: whether `sendEvent` throws for a handler error isn't stated in Apple's docs].
+
+**Alternatives considered:**
+- `NSAppleScript` with `tell application id …`: easiest to read, but it launches a player that isn't running, has no timeout parameter, and compiles script text [I].
+- ScriptingBridge (`SBApplication`): can launch the target on first use, and in Swift it needs generated headers or untyped key-value code [I].
+
+**Why:** pid addressing and a short timeout give the two guarantees that matter: never launch a player, never hang behind one. A local reply normally takes milliseconds; 2 s gives up on a hung player instead of queueing clicks behind it.
+
+**Trade-offs / follow-ups:**
+- The codes come from the players' dictionaries, which can change with an update. A wrong code fails with an error and maps to `.failed`, not a crash (D23).
+- Device checks 4 (never launch) and 9 (hung player) in TASK.md Phase 3.
+
+---
+
+## D23. Automation permission: checked silently at start, asked on the first click
+
+**Date:** 2026-10-25 · **Status:** Accepted (Shash, Phase 3 plan decisions 2 and 3)
+
+**Decision:**
+- At start, for each running player, `AEDeterminePermissionToAutomateTarget(…, askUserIfNeeded: false)` runs on the Apple Event queue. It never prompts. Only if it returns `noErr` is the current state and track read (D22). Otherwise nothing is sent and the module waits for the player's next notification (D24).
+- The first click on a control calls it with `askUserIfNeeded: true` on the same queue, then sends. That call blocks until the user answers the system prompt [I], so it never runs on the main thread. Controls are disabled while a command is in flight. Every later click calls it again, so a grant turned on in System Settings works without a relaunch [I: device check 2].
+- The permission check uses the play/pause event for the target app; Automation consent is per target app [I].
+- No custom screen before the system prompt: the prompt shows our `NSAppleEventsUsageDescription`, and the click that triggers it is the explanation.
+- "First enabled" in CLAUDE.md and ARCHITECTURE §10 means first use here: Now Playing is on by default (D21), so asking when it is enabled would mean asking at launch.
+- Outcomes, mapped by one pure function:
+
+| OSStatus | Meaning | Outcome |
+|---|---|---|
+| 0 | noErr | `.ok` |
+| -1743 | errAEEventNotPermitted | `.denied` |
+| -1744 | errAEEventWouldRequireUserConsent | `.needsConsent` |
+| -600, -609 | procNotFound, connectionInvalid | `.notRunning` |
+| -1712 | errAETimeout | `.timedOut` |
+| anything else | | `.failed(code)` |
+
+- `.denied` shows "Allow control of <player> in System Settings" in place of the artist line, as a button that opens Privacy & Security › Automation (`x-apple.systempreferences:com.apple.preference.security?Privacy_Automation` [I: undocumented URL]; if it fails, the text still says where to go). The controls stay, so a retry works after a grant. Track info keeps updating from notifications, which need no permission. Other outcomes are logged only.
+
+**Alternatives considered:**
+- Our own explanation screen before the prompt (RISKS §2). Rejected by Shash: more UI for one prompt per player, and the prompt already comes straight after the user's own click.
+- Ask at launch, or when the module is enabled. Rejected: prompts with no context, and D21 enables the module by default.
+- Skip the read at start. Rejected by Shash: a returning user would see only the player name until the next track change.
+
+**Why:** No prompt appears unless the user clicked a control for that player, and no permission state can crash the app.
+
+**Trade-offs / follow-ups:**
+- The usage string now covers reading the current track (project.yml).
+- A user who denied earlier sees normal controls until the first click shows the denied state.
+- Device checks 1–3 in TASK.md Phase 3 settle the deferred step i items (one prompt per target app; grants after re-signing).
+
+---
+
+## D24. Track info from distributed notifications; one player chosen; no timers
+
+**Date:** 2026-10-25 · **Status:** Accepted (Shash, after the step 1 probe)
+
+**Decision:**
+- Observe `com.apple.Music.playerInfo` and `com.spotify.client.PlaybackStateChanged` with `suspensionBehavior: .deliverImmediately`. The probe saw no suspension for a never-active app, but DropNotch becomes active while Settings is open (D14), and Apple documents that delivery can be suspended [I: device check 7]. It costs one argument.
+- Payloads: `Player State` (`Playing`/`Paused`/`Stopped`), `Name` and `Artist` [V: probe]. A payload with only `Player State` (Music between tracks, launch, quit) updates the state and keeps the last track. Only quitting clears a player (`NSWorkspace` did-terminate). Titles and artists are trimmed and an empty string counts as missing; with no title the view shows the player's name. A Spotify `Track ID` starting with `spotify:ad:` is treated as an ad: no title or artist [I: device check 14].
+- Bursts (Music sends two states within 25–85 ms) are not debounced. The latest state is shown; a possible ~90 ms icon flicker is device check 10. If it shows, a one-shot 150 ms debounce goes in ARCHITECTURE §9.
+- Which player is shown, a pure reducer (`NowPlayingSelection`):
+  1. The player that most recently reported `Playing`.
+  2. Otherwise the player that most recently reported any state. Pausing doesn't hand over to the other player.
+  3. A player that quits drops out.
+  4. A running player whose state is unknown (no notification yet, no read allowed) shows only when no player has a known state; Music before Spotify. It shows the player name and controls, which is the way to the first prompt.
+  5. Neither running: "Nothing playing".
+- No timers or polling. Nothing is added to ARCHITECTURE §9's timer table.
+
+**Alternatives considered:**
+- The block-based `addObserver(forName:object:queue:using:)`: it can't set the suspension behaviour.
+- "Stopped clears the track" (the first plan). Rejected by the probe: it blanks the title on every Music track change.
+- Debounce every notification. Rejected until the device shows a flicker: it adds a timer for a ~90 ms artefact.
+- Show both players. Rejected: no room in the open shape, and the MVP needs one set of controls.
+
+**Why:** Notifications arrive at a background app with no permission and no wake-ups between changes. The selection rules keep the player the user last touched on screen.
+
+**Trade-offs / follow-ups:**
+- The notification names and keys are undocumented and can change with a player update (RISKS §4). If they change, track info stops arriving; controls still work.
+- Device checks 5–7, 10, 13 and 14 in TASK.md Phase 3.

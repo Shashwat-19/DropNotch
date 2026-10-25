@@ -14,7 +14,7 @@ Decision numbers (D1–D14) refer to docs/DECISIONS.md. Start with the `planner`
 
 Plan for c–j approved by Shash, 2026-10-24: branches `feat/menu-bar` (c), `feat/notch-panel` (d), `feat/hover-state` (e) and `feat/module-registry` (f), merged in that order; the g tests go in the branch whose logic they test. **After `feat/hover-state` merges, stop** and hand Shash the hover device checks from step i. `feat/module-registry` waits for Shash's report.
 
-**Status (2026-10-25):** c, d and e are on main. The d–e checks passed on a notched Mac on 2026-10-25, after the fixes on `fix/hover-glitch`: the D16 correction, the D18 retune, the D19 canvas and D20. The notch opens centred in about 0.2–0.3 s, every deliberate hover opened it, sweeps didn't, and resting at the top edge kept it open. **Phase 2 is done.** Branch 4, `feat/module-registry` (step f; D21), passed its step j reviews (code-reviewer, test-writer, accessibility-auditor, performance-optimizer, docs-writer) and its device check on a notched Mac (6 centred opens, placeholder centred, no spill on close), and is on main. **Next: Phase 3, not started.** Carried into Phase 3's accessibility checks, not yet tested: Reduce Motion (no flash or clipped frame; toggling mid-session), the Accessibility Inspector, and what VoiceOver announces for the panel. Two D20 device checks are still open; they are listed in step i.
+**Status (2026-10-25):** c, d and e are on main. The d–e checks passed on a notched Mac on 2026-10-25, after the fixes on `fix/hover-glitch`: the D16 correction, the D18 retune, the D19 canvas and D20. The notch opens centred in about 0.2–0.3 s, every deliberate hover opened it, sweeps didn't, and resting at the top edge kept it open. **Phase 2 is done.** Branch 4, `feat/module-registry` (step f; D21), passed its step j reviews (code-reviewer, test-writer, accessibility-auditor, performance-optimizer, docs-writer) and its device check on a notched Mac (6 centred opens, placeholder centred, no spill on close), and is on main. **Next: Phase 3, in progress (see "Phase 3" below).** Carried into Phase 3's accessibility checks, not yet tested: Reduce Motion (no flash or clipped frame; toggling mid-session), the Accessibility Inspector, and what VoiceOver announces for the panel. Two D20 device checks are still open; they are listed in step i.
 
 a. **Step 0: verify before building.** Done 2026-10-24 (preview-flag run partial); report in docs/research/clipboard-probe-2026-10-24.md, reviewed by Shash; decisions D7a and D7b.
    - **Clipboard warning probe (D7).** Build a throwaway probe in a scratch folder outside DropNotch/. It is not committed. It reads `NSPasteboard.general` in the background when `changeCount` changes. Record: whether macOS shows a privacy alert or prompt on the current macOS version; what triggers it; whether reading only `changeCount` and `types` avoids it. Report the result to Shash before the Clipboard module is built.
@@ -119,3 +119,49 @@ Performance (performance-optimizer):
 - Before release, re-measure with the pointer inside the panel, in a Release build, and over hours.
 
 Phase 3 polish: give the open shape top corners/shoulders where it meets the menu bar, so it reads as one piece with the hardware notch (the square top corners show over the menu bar today).
+
+## Phase 3
+
+Branch order (Shash, 2026-10-25): `feat/now-playing-scripting`, then `feat/now-playing-compact` (the compact slot, with a D5 revision; the "song icon" starts as the player's app icon from `NSWorkspace`, with no extra Apple Event and no network; real artwork later), then `feat/hotkey` (L1–L3, release blocker).
+
+### Branch 1: `feat/now-playing-scripting` (plan approved by Shash, 2026-10-25)
+
+Real Now Playing for Music and Spotify: title, artist, play/pause, next, previous, in the open notch. Decisions D22 (Apple Events), D23 (permission), D24 (notifications and selection). Probe report: docs/research/now-playing-probe-2026-10-25.md.
+
+Out of this branch: MediaRemote (v0.2), artwork, progress bar and seek (follow-up branch; seek stays MVP), shuffle and repeat, the compact slot and waveform (branch 2), a custom screen before the Automation prompt (not built, D23), hotkey and keyboard focus (branch 3).
+
+Steps, one commit each:
+1. Probe (not committed). Done 2026-10-25; report reviewed by Shash.
+2. `docs:` this section, the probe report, D22–D24, and corrections to D21, ARCHITECTURE §3/§8/§10 and RISKS §2.
+3. `feat:` `Logger.nowPlaying`.
+4. `feat:` `Services/MediaPlayer.swift`; `NowPlayingInfo` gains `player`.
+5. `feat:` `Services/PlayerNotificationParser.swift` + tests.
+6. `feat:` `Services/NowPlayingSelection.swift` + tests.
+7. `feat:` `Services/AppleEventOutcome.swift` + tests.
+8. `feat:` `Services/AppleEventSending.swift` + `Services/AppleEventSender.swift`.
+9. `feat:` `NowPlayingSource.send(_:to:)`; `Services/ScriptablePlayersSource.swift` + tests.
+10. `feat:` open-notch view, controls, denied state, accessibility, dark scheme + tests.
+11. `feat:` `acceptsFirstMouse` on `NotchHostingView`.
+12. `feat:` `AppDelegate` uses `ScriptablePlayersSource`.
+13. `chore:` usage string in project.yml covers reading the current track.
+14. Debug build and test. **Stop before the Release build** (Shash): Shash runs the Release build and device checks.
+
+Agents (Shash, 2026-10-25): `test-writer`, `code-reviewer`, `security-auditor`, `docs-writer`. Not `performance-optimizer` (no timers; device check 12 covers idle wake-ups). `accessibility-auditor` runs once at the end of the MVP.
+
+Device checks (Release build, notched Mac). Reset grants between runs with `tccutil reset AppleEvents com.shashwat.DropNotch` [I: service name not checked].
+1. Spotify already playing at launch: no prompt at launch. The first click gives one prompt naming Spotify, with our usage text. Then Music, which gets its own prompt. (Settles step i "one prompt per target app".)
+2. Deny: the "Allow in System Settings" state appears, track info keeps updating, nothing crashes. Turning the grant on in System Settings works without a relaunch.
+3. Re-sign: does an ad-hoc Release rebuild keep the grant, re-prompt, or return -1743 silently? Do Debug and Release share a grant? (Settles step i "grants after re-signing".)
+4. Never launch: quit the player and click a control straight away. It must not relaunch.
+5. Launch and quit players while the notch is open. Quitting both shows "Nothing playing".
+6. Both players playing: the selection rule in D24.
+7. Track changes reach the notch while another app is frontmost, and still do after Settings has been opened and closed.
+8. The first click on a control works, DropNotch doesn't activate, and typing in the front app straight after still works.
+9. Hung player: `kill -STOP <pid>`, click: the notch stays responsive and the click gives up after about 2 s. Then `kill -CONT <pid>`.
+10. Music: no visible flicker of the play/pause icon on pause, play or skip (D24 bursts).
+11. Spotify's Previous mid-track: restart or previous track? Record it.
+12. Idle wake-ups are 0 with both players running; while playing, wake-ups only on notifications.
+13. Radio or a stream with no title: the notch shows the player name, never an empty or odd title.
+14. A Spotify ad on the free account (empty or odd `Name`): the notch hides the title or shows the player name, never garbage.
+15. Release launch, and `codesign -d --entitlements -` shows only apple-events (D11, D13).
+16. Accessibility (the carry-overs from step i): VoiceOver reads the control labels and the title, Increase Contrast, Accessibility Inspector, Reduce Motion.
