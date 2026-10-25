@@ -154,10 +154,10 @@ Device checks (Release build, notched Mac). Reset grants between runs with `tccu
 3. Re-sign: does an ad-hoc Release rebuild keep the grant, re-prompt, or return -1743 silently? Do Debug and Release share a grant? (Settles step i "grants after re-signing".)
 4. Never launch: quit the player and click a control straight away. It must not relaunch.
 5. Launch and quit players while the notch is open. Quitting both shows "Nothing playing".
-6. Both players playing: the selection rule in D24.
+6. Both players playing: the selection rule in D24. Note whether each Music track change briefly shows Spotify (~70 ms).
 7. Track changes reach the notch while another app is frontmost, and still do after Settings has been opened and closed.
 8. The first click on a control works, DropNotch doesn't activate, and typing in the front app straight after still works.
-9. Hung player: `kill -STOP <pid>`, click: the notch stays responsive and the click gives up after about 2 s. Then `kill -CONT <pid>`.
+9. Hung player: `kill -STOP <pid>`, click: the notch stays responsive and the click gives up after about 2 s. Then `kill -CONT <pid>`. If the controls stay disabled until `kill -CONT`, the hang is in the permission check (it has no timeout); record which.
 10. Music: no visible flicker of the play/pause icon on pause, play or skip (D24 bursts).
 11. Spotify's Previous mid-track: restart or previous track? Record it.
 12. Idle wake-ups are 0 with both players running; while playing, wake-ups only on notifications.

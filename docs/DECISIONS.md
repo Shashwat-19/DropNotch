@@ -559,7 +559,7 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 | Play/pause | `hookPlPs` | `spfyPlPs` |
 | Next | `hookNext` | `spfyNext` |
 | Previous | `hookBack` (restarts the track, then goes back; Shash) | `spfyPrev` |
-| Read | `core`/`getd` on `pPlS`, and `pnam`/`pArt` of `pTrk` | same |
+| Read | `core`/`getd` on `pPlS`, and `pnam`/`pArt` of `pTrk` | same, plus `ID  ` of `pTrk` (the track id, for the ad rule in D24; `sdef` type text) |
 
 - Each event is addressed to the pid of the running `NSRunningApplication`, never to the bundle ID, so a player that quit between the check and the send isn't relaunched [I: device check 4].
 - Sent with `sendEvent(options: .waitForReply, timeout: 2)` on one serial `DispatchQueue`, so commands stay in order and nothing blocks the main thread. Bridged to async with `withCheckedContinuation`.
@@ -620,12 +620,12 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Decision:**
 - Observe `com.apple.Music.playerInfo` and `com.spotify.client.PlaybackStateChanged` with `suspensionBehavior: .deliverImmediately`. The probe saw no suspension for a never-active app, but DropNotch becomes active while Settings is open (D14), and Apple documents that delivery can be suspended [I: device check 7]. It costs one argument.
-- Payloads: `Player State` (`Playing`/`Paused`/`Stopped`), `Name` and `Artist` [V: probe]. A payload with only `Player State` (Music between tracks, launch, quit) updates the state and keeps the last track. Only quitting clears a player (`NSWorkspace` did-terminate). Titles and artists are trimmed and an empty string counts as missing; with no title the view shows the player's name. A Spotify `Track ID` starting with `spotify:ad:` is treated as an ad: no title or artist [I: device check 14].
+- Payloads: `Player State` (`Playing`/`Paused`/`Stopped`), `Name` and `Artist` [V: probe]. A payload with only `Player State` (Music between tracks, launch, quit) updates the state and keeps the last track. Only quitting clears a player (`NSWorkspace` did-terminate). Titles and artists are trimmed and an empty string counts as missing; with no title the view shows the player's name. A Spotify `Track ID` starting with `spotify:ad:` is treated as an ad: no title or artist [I: device check 14]. The read at start applies the same rule through the same function, using the track's `ID  ` property; whether that returns `spotify:ad:…` for an ad is also [I].
 - Bursts (Music sends two states within 25–85 ms) are not debounced. The latest state is shown; a possible ~90 ms icon flicker is device check 10. If it shows, a one-shot 150 ms debounce goes in ARCHITECTURE §9.
 - Which player is shown, a pure reducer (`NowPlayingSelection`):
-  1. The player that most recently reported `Playing`.
+  1. Among players whose latest state is `Playing`, the one that reported most recently. So with both playing, pausing the one on screen switches to the other; and each Music track change (a `Stopped` about 70 ms before the new track) briefly shows the other player [I: device check 6].
   2. Otherwise the player that most recently reported any state. Pausing doesn't hand over to the other player.
-  3. A player that quits drops out.
+  3. A player that quits drops out. A state-only payload from a player that isn't known to be running is ignored: both players post one on quit, and it can arrive after `NSWorkspace`'s quit notice (code-reviewer, 2026-10-25).
   4. A running player whose state is unknown (no notification yet, no read allowed) shows only when no player has a known state; Music before Spotify. It shows the player name and controls, which is the way to the first prompt.
   5. Neither running: "Nothing playing".
 - No timers or polling. Nothing is added to ARCHITECTURE §9's timer table.

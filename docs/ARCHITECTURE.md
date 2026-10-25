@@ -21,16 +21,17 @@ DropNotch/
   Notch/          NotchPanel, NotchHostingView, NotchGeometry, NotchHoverStateMachine, NotchState,
                   NotchRootView, ScreenObserver, NotchModule (protocol + CompactSlot), ModuleRegistry
   Modules/
-    NowPlaying/   NowPlayingModule (stub, D21). Planned: separate compact/expanded/settings views, NowPlayingModel
+    NowPlaying/   NowPlayingModule, NowPlayingExpandedView (D22–D24). Planned: compact view (next branch), settings view
     FileTray/     (planned) tray views, TrayStore
     Clipboard/    (planned) history views, ClipboardHistoryStore
     Notes/        (planned) notes views, NotesStore
   Services/       one protocol + implementations per system dependency:
-                  NowPlayingSource, NowPlayingInfo, NoNowPlayingSource (exist; D21).
-                  Planned: AppleMusic and Spotify sources, MediaRemote later,
-                  PasteboardWatcher, BluetoothBatteryProvider (later), …
+                  Now Playing (D21–D24): NowPlayingSource, NowPlayingInfo, NoNowPlayingSource,
+                  MediaPlayer, PlayerNotificationParser, NowPlayingSelection, AppleEventOutcome,
+                  AppleEventSending, AppleEventSender, ScriptablePlayersSource.
+                  Planned: MediaRemote (v0.2), PasteboardWatcher, BluetoothBatteryProvider (later), …
   Settings/       Settings window, launch at login (Phase 3), layout editor, per-module settings host
-  Support/        Logger categories, file locations, small shared helpers
+  Support/        Logger categories, file locations, small shared helpers (FourCharCode+Code)
 DropNotchTests/   mirrors the folders above
 ```
 
@@ -70,7 +71,7 @@ Why it looks like this (notes for a Swift newcomer):
 
 `ModuleRegistry` (in `Notch/`) owns the module instances in a fixed order, keeps each module's enabled flag in `UserDefaults` (`module.<id>.enabled`, on by default), calls `start()`/`stop()` when the flag changes while it is running, and gives the layout the enabled modules in `tabOrder`, plus the module for each compact slot (D8). The initialiser has a `precondition` that module ids are unique: duplicate ids would share one saved flag and one slot, so a duplicate is a programming error and stops the app. `precondition` is checked in Release builds as well as Debug, unlike `assert` [I: Swift standard library behaviour, not checked against Apple's documentation]. The layout slots (`compactLeftID`, `compactRightID`, `tabOrder`) have defaults only and are not saved or editable until Phase 3 Settings.
 
-What exists today (D21): `AppDelegate` creates one registry holding one `NowPlayingModule` built on `NoNowPlayingSource`, and calls `start()` at launch and `stop()` at quit. `NowPlayingModule` reads the source's `AsyncStream<NowPlayingInfo?>` in a `Task` that `start()` creates and `stop()` cancels, then clears `info`. `NoNowPlayingSource` never yields, so the expanded view always shows the placeholder "Nothing playing". Phase 3 adds playback commands (`send(_:to:)`) and the Music and Spotify source (D22–D24).
+What exists today (D21–D24): `AppDelegate` creates one registry holding one `NowPlayingModule` built on `ScriptablePlayersSource`, and calls `start()` at launch and `stop()` at quit. When the app is hosting unit tests (`XCTestConfigurationFilePath` is set) it never calls `start()`, so a test run doesn't contact real players. `NowPlayingModule` reads the source's `AsyncStream<NowPlayingInfo?>` in a `Task` that `start()` creates and `stop()` cancels, then clears `info`, and sends playback commands with `send(_:to:)`. `ScriptablePlayersSource` turns the players' distributed notifications and `NSWorkspace` launch and quit into that stream, through the pure `PlayerNotificationParser` and `NowPlayingSelection`, and sends Apple Events through `AppleEventSending` (D22–D24). `NoNowPlayingSource` never yields and sends nothing; it is for tests.
 
 `NotchRootView` shows the first enabled module's `expandedView()` as an overlay on the open shape. The overlay fades in when the notch opens and is removed at once when it closes (an asymmetric transition: opacity in, identity out), so the text never sits outside the shrinking shape (D19). Tab switching, and `compactView(slot:)` and `settingsView()` (which have no caller yet), come with Phase 3.
 
