@@ -18,14 +18,16 @@ Choices marked **(Dn)** are accepted decisions in [DECISIONS.md](DECISIONS.md).
 ```
 DropNotch/
   App/            DropNotchApp (entry point), AppDelegate, menu-bar item
-  Notch/          NotchPanel, NotchGeometry, NotchHoverStateMachine, NotchRootView, ScreenObserver, ModuleRegistry
+  Notch/          NotchPanel, NotchHostingView, NotchGeometry, NotchHoverStateMachine, NotchState,
+                  NotchRootView, ScreenObserver, NotchModule (protocol + CompactSlot), ModuleRegistry
   Modules/
-    NowPlaying/   compact + expanded + settings views, NowPlayingModel
-    FileTray/     tray views, TrayStore
-    Clipboard/    history views, ClipboardHistoryStore
-    Notes/        notes views, NotesStore
+    NowPlaying/   NowPlayingModule (stub, D21). Planned: separate compact/expanded/settings views, NowPlayingModel
+    FileTray/     (planned) tray views, TrayStore
+    Clipboard/    (planned) history views, ClipboardHistoryStore
+    Notes/        (planned) notes views, NotesStore
   Services/       one protocol + implementations per system dependency:
-                  NowPlayingSource (AppleMusic, Spotify; MediaRemote later),
+                  NowPlayingSource, NowPlayingInfo, NoNowPlayingSource (exist; D21).
+                  Planned: AppleMusic and Spotify sources, MediaRemote later,
                   PasteboardWatcher, BluetoothBatteryProvider (later), …
   Settings/       Settings window, launch at login (Phase 3), layout editor, per-module settings host
   Support/        Logger categories, file locations, small shared helpers
@@ -40,11 +42,11 @@ Rules:
 
 ## 3. Module protocol and registry
 
-Every feature module implements one protocol. Sketch (Swift, our own design):
+Every feature module implements one protocol, `NotchModule` in `Notch/NotchModule.swift` (with the `CompactSlot` enum). The code is the source of truth; this is a sketch of its shape:
 
 ```swift
 @MainActor
-protocol NotchModule: AnyObject, Identifiable where ID == String {
+protocol NotchModule: AnyObject {
     var id: String { get }                       // stable key used by layout and settings storage
     var title: LocalizedStringResource { get }
     var hasCompactContent: Bool { get }          // e.g. Now Playing only while something is playing
@@ -54,9 +56,11 @@ protocol NotchModule: AnyObject, Identifiable where ID == String {
     func settingsView() -> AnyView
 
     func start()                                 // called only while enabled; begins observing
-    func stop()                                  // called when disabled or app quits
+    func stop()                                  // called when disabled or app quits; safe to call twice
 }
 ```
+
+The protocol does not inherit `Identifiable`; `id` is a plain `String`.
 
 Why it looks like this (notes for a Swift newcomer):
 - `@MainActor`: every module drives UI state, so the compiler guarantees it is only touched on the main thread. Background work happens inside services, which hand results back to the main actor.
@@ -64,7 +68,11 @@ Why it looks like this (notes for a Swift newcomer):
 - `AnyView` return types: the registry keeps modules of different types in one array. A protocol with an associated `View` type can't sit in a plain array without type erasure, and `AnyView` is the simplest erasure. Apple documents that changing the wrapped view type destroys and rebuilds the hierarchy [V: https://developer.apple.com/documentation/swiftui/anyview]; no diffing cost is documented. Module view types don't change once placed, so this rebuild doesn't recur [I].
 - The enabled flag lives in the registry, not on the module (D21), so there is one source of truth and the notch view redraws when it changes. A disabled module runs no observers, timers or prompts. `start()`/`stop()` are separate from the flag so the registry decides when observers run (for example, stop everything when the screen sleeps).
 
-`ModuleRegistry` (in `Notch/`) owns the module instances in a fixed order, keeps each module's enabled flag in `UserDefaults` (`module.<id>.enabled`, on by default), calls `start()`/`stop()` when the flag changes while it is running, and gives the layout the enabled modules in `tabOrder`, plus the module for each compact slot (D8). The open notch shows the first enabled module's expanded view; tab switching and compact views in the closed notch come with Phase 3.
+`ModuleRegistry` (in `Notch/`) owns the module instances in a fixed order, keeps each module's enabled flag in `UserDefaults` (`module.<id>.enabled`, on by default), calls `start()`/`stop()` when the flag changes while it is running, and gives the layout the enabled modules in `tabOrder`, plus the module for each compact slot (D8). The initialiser has a `precondition` that module ids are unique: duplicate ids would share one saved flag and one slot, so a duplicate is a programming error and stops the app. `precondition` is checked in Release builds as well as Debug, unlike `assert` [I: Swift standard library behaviour, not checked against Apple's documentation]. The layout slots (`compactLeftID`, `compactRightID`, `tabOrder`) have defaults only and are not saved or editable until Phase 3 Settings.
+
+What exists today (D21): `AppDelegate` creates one registry holding one `NowPlayingModule` built on `NoNowPlayingSource`, and calls `start()` at launch and `stop()` at quit. `NowPlayingModule` reads the source's `AsyncStream<NowPlayingInfo?>` in a `Task` that `start()` creates and `stop()` cancels, then clears `info`. `NoNowPlayingSource` never yields, so the expanded view always shows the placeholder "Nothing playing". `NowPlayingSource` has no playback commands yet; real sources come in Phase 3.
+
+`NotchRootView` shows the first enabled module's `expandedView()` as an overlay on the open shape. The overlay fades in when the notch opens and is removed at once when it closes (an asymmetric transition: opacity in, identity out), so the text never sits outside the shrinking shape (D19). Tab switching, and `compactView(slot:)` and `settingsView()` (which have no caller yet), come with Phase 3.
 
 Transient HUDs (timed overlays shown for a few seconds: battery, Bluetooth connect, track change) are a registry feature: a module asks for a timed peek, and the hover state machine shows it. Atoll uses the same idea for its HUDs [V: research/atoll-system-shell.md A2].
 
@@ -145,7 +153,7 @@ Target: zero wake-ups while idle, apart from the clipboard poll. Intervals below
 | Clipboard `changeCount` poll | 0.5 s, tolerance 0.25 s (D7) | Clipboard module enabled and screen awake | The `changeCount` page describes only the counter; no change notification is documented [V: https://developer.apple.com/documentation/appkit/nspasteboard/changecount]. Reading one integer per tick is cheap [I: not measured]. Atoll uses 0.5 s [V]. |
 | Hover open delay | One-shot 0.12 s | Pointer enters the closed notch | Avoids opening when the pointer just passes through. Atoll's default is 0.3 s [V]; that felt slow on the device (D18). |
 | Hover exit debounce | One-shot 0.1 s | Pointer leaves | Avoids flicker at the edge [V: Atoll uses 100 ms]. |
-| Sweep guard (not a timer) | Per mouse-moved event | Pointer inside the panel only, via the tracking area's `.mouseMoved` | Restarts the open delay above 600 pt/s sideways (D20). No events while the pointer is outside the panel. |
+| Sweep guard (not a timer) | Per mouse-moved event | Pointer inside the panel only, via the tracking area's `.mouseMoved` | Restarts the open delay above 600 pt/s sideways (D20). No events while the pointer is outside the panel. For about 0.25 s after a close starts the panel is still large (D19), so mouse-moved events reach the guard then; this is the D19 trade-off, and the guard only acts during peek. |
 | Peek dismissal | One-shot, 2–3 s | A peek HUD is showing | Timed by definition. |
 | Screen-change debounce | One-shot 0.2 s | Display change burst | Coalesces bursts. |
 | Notes autosave | One-shot 1 s after last keystroke | Typing in notes | Batches disk writes. |

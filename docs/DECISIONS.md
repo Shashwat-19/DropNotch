@@ -532,5 +532,13 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 **Trade-offs / follow-ups:**
 - The protocol's `compactView(slot:)` and `settingsView()` have no caller yet: the closed panel is exactly the notch (D5), so there is no room for compact content until the closed frame can widen.
 - Device check: the placeholder text appears when the shape opens, and nothing flickers or shifts during the grow or shrink (D19). Unverified; tests don't cover rendering.
-- Not run yet for this branch: `code-reviewer`; after the branch, once: `accessibility-auditor`, `performance-optimizer`, `docs-writer` (TASK.md step j).
+- Later lists from the reviews are in TASK.md (Phase 3 carry-overs) and RISKS.md §4.
+
+**Review (TASK.md step j):**
+- `code-reviewer`: approved with suggestions. Applied: the removal transition (module content leaves at once on close), a `precondition` that module ids are unique, and test teardown.
+- `test-writer`: extended the registry and Now Playing tests; 56 tests in total.
+- `performance-optimizer`: an idle Debug build measured 0.0–0.1 % CPU with 0 idle wake-ups over 12 samples. Not measured: pointer inside the panel, a Release build, long-run memory.
+- `accessibility-auditor`: no blockers. Its Later items are in TASK.md.
+- `docs-writer`: ARCHITECTURE.md §2, §3 and §9 updated to match the code.
+- Unverified: the device check above; the 56-test figure and the measurements are as reported by those agents, not re-run by `docs-writer`.
 

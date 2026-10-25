@@ -14,7 +14,7 @@ Decision numbers (D1–D14) refer to docs/DECISIONS.md. Start with the `planner`
 
 Plan for c–j approved by Shash, 2026-10-24: branches `feat/menu-bar` (c), `feat/notch-panel` (d), `feat/hover-state` (e) and `feat/module-registry` (f), merged in that order; the g tests go in the branch whose logic they test. **After `feat/hover-state` merges, stop** and hand Shash the hover device checks from step i. `feat/module-registry` waits for Shash's report.
 
-**Status (2026-10-25):** c, d and e are on main. The d–e checks passed on a notched Mac on 2026-10-25, after the fixes on `fix/hover-glitch`: the D16 correction, the D18 retune, the D19 canvas and D20. The notch opens centred in about 0.2–0.3 s, every deliberate hover opened it, sweeps didn't, and resting at the top edge kept it open. **Branch 4, `feat/module-registry` (step f; decision D21), is implemented on `feat/module-registry` and awaiting Shash's device check and merge.** Two D20 device checks are still open; they are listed in step i.
+**Status (2026-10-25):** c, d and e are on main. The d–e checks passed on a notched Mac on 2026-10-25, after the fixes on `fix/hover-glitch`: the D16 correction, the D18 retune, the D19 canvas and D20. The notch opens centred in about 0.2–0.3 s, every deliberate hover opened it, sweeps didn't, and resting at the top edge kept it open. **Branch 4, `feat/module-registry` (step f; decision D21), is implemented on `feat/module-registry`. The step j reviews for it are done (code-reviewer, test-writer, accessibility-auditor, performance-optimizer, docs-writer); the device check is next, then merge.** Two D20 device checks are still open; they are listed in step i.
 
 a. **Step 0: verify before building.** Done 2026-10-24 (preview-flag run partial); report in docs/research/clipboard-probe-2026-10-24.md, reviewed by Shash; decisions D7a and D7b.
    - **Clipboard warning probe (D7).** Build a throwaway probe in a scratch folder outside DropNotch/. It is not committed. It reads `NSPasteboard.general` in the background when `changeCount` changes. Record: whether macOS shows a privacy alert or prompt on the current macOS version; what triggers it; whether reading only `changeCount` and `types` avoids it. Report the result to Shash before the Clipboard module is built.
@@ -71,6 +71,10 @@ i. **Manual checks on a real notched Mac.** These cannot run in CI.
    - Still to confirm (D20):
      - With a display arranged directly above the notched screen, a pointer resting on that display's bottom edge over the notch doesn't trigger peek or open.
      - A slow, slightly shaky approach still opens the notch. The sweep guard measures speed from one move to the next, with no smoothing.
+   - Module placeholder (D21):
+     - "Nothing playing" appears when the shape opens, doesn't flicker, and disappears at once on close without poking outside the shrinking shape.
+     - With Reduce Motion on, hover open and close show no flash or clipped frame, and toggling the setting mid-session works.
+     - VoiceOver: note what it announces for the panel while closed and open. The accessibility-auditor suggested naming the panel "DropNotch" or hiding it from VoiceOver. Undecided: ask Shash.
    - Menu-bar Settings… opens Settings in front, with keyboard focus, while another app is frontmost (D14). ⌘Q in the Settings window quits.
    - Deferred (Shash, 2026-10-24): the step a items that can only be confirmed on a device need features outside Phase 2. Each one is checked in the phase that builds its feature:
      - Automation prompts (Release build, D11): does macOS show one prompt per target app, on the first Apple Event? Not stated in Apple docs; confirm on device.
@@ -86,10 +90,32 @@ j. **Review and records.**
    - Once, after `feat/module-registry`: `accessibility-auditor`, `performance-optimizer` and `docs-writer`.
    - No `security-auditor` in Phase 2 (Shash, 2026-10-24): c–f change no entitlements or signing, and step b's entitlements were reviewed under D13.
    - Update docs/DECISIONS.md and docs/ARCHITECTURE.md.
+   - Branch 4 (`feat/module-registry`): all of the above done except the device check (step i). Outcomes are in D21, "Review".
 
 ## Out of scope for Phase 2
 Now Playing real sources, file tray, clipboard, and notes modules (Phase 3). MediaRemote (v0.2). Lock screen (beyond v0.2). Sparkle. Launch at login (Phase 3 Settings).
 
 Clipboard module (Phase 3), first step: re-run probe copies 4–6 (detection call and text reads) under the preview flag (`defaults write com.shashwat.ClipboardProbe EnablePasteboardPrivacyDeveloperPreview -bool yes`), with the probe's main-actor fix (D7b); delete the flag afterwards. See docs/research/clipboard-probe-2026-10-24.md §4.
+
+## Phase 3 carry-overs
+
+From the branch 4 reviews. None blocks the Phase 2 merge. Nothing here is built yet.
+
+Accessibility (accessibility-auditor):
+- L1. Hover is the only trigger. The hotkey must toggle the notch and click-to-open is needed. Release blocker (also RISKS.md §4).
+- L2. The panel can never be key (D16). When controls or text fields arrive, flip `canBecomeKey` while the notch is open; this revisits D16. It brings Escape to close, a focus ring, and labels on icon-only controls.
+- L3. Close behaviour for a hotkey-opened notch: Escape, the hotkey again, or focus leaving. Don't auto-close while VoiceOver focus is inside.
+- L4. Post an accessibility notification on open, and group the open content under the module title.
+- L5. Force a dark colour scheme on the notch content when the first real module lands.
+- L6. Respect Increase Contrast. Never use colour alone to show state.
+- L7. Hit targets of at least about 24 pt, kept clear of the 18 pt corners.
+- L8. Optional cross-fade instead of nothing under Reduce Motion.
+- Real text uses `.subheadline` or larger, not `.caption` (about 10 pt). The stub's placeholder uses `.caption`.
+
+Performance (performance-optimizer):
+- Build log strings lazily on the sweep path (`NotchState.send`, `NotchState.startTimer`, `NotchHostingView.logPointer`).
+- Re-check `AnyView` identity and per-module `@Observable` state when real content lands.
+- Add `NSWorkspace` screen sleep/wake pausing together with the first repeating timer or animation.
+- Before release, re-measure with the pointer inside the panel, in a Release build, and over hours.
 
 Phase 3 polish: give the open shape top corners/shoulders where it meets the menu bar, so it reads as one piece with the hardware notch (the square top corners show over the menu bar today).
