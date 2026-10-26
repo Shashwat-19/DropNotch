@@ -204,14 +204,14 @@ Steps, one commit each:
 Agents: `test-writer`, `code-reviewer`, `security-auditor` (network, image decoding, Apple Event writes), `performance-optimizer` (Core Animation bar, reads per notification, decoding), `accessibility-auditor` (Shash: on this branch), then `docs-writer` after the device checks.
 
 Device checks (Release build, notched Mac), numbered after branch 1's:
-17. The bar matches the player's own time to within about 1 s after play, pause, next, and 2 minutes of playing, for both players.
-18. A seek made in the player's own window shows in the notch on the next open; note whether it shows while the notch is already open.
-19. Click and drag seek on both players. The first seek without the grant prompts once. Drag past the panel edge (does the notch close mid-drag?). VoiceOver (with "cursor follows mouse pointer", since the panel can't take focus until `feat/hotkey`) adjusts in 10 s steps, speaks the new value, and quick repeated adjusts add up; record which VoiceOver command adjusts the bar.
-20. Artwork: Music library track, catalogue track, radio (app icon), a track without artwork (app icon); Spotify track, an ad (app icon); without the grant, app icons.
-21. Network (`nettop` or a firewall): only `i.scdn.co`, at most one request per Spotify track change, none for Music, none while idle. Offline: app icon, no retries.
-22. The bar moves smoothly (it is drawn at 10 fps), stops when paused, and is right after closing and reopening the notch.
-23. Energy: 0 wake-ups while closed and while paused; about 1 a second while open and playing (the elapsed time); WindowServer within about 3 points of its baseline; display sleep with the notch open closes it.
-24. Memory stays flat over 50 track changes.
-25. Accessibility Inspector: the bar's role and increment/decrement actions (if it isn't adjustable, switch to an AppKit slider role on `ProgressBarView`), its value after 30 s of playing; every control named; the panel reads as "DropNotch" containing a "Now Playing" group. VoiceOver speaks the announcement after a refused request. The System Settings link is a 24 pt target and the denied layout fits under the real notch. Track contrast with Increase Contrast on and off; Reduce Motion shows no jumps.
-26. Release launch, and `codesign -d --entitlements -` shows only apple-events.
+17. **Pending.** The bar matches the player's own time to within about 1 s after play, pause, next, and 2 minutes of playing, for both players.
+18. **Pending.** A seek made in the player's own window shows in the notch on the next open; note whether it shows while the notch is already open.
+19. **Pending.** Click and drag seek on both players. The first seek without the grant prompts once. Drag past the panel edge (does the notch close mid-drag?). VoiceOver (with "cursor follows mouse pointer", since the panel can't take focus until `feat/hotkey`) adjusts in 10 s steps, speaks the new value, and quick repeated adjusts add up; record which VoiceOver command adjusts the bar.
+20. **Pending.** Artwork: Music library track, catalogue track, radio (app icon), a track without artwork (app icon); Spotify track, an ad (app icon); without the grant, app icons.
+21. **Pending.** Network (`nettop` or a firewall): only `i.scdn.co`, at most one request per Spotify track change, none for Music, none while idle. Offline: app icon, no retries.
+22. **Pending.** The bar moves smoothly (it is drawn at 10 fps), stops when paused, and is right after closing and reopening the notch.
+23. **Pending.** Energy: 0 wake-ups while closed and while paused; about 1 a second while open and playing (the elapsed time); WindowServer within about 3 points of its baseline; display sleep with the notch open closes it.
+24. **Pending.** Memory stays flat over 50 track changes.
+25. **Pending.** Accessibility Inspector: the bar's role and increment/decrement actions (if it isn't adjustable, switch to an AppKit slider role on `ProgressBarView`), its value after 30 s of playing; every control named; the panel reads as "DropNotch" containing a "Now Playing" group. VoiceOver speaks the announcement after a refused request. The System Settings link is a 24 pt target and the denied layout fits under the real notch. Track contrast with Increase Contrast on and off; Reduce Motion shows no jumps.
+26. **Pending.** Release launch, and `codesign -d --entitlements -` shows only apple-events.
 
