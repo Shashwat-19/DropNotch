@@ -24,5 +24,11 @@
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>DropNotch shows the current track, its artwork and progress from Music and Spotify, and sends play, pause, skip and seek commands when you use the controls in the notch.</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>DropNotch keeps a link to files you drop on the notch, so they stay in the tray.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>DropNotch keeps a link to files you drop on the notch, so they stay in the tray.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>DropNotch keeps a link to files you drop on the notch, so they stay in the tray.</string>
 </dict>
 </plist>

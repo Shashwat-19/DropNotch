@@ -40,6 +40,10 @@ targets:
         # Agent app: no Dock icon or app menu.
         LSUIElement: true
         # Covers the reads of the track, artwork and position (D23, D26) as well as the controls.
+        # Shown when the tray first opens a file kept in one of these folders (D32, RISKS.md §2).
+        NSDesktopFolderUsageDescription: DropNotch keeps a link to files you drop on the notch, so they stay in the tray.
+        NSDocumentsFolderUsageDescription: DropNotch keeps a link to files you drop on the notch, so they stay in the tray.
+        NSDownloadsFolderUsageDescription: DropNotch keeps a link to files you drop on the notch, so they stay in the tray.
         NSAppleEventsUsageDescription: DropNotch shows the current track, its artwork and progress from Music and Spotify, and sends play, pause, skip and seek commands when you use the controls in the notch.
     # No App Sandbox (D4). Under the hardened runtime, sending Apple Events to other apps
     # (Music, Spotify) needs this entitlement (D2).
