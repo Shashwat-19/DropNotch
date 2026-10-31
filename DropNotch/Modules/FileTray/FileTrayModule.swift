@@ -96,7 +96,8 @@ final class FileTrayModule: NotchModule {
     func add(_ urls: [URL]) {
         guard !urls.isEmpty, !loadFailed else { return }
         refresh()
-        var present = Set(locations.values.map(\.path))
+        // Both sides through `resolvingSymlinksInPath()`: it drops a leading /private that bookmark resolution keeps.
+        var present = Set(locations.values.map { $0.resolvingSymlinksInPath().path })
         for dropped in urls {
             // A symlink is followed, so the tray holds the file the user meant, not the link (D32).
             let url = dropped.resolvingSymlinksInPath()

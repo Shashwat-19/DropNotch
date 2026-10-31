@@ -136,23 +136,19 @@ final class FileTrayModuleTests: XCTestCase {
         XCTAssertEqual(module.items.count, 1)
     }
 
-    // Known bug: `add` compares `resolvingSymlinksInPath()` paths, which drop a leading /private, with resolved
-    // bookmark paths, which keep it. So under /private (/tmp, /var, where every test temp folder is) a file
-    // dropped again in a later drop is added twice. Under /Users the two paths match. Remove the
-    // XCTExpectFailure once fixed; strict mode fails this test when the bug is gone.
+    // Under /private (every test temp folder is), where `resolvingSymlinksInPath()` and bookmark resolution
+    // disagree about the leading /private.
     func testAddingTheSameFileInALaterDropKeepsOneItem() throws {
         let a = try original("a.txt")
         let module = makeModule()
         module.start()
         module.add([a])
-        XCTExpectFailure("later-drop dedupe misses files under /private") {
-            module.add([a])
-            XCTAssertEqual(module.items.count, 1, "in a later drop")
-            let reloaded = makeModule()
-            reloaded.start()
-            reloaded.add([a])
-            XCTAssertEqual(reloaded.items.count, 1, "after a relaunch")
-        }
+        module.add([a])
+        XCTAssertEqual(module.items.count, 1, "in a later drop")
+        let reloaded = makeModule()
+        reloaded.start()
+        reloaded.add([a])
+        XCTAssertEqual(reloaded.items.count, 1, "after a relaunch")
     }
 
     func testAddingASymlinkHoldsItsTarget() throws {
