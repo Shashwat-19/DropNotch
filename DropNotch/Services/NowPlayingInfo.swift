@@ -36,8 +36,8 @@ struct NowPlayingInfo: Equatable {
     /// or within a second of where `shown` has got to by `now`, carries on from `shown`: while paused either
     /// way (a pause stays where it froze), while playing only backwards. Music's position reads lag and
     /// jitter by a few tenths of a second [V: probe, 2026-10-31]; a seek moves further. Paused, a position in
-    /// the same whole second as `shown` is taken as it is: the text doesn't change and the bar moves under a
-    /// pixel, and it stops the screen drifting ahead of the player across pause and play.
+    /// the same whole second as `shown` is taken as it is: the text doesn't change and the bar moves back only by
+    /// the read's lag, a fraction of a second, and it stops the screen drifting ahead of the player across pause and play.
     func steadied(after shown: NowPlayingInfo?, at now: Date) -> NowPlayingInfo {
         guard let shown, shown.player == player, let trackID, trackID == shown.trackID,
               let shownSeconds = shown.elapsed(at: now) else { return self }

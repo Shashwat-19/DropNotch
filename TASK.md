@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-10-25):** Phase 3 is in progress. Branch 1, `feat/now-playing-scripting`, is merged to main; branch 2, `feat/now-playing-media`, is being planned. See "Phase 3" below.
+**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, and 2, `feat/now-playing-media`, are merged to main. Next: compact-slot, then hotkey, notes, file-tray, clipboard, settings, polish, release. See "Phase 3" below.
 
 ## Goal
 Run a reverse-engineering analysis (REA) of Canopy and Atoll, turn it into a feature matrix and architecture plan for DropNotch, then scaffold the foundation. DropNotch must be original code that Shash owns.
@@ -178,7 +178,7 @@ Device checks (Release build, notched Mac). Reset grants between runs with `tccu
 
 ### Branch 2: `feat/now-playing-media` (plan approved by Shash, 2026-10-25)
 
-**Status (2026-10-25):** steps 0–14 done; Debug clean build and tests pass (212 tests, 0 failures, run by the lead). Reviews done, required fixes applied: test-writer (artwork after an ad), code-reviewer (lost races, relaunch, VoiceOver base, a name shared with Atoll), security-auditor (JPEG/PNG only, size limits, host as written), performance-optimizer (10 fps bar, elapsed-time §9 row, screen sleep closes the notch), accessibility-auditor (live VoiceOver value, announced denial, 24 pt link, 40 % track). Waiting for Shash's Release build and device checks 17–26; docs-writer after those.
+**Status (2026-10-25):** steps 0–14 done; Debug clean build and tests pass (212 tests, 0 failures, run by the lead). Reviews done, required fixes applied: test-writer (artwork after an ad), code-reviewer (lost races, relaunch, VoiceOver base, a name shared with Atoll), security-auditor (JPEG/PNG only, size limits, host as written), performance-optimizer (10 fps bar, elapsed-time §9 row, screen sleep closes the notch), accessibility-auditor (live VoiceOver value, announced denial, 24 pt link, 40 % track). **Merged to main 2026-10-31.** After Shash's first Music run, a UI-feel pass (D27: optimistic play/pause, symbol morph, hover glass, crossfades) and three clip fixes (time jumps, icon flash, text overlap; D27 revision), each through test-writer and code-reviewer (final verdict Approve; 258 tests, 0 failures). Device checks 17–20 and 22 passed for Music (Shash, 2026-10-31). docs-writer runs once in the release branch (speed mode).
 
 Progress bar with seek, and artwork, in the open notch. Decisions D25 (Spotify artwork over HTTPS, the first network access) and D26 (units, reads, merging, Core Animation bar, seek; favourite dropped). Probe report: docs/research/now-playing-media-probe-2026-10-25.md. Package search (dependency-manager, 2026-10-25): no packages.
 
@@ -204,18 +204,20 @@ Steps, one commit each:
 Agents: `test-writer`, `code-reviewer`, `security-auditor` (network, image decoding, Apple Event writes), `performance-optimizer` (Core Animation bar, reads per notification, decoding), `accessibility-auditor` (Shash: on this branch), then `docs-writer` after the device checks.
 
 Device checks (Release build, notched Mac), numbered after branch 1's. Speed mode (CLAUDE.md): only 17, 18, 19, 20, 22 and 26 run on this branch; 21, 23, 24 and 25 moved to the Release checklist below.
-17. **Pending.** The bar matches the player's own time to within about 1 s after play, pause, next, and 2 minutes of playing, for both players.
-18. **Pending.** A seek made in the player's own window shows in the notch on the next open; note whether it shows while the notch is already open.
-19. **Pending.** Click and drag seek on both players. The first seek without the grant prompts once. Drag past the panel edge (does the notch close mid-drag?). VoiceOver (with "cursor follows mouse pointer", since the panel can't take focus until `feat/hotkey`) adjusts in 10 s steps, speaks the new value, and quick repeated adjusts add up; record which VoiceOver command adjusts the bar.
-20. **Pending.** Artwork: Music library track, catalogue track, radio (app icon), a track without artwork (app icon); Spotify track, an ad (app icon); without the grant, app icons.
-22. **Pending.** The bar moves smoothly (it is drawn at 10 fps), stops when paused, and is right after closing and reopening the notch.
-26. **Pending.** Release launch, and `codesign -d --entitlements -` shows only apple-events.
+17. **Passed for Music (Shash, 2026-10-31).** The time matches Music after play, pause and next; no backward jumps. Spotify: Release checklist.
+18. **Passed for Music (Shash, 2026-10-31).** Spotify: Release checklist.
+19. **Passed for Music (Shash, 2026-10-31).** Spotify: Release checklist.
+20. **Passed for Music (Shash, 2026-10-31);** no app-icon flash between tracks. Spotify: Release checklist.
+22. **Passed (Shash, 2026-10-31).**
+26. Moved to the Release checklist (the lead checked `codesign`: only apple-events, hardened runtime on).
 
 ## Release checklist
 
 Device checks moved here from feature branches (speed mode, CLAUDE.md). Run them in the release branch on a Release build on a notched Mac.
 
 From branch 2, `feat/now-playing-media`:
+- **Pending.** 17–20 for Spotify (as written above): time and bar, a seek in Spotify's window, click and drag seek with the first-seek prompt and VoiceOver adjust, Spotify artwork, an ad, and app icons without the grant.
+- **Pending.** 26. Release launch, and `codesign -d --entitlements -` shows only apple-events.
 - **Pending.** UI feel (D27): glass appears on hover only, in the non-activating panel, with press feedback on macOS 26+; its press bounce respects Reduce Motion; on macOS 14/15 the white hover circle appears in the non-activating panel; a late Music burst doesn't flicker the play/pause icon; artwork on a track change fades old → new directly, with the app icon only for a track without artwork or after the 2 s hold.
 21. **Pending.** Network (`nettop` or a firewall): only `i.scdn.co`, at most one request per Spotify track change, none for Music, none while idle. Offline: app icon, no retries.
 23. **Pending.** Energy: 0 wake-ups while closed and while paused; about 1 a second while open and playing (the elapsed time); WindowServer within about 3 points of its baseline; display sleep with the notch open closes it.
