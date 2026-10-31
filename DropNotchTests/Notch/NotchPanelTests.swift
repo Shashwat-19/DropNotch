@@ -100,6 +100,21 @@ final class NotchPanelTests: XCTestCase {
         }
     }
 
+    // Hover never makes the panel key; only the hotkey does (D30).
+    func testPanelBecomesKeyOnlyWhenAcceptingKeyboardAndEscapeDismisses() {
+        let panel = NotchPanel(contentView: NSView())
+        XCTAssertFalse(panel.canBecomeKey)
+        XCTAssertFalse(panel.canBecomeMain)
+        panel.acceptsKeyboard = true
+        XCTAssertTrue(panel.canBecomeKey)
+        XCTAssertFalse(panel.canBecomeMain)
+
+        var dismissals = 0
+        panel.onDismiss = { dismissals += 1 }
+        panel.cancelOperation(nil)
+        XCTAssertEqual(dismissals, 1)
+    }
+
     func testPanelHasAnAccessibleName() {
         let panel = NotchPanel(contentView: NSView())
         XCTAssertEqual(panel.title, "DropNotch")

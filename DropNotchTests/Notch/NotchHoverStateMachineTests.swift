@@ -200,6 +200,94 @@ final class NotchHoverStateMachineTests: XCTestCase {
         XCTAssertNil(machine.handle(.pointerMoved(x: 900, time: 10.05)))
     }
 
+    // MARK: Hotkey (D30)
+
+    func testHotkeyFromClosedOpensWithKeyboard() {
+        var machine = Machine()
+        XCTAssertNil(machine.handle(.hotkeyPressed))
+        XCTAssertEqual(machine.phase, .open)
+        XCTAssertTrue(machine.openedByKeyboard)
+    }
+
+    func testHotkeyFromPeekOpensAndTheStaleOpenDelayDoesNothing() {
+        var machine = driven([.pointerEntered])
+        XCTAssertNil(machine.handle(.hotkeyPressed))
+        XCTAssertEqual(machine.phase, .open)
+        XCTAssertTrue(machine.openedByKeyboard)
+
+        // The open delay started on entry is still running.
+        XCTAssertNil(machine.handle(.openDelayElapsed))
+        XCTAssertEqual(machine.phase, .open)
+        XCTAssertTrue(machine.openedByKeyboard)
+    }
+
+    // A hover-opened notch takes focus rather than closing under the pointer.
+    func testHotkeyOnAHoverOpenedNotchKeepsItOpenAndTakesFocus() {
+        var machine = opened
+        XCTAssertNil(machine.handle(.hotkeyPressed))
+        XCTAssertEqual(machine.phase, .open)
+        XCTAssertTrue(machine.openedByKeyboard)
+    }
+
+    func testSecondHotkeyCloses() {
+        for start in [Machine(), driven([.pointerEntered]), opened] {
+            var machine = start
+            _ = machine.handle(.hotkeyPressed)
+            XCTAssertNil(machine.handle(.hotkeyPressed))
+            XCTAssertEqual(machine.phase, .closed)
+            XCTAssertFalse(machine.openedByKeyboard)
+        }
+    }
+
+    func testPointerLeavingAHotkeyOpenedNotchDoesNotCloseIt() {
+        for start in [Machine(), opened] {
+            var machine = start
+            _ = machine.handle(.hotkeyPressed)
+            _ = machine.handle(.pointerExited)
+            XCTAssertNil(machine.handle(.exitDebounceElapsed))
+            XCTAssertEqual(machine.phase, .open)
+            XCTAssertTrue(machine.openedByKeyboard)
+        }
+    }
+
+    func testDismissedClosesAHotkeyOpenedNotch() {
+        var machine = driven([.hotkeyPressed])
+        XCTAssertNil(machine.handle(.dismissed))
+        XCTAssertEqual(machine.phase, .closed)
+        XCTAssertFalse(machine.openedByKeyboard)
+    }
+
+    // Dismissal only undoes the hotkey; hover keeps its own rules.
+    func testDismissedWithoutTheHotkeyDoesNothing() {
+        for start in [Machine(), driven([.pointerEntered]), opened] {
+            var machine = start
+            let phase = machine.phase
+            XCTAssertNil(machine.handle(.dismissed))
+            XCTAssertEqual(machine.phase, phase)
+            XCTAssertFalse(machine.openedByKeyboard)
+        }
+    }
+
+    // The pointer left a hotkey-opened notch, so an exit debounce was running when Escape closed it.
+    func testStaleExitDebounceAfterDismissDoesNothing() {
+        var machine = driven([.hotkeyPressed, .pointerEntered, .pointerExited, .dismissed])
+        XCTAssertNil(machine.handle(.exitDebounceElapsed))
+        XCTAssertEqual(machine.phase, .closed)
+        XCTAssertFalse(machine.openedByKeyboard)
+    }
+
+    func testHotkeyCloseForgetsAnOpenDelayThatEndedOutside() {
+        var machine = driven([.pointerEntered, .pointerExited, .openDelayElapsed, .hotkeyPressed, .hotkeyPressed])
+        XCTAssertEqual(machine.phase, .closed)
+
+        // Same as after a hover close: a fresh hover peeks and waits for a new open delay.
+        XCTAssertEqual(machine.handle(.pointerEntered), .startOpenDelay)
+        XCTAssertEqual(machine.phase, .peek)
+        XCTAssertEqual(machine.handle(.pointerExited), .startExitDebounce)
+        XCTAssertEqual(machine.handle(.pointerEntered), .cancelExitDebounce)
+        XCTAssertEqual(machine.phase, .peek)
+    }
+
     func testTimingConstants() {
         XCTAssertEqual(Machine.openDelay, .milliseconds(120))
         XCTAssertEqual(Machine.exitDebounce, .milliseconds(100))
