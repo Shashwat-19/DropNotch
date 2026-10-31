@@ -272,6 +272,9 @@ final class FileTrayModuleTests: XCTestCase {
         try writeTray([item])
         let module = makeModule()
         module.start()
+        module.refresh()
+        // Missing, so AirDrop, Share and drags never send what the link points to.
+        XCTAssertNil(module.locations[item.id])
         module.clear()
         XCTAssertFalse(exists(folder))
         XCTAssertEqual(try String(contentsOf: sentinel, encoding: .utf8), "keep")
