@@ -35,13 +35,16 @@ struct NowPlayingInfo: Equatable {
     /// This info as the view should draw it after `shown` (D27). On the same track, a position that is missing,
     /// or within a second of where `shown` has got to by `now`, carries on from `shown`: while paused either
     /// way (a pause stays where it froze), while playing only backwards. Music's position reads lag and
-    /// jitter by a few tenths of a second [V: probe, 2026-10-31]; a seek moves further.
+    /// jitter by a few tenths of a second [V: probe, 2026-10-31]; a seek moves further. Paused, a position in
+    /// the same whole second as `shown` is taken as it is: the text doesn't change and the bar moves under a
+    /// pixel, and it stops the screen drifting ahead of the player across pause and play.
     func steadied(after shown: NowPlayingInfo?, at now: Date) -> NowPlayingInfo {
         guard let shown, shown.player == player, let trackID, trackID == shown.trackID,
               let shownSeconds = shown.elapsed(at: now) else { return self }
         if let seconds = elapsed(at: now) {
             let delta = seconds - shownSeconds
             guard abs(delta) < Self.steadyTolerance, delta < 0 || !isPlaying else { return self }
+            if !isPlaying, seconds.rounded(.down) == shownSeconds.rounded(.down) { return self }
         }
         var steadied = self
         steadied.position = PlaybackPosition(seconds: shownSeconds, at: now)

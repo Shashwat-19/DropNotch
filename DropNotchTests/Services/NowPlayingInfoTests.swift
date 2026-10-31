@@ -49,12 +49,21 @@ final class NowPlayingInfoTests: XCTestCase {
 
     // MARK: Steadied
 
-    func testPausedAJitterEitherWayStaysWhereItFroze() {
-        let shown = track(.paused, at: 50)
-        for seconds in [49.8, 49.01, 50.2, 50.99] {
+    func testPausedAJitterIntoAnotherSecondStaysWhereItFroze() {
+        let shown = track(.paused, at: 50.5)
+        for seconds in [49.8, 49.51] {
             let steadied = track(.paused, at: seconds).steadied(after: shown, at: now)
-            XCTAssertEqual(steadied.position, PlaybackPosition(seconds: 50, at: now), "\(seconds)")
+            XCTAssertEqual(steadied.position, PlaybackPosition(seconds: 50.5, at: now), "\(seconds)")
             XCTAssertEqual(steadied.state, .paused)
+        }
+    }
+
+    // The text doesn't change, so the read is taken: it resets any lead over the player at each pause.
+    func testPausedAReadInTheSameWholeSecondIsTaken() {
+        let shown = track(.paused, at: 50.5)
+        for seconds in [50.0, 50.2, 50.99] {
+            let next = track(.paused, at: seconds)
+            XCTAssertEqual(next.steadied(after: shown, at: now), next, "\(seconds)")
         }
     }
 

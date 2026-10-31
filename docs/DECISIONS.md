@@ -747,6 +747,6 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Trade-offs / follow-ups:**
 - The settle is a one-shot 1 s sleep per play/pause click (ARCHITECTURE §9).
-- Unverified, release checklist: whether interactive glass shows a hover effect on macOS, and whether its press bounce respects Reduce Motion; the white hover circle in the non-activating panel on macOS 14/15; whether a late Music burst still flickers the icon; the artwork fading old → app icon → new on a track change (the selection drops the old artwork first).
-- The steadying biases the position ahead of the player's by under a second (it keeps small forward differences while paused, and any backward one under 1 s). A larger difference is taken as a seek in the player's window and applied, so a long run of toggles can, rarely, step back once.
+- Unverified, release checklist: whether interactive glass shows a hover effect on macOS, and whether its press bounce respects Reduce Motion; the white hover circle in the non-activating panel on macOS 14/15; whether a late Music burst still flickers the icon; artwork on a track change fading old → new directly, the app icon only when missing or after the 2 s hold.
+- While playing, the steadying holds a read that is behind by under a second, so the screen can run up to a second ahead of the player. Each pause takes a read in the same whole second as the screen, which resets that lead without a visible change. A difference of 1 s or more is taken as a seek in the player's window and applied.
 - Hover feedback relies on SwiftUI `onHover` in the non-activating panel [I: device check].

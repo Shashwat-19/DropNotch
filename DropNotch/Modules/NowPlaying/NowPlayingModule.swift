@@ -157,7 +157,9 @@ final class NowPlayingModule: NotchModule {
                     try? await Task.sleep(for: settleDelay)
                     // Not tied to `currentClick`: a skip or seek straight after must not keep the guess forever.
                     // `stop()` and the next play/pause cancel this instead.
-                    guard let self, !Task.isCancelled else { return }
+                    // A click the player has confirmed since is settled already; rebuilding here would skip
+                    // the steadying and step the time back to the raw read.
+                    guard let self, !Task.isCancelled, self.pendingIsPlaying != nil else { return }
                     self.pendingIsPlaying = nil
                     self.updateShown(allowsBackward: true)
                 }

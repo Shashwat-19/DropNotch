@@ -5,13 +5,14 @@ struct NowPlayingExpandedView: View {
     let module: NowPlayingModule
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// The old track's title and artist while they fade out; nil shows the current ones (D27).
-    @State private var fadingText: TrackText?
+    /// The title and artist on screen. A change fades this out, then swaps it, then fades in (D27); nil until
+    /// the first appearance shows the current ones.
+    @State private var displayedText: TrackText?
     @State private var textOpacity = 1.0
 
     var body: some View {
         if let info = module.shown {
-            let text = fadingText ?? TrackText(info)
+            let text = displayedText ?? TrackText(info)
             VStack(spacing: 8) {
                 HStack(spacing: 12) {
                     NowPlayingArtworkView(artwork: info.artwork, player: info.player, size: 56)
@@ -54,8 +55,11 @@ struct NowPlayingExpandedView: View {
             .accessibilityElement(children: .contain)
             .accessibilityLabel(Text(module.title))
             // The open content is inserted each time the notch opens (D19), so this runs once per open.
-            .onAppear { module.didOpen() }
-            .onChange(of: TrackText(info)) { old, _ in fade(from: old) }
+            .onAppear {
+                displayedText = TrackText(info)
+                module.didOpen()
+            }
+            .onChange(of: TrackText(info)) { fadeToCurrentText() }
         } else {
             Text("Nothing playing")
                 .font(.subheadline)
@@ -93,13 +97,14 @@ struct NowPlayingExpandedView: View {
 
     /// The old text fades out, then the current one fades in, 0.12 s each, so the two never overlap. A fade is
     /// what Reduce Motion substitutes for motion (L8), so it stays on.
-    private func fade(from old: TrackText) {
-        if fadingText == nil { fadingText = old }
+    /// `displayedText` only changes once the old text is invisible, so the new title never shows for a frame
+    /// before the fade.
+    private func fadeToCurrentText() {
         withAnimation(.easeOut(duration: 0.12)) {
             textOpacity = 0
         } completion: {
             // Whatever is current by now, so a second change during the fade isn't lost.
-            fadingText = nil
+            displayedText = module.shown.map(TrackText.init)
             withAnimation(.easeIn(duration: 0.12)) { textOpacity = 1 }
         }
     }
@@ -110,15 +115,15 @@ struct NowPlayingExpandedView: View {
             openURL(url)
         }
     }
-}
 
-/// The title and artist lines, compared to tell when a new track's text should fade in.
-private struct TrackText: Equatable {
-    var title: String
-    var artist: String?
+    /// The title and artist lines, compared to tell when a new track's text should fade in.
+    private struct TrackText: Equatable {
+        var title: String
+        var artist: String?
 
-    init(_ info: NowPlayingInfo) {
-        title = info.title ?? info.player.displayName
-        artist = info.title == nil ? nil : info.artist
+        init(_ info: NowPlayingInfo) {
+            title = info.title ?? info.player.displayName
+            artist = info.title == nil ? nil : info.artist
+        }
     }
 }

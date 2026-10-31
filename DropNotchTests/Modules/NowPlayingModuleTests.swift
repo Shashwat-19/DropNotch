@@ -431,16 +431,20 @@ final class NowPlayingModuleTests: XCTestCase {
         for (step, info) in steps {
             await deliver(info, to: module, source)
             XCTAssertEqual(module.shown?.state, .paused, step)
-            XCTAssertEqual(shownSeconds(module), frozen, "paused: \(step) neither zeroes nor moves the time")
+            // A read in the same whole second may be taken (it resets drift); the text never changes.
+            let seconds = try XCTUnwrap(shownSeconds(module), step)
+            XCTAssertEqual(seconds.rounded(.down), frozen.rounded(.down), "paused: \(step) neither zeroes nor moves the time")
         }
         source.release(.ok)
         await pause.value
-        XCTAssertEqual(shownSeconds(module), frozen)
+        let pausedAt = try XCTUnwrap(shownSeconds(module))
+        XCTAssertEqual(pausedAt.rounded(.down), frozen.rounded(.down))
 
         let play = await clickInFlight(module, source, .playPause)
         let resumedAt = Date()
         XCTAssertEqual(module.shown?.state, .playing)
-        XCTAssertEqual(module.shown?.position?.seconds, frozen, "play resumes where the pause froze")
+        XCTAssertEqual(try XCTUnwrap(module.shown?.position?.seconds), pausedAt, accuracy: 0.01,
+                       "play resumes where the pause froze")
         // The selection anchors Music's paused position (the read's) until something says otherwise.
         for (step, info) in [("old state", music(.paused, at: frozen - 0.2)),
                              ("new state", music(.playing, at: frozen - 0.2)),
@@ -448,13 +452,25 @@ final class NowPlayingModuleTests: XCTestCase {
             await deliver(info, to: module, source)
             XCTAssertEqual(module.shown?.state, .playing, step)
             let seconds = try XCTUnwrap(shownSeconds(module), step)
-            XCTAssertGreaterThanOrEqual(seconds, frozen, "\(step) went back")
-            XCTAssertEqual(seconds, frozen + Date().timeIntervalSince(resumedAt), accuracy: 0.05, step)
+            XCTAssertGreaterThanOrEqual(seconds, pausedAt, "\(step) went back")
+            XCTAssertEqual(seconds, pausedAt + Date().timeIntervalSince(resumedAt), accuracy: 0.05, step)
         }
         source.release(.ok)
         await play.value
         XCTAssertEqual(module.shown?.state, .playing)
         XCTAssertNil(module.pendingIsPlaying)
+    }
+
+    // The reply can come before Music's agreeing burst: the settle must not then step the time back to the raw read.
+    func testASettleAfterAConfirmedClickLeavesTheTimeAlone() async throws {
+        let (module, source) = await moduleShowing(music(.playing, at: 10.5), settleDelay: .milliseconds(10))
+        await module.perform(.playPause)
+        let frozen = try XCTUnwrap(shownSeconds(module))
+        await deliver(music(.paused, at: frozen), to: module, source)
+        await deliver(music(.paused, at: frozen - 0.6), to: module, source)
+        XCTAssertNil(module.pendingIsPlaying)
+        try await Task.sleep(for: .milliseconds(50))
+        XCTAssertEqual(try XCTUnwrap(shownSeconds(module)), frozen, accuracy: 0.01, "the settle came and went")
     }
 
     // Clip (b), Music: 0:07 -> 0:09 -> 0:03. A stale burst (old state first) and then a read 0.3 s behind.
