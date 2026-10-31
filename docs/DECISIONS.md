@@ -778,3 +778,20 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - The grace is a one-shot 5 s sleep per pause (ARCHITECTURE §9).
 - 15 fps is a guess at what looks smooth at this size. Device check; performance-optimizer measures WindowServer cost in the release branch.
 - Toggling Low Power Mode mid-song takes effect at once (power-state notification); screen sleep and wake stop and restart the bars.
+
+---
+
+## D29. Panel frames are whole points; the shape fills the strip above the screen
+
+**Date:** 2026-10-31 · **Status:** Accepted (Shash asked for the overdraw after device check 27)
+
+**Root cause:** AppKit rounds a window's frame to whole points, origin down and size up, even on a 2x display [V: probe, 2026-10-31, 240 frames, 0 exceptions]. The closed panel is 37.5 + 1 pt tall on a 14" MacBook Pro, so AppKit put its bottom 0.5 pt lower than asked, while `NotchPanel` placed the canvas for the asked frame. Everything drew 0.5 pt low, and with the shape starting 1 pt below the canvas top, the screen's top pixel row showed wallpaper. It was hidden by the hardware notch until the wings (D28); the open frame is whole points, so it was flush.
+
+**Decision:**
+- `NotchPanel` asks for the smallest whole-point frame around the geometry's frame (`NSIntegralRect`), which AppKit keeps as is, and places the canvas for that frame.
+- The shape is drawn at the panel frame's height, from the canvas top: it fills the 1 pt strip above the screen (D20) in every state and during every animation, so its top edge is always off-screen. Content is pushed down by the same 1 pt.
+- Tests: the shape's top is at or above the screen's top in every phase, with and without wings, at 1x and 2x, against the probe's rounding rule; and a real panel keeps the whole-point frame.
+
+**Alternatives:** Whole-point frames in `NotchGeometry` itself. Rejected: the shape frames would lose their pixel alignment to the hardware notch; only the window needs whole points.
+
+**Trade-off:** the panel can be up to 1 pt wider and 1 pt taller than the shape at its bottom and sides, so the hover area grows by that much.

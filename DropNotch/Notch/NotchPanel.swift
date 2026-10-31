@@ -41,10 +41,17 @@ final class NotchPanel: NSPanel {
     /// canvas never moves or resizes on screen, so SwiftUI never re-lays out the shape when
     /// the panel grows: only the shape's own size animates (D19).
     func setFrame(_ frame: CGRect, canvas: CGRect) {
+        let frame = Self.windowFrame(frame)
         // The canvas has no autoresizing mask, so this frame holds after the resize below.
         self.canvas.frame = Self.canvasFrame(panelFrame: frame, canvas: canvas)
         setFrame(frame, display: true)
     }
+
+    /// AppKit rounds a window's frame to whole points, origin down and size up, even on a 2x display
+    /// [V: probe, 2026-10-31: 240 frames]. A 37.5 pt panel then sat 0.5 pt lower than asked while the canvas
+    /// was placed for the asked frame, leaving a pixel row of wallpaper above the shape (D29). The smallest
+    /// whole-point frame around `frame` is one AppKit keeps as is, so the canvas is placed for the real frame.
+    static func windowFrame(_ frame: CGRect) -> CGRect { NSIntegralRect(frame) }
 
     /// `canvas` in the panel's own coordinates. Subtracting the snapped origins, rather than
     /// centring by half the width difference, keeps the canvas on whole pixels.

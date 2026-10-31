@@ -49,6 +49,57 @@ final class NotchPanelTests: XCTestCase {
         XCTAssertEqual(hosting.frame.size, canvas.size)
     }
 
+    // The bug this guards (D29): AppKit rounded a 37.5 pt panel down by 0.5 pt while the canvas was placed
+    // for the asked frame, so a pixel row of wallpaper showed above the shape. `appKit` is the rounding the
+    // probe measured: origin down, size up.
+    func testShapeTopIsAtOrAboveTheScreenTopInEveryState() {
+        let appKit = { (r: CGRect) in
+            CGRect(x: r.minX.rounded(.down), y: r.minY.rounded(.down),
+                   width: r.width.rounded(.up), height: r.height.rounded(.up))
+        }
+        let screens: [(name: String, frame: CGRect, inset: CGFloat, left: CGFloat?, right: CGFloat?, menuBar: CGFloat)] = [
+            ("notch 37.5", CGRect(x: 0, y: 0, width: 1512, height: 982), 37.5, 651, 654, 37.5),
+            ("notch 32", CGRect(x: -1512, y: 0, width: 1512, height: 982), 32, 650.25, 653, 32),
+            ("pill 24.5", CGRect(x: 1512, y: -200, width: 1920, height: 1080), 0, nil, nil, 24.5),
+        ]
+        for screen in screens {
+            for scale in [1, 2] as [CGFloat] {
+                let geometry = NotchGeometry(screenFrame: screen.frame, safeAreaTop: screen.inset,
+                                             auxLeftWidth: screen.left, auxRightWidth: screen.right,
+                                             menuBarHeight: screen.menuBar, backingScale: scale)
+                let canvas = geometry.panelFrame(for: .open)
+                for phase in [NotchHoverStateMachine.Phase.closed, .peek, .open] {
+                    for compact in [false, true] {
+                        let label = "\(screen.name) \(phase) compact \(compact) at \(scale)x"
+                        let window = NotchPanel.windowFrame(geometry.panelFrame(for: phase, compact: compact))
+                        XCTAssertEqual(appKit(window), window, "AppKit would move the window: \(label)")
+                        let local = NotchPanel.canvasFrame(panelFrame: window, canvas: canvas)
+                        let onScreen = local.offsetBy(dx: appKit(window).minX, dy: appKit(window).minY)
+                        // NotchRootView pins the shape to the canvas top at the panel frame's height.
+                        let shapeTop = onScreen.maxY
+                        let shapeBottom = shapeTop - geometry.panelFrame(for: phase, compact: compact).height
+                        XCTAssertGreaterThanOrEqual(shapeTop, screen.frame.maxY, label)
+                        XCTAssertEqual(shapeBottom, geometry.frame(for: phase, compact: compact).minY, label)
+                    }
+                }
+            }
+        }
+    }
+
+    // A real window: whatever display the test runs on, AppKit keeps the whole-point frame as set.
+    func testRealPanelKeepsTheWholePointFrameForAFractionalNotch() {
+        let geometry = notched(inset: 37.5, scale: 2)
+        let panel = NotchPanel(contentView: NSView())
+        for phase in [NotchHoverStateMachine.Phase.closed, .peek, .open] {
+            for compact in [false, true] {
+                let asked = geometry.panelFrame(for: phase, compact: compact)
+                panel.setFrame(asked, canvas: geometry.panelFrame(for: .open))
+                XCTAssertEqual(panel.frame, NotchPanel.windowFrame(asked), "\(phase) compact \(compact)")
+                XCTAssertTrue(panel.frame.contains(asked))
+            }
+        }
+    }
+
     func testPanelHasAnAccessibleName() {
         let panel = NotchPanel(contentView: NSView())
         XCTAssertEqual(panel.title, "DropNotch")

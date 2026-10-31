@@ -7,7 +7,9 @@ struct NotchRootView: View {
     let registry: ModuleRegistry
 
     var body: some View {
-        let size = state.geometry?.frame(for: state.displayedPhase, compact: state.displaysCompact).size ?? .zero
+        // The panel's frame, not the shape's: the shape fills the 1 pt strip above the screen too, so its top
+        // edge is off-screen in every state and during every animation (D29).
+        let size = state.geometry?.panelFrame(for: state.displayedPhase, compact: state.displaysCompact).size ?? .zero
         let radius: CGFloat = state.displayedPhase == .open ? 18 : 10
         let shape = UnevenRoundedRectangle(bottomLeadingRadius: radius, bottomTrailingRadius: radius)
         shape
@@ -16,6 +18,7 @@ struct NotchRootView: View {
             .overlay(alignment: .top) {
                 if state.displayedPhase != .open, state.displaysCompact, let geometry = state.geometry {
                     compactSlots(geometry)
+                        .padding(.top, NotchGeometry.topOverhang)
                         .transition(.opacity)
                 }
             }
@@ -27,14 +30,12 @@ struct NotchRootView: View {
                 if state.displayedPhase == .open, let module = registry.expandedModules.first {
                     module.expandedView()
                         // Start below the closed notch, so nothing sits under the camera housing.
-                        .padding(.top, state.geometry?.closedFrame.height ?? 0)
+                        .padding(.top, (state.geometry?.closedFrame.height ?? 0) + NotchGeometry.topOverhang)
                         // The shape is always black, so its content uses dark colours in light mode too (L5).
                         .environment(\.colorScheme, .dark)
                         .transition(.asymmetric(insertion: .opacity, removal: .identity))
                 }
             }
-            // The panel reaches above the screen (D20); keep the shape below the screen's top.
-            .padding(.top, NotchGeometry.topOverhang)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             // The panel overlaps the camera housing; without this SwiftUI would push
             // the content below the screen's safe area.
