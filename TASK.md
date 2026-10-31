@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, and 3, `feat/compact-slot`, are merged to main. Next: hotkey, notes, file-tray, clipboard, settings, polish, release. See "Phase 3" below.
+**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, and 4, `feat/hotkey`, are merged to main and pushed to `origin`. Next: notes, file-tray, clipboard, settings, polish, release. See "Phase 3" below.
 
 ## Goal
 Run a reverse-engineering analysis (REA) of Canopy and Atoll, turn it into a feature matrix and architecture plan for DropNotch, then scaffold the foundation. DropNotch must be original code that Shash owns.
@@ -231,15 +231,15 @@ Device checks (Debug build is enough: no entitlement or signing change; notched 
 
 Reviews: test-writer (18 tests); code-reviewer: Approve with changes. Applied: grow to the union of the old and new frames (W1), device checks listed (W2), content fades out with the wings (S3), fewer observer wakes (S4), bars restart only on a size change (S5), comments (S6, S7).
 
-### Branch 4: `feat/hotkey` (D30; shortcut ⌃⌥N chosen by Shash, 2026-10-31)
+### Branch 4: `feat/hotkey` (D30; shortcut ⌃⌥N chosen by Shash, 2026-10-31; merged to main 2026-10-31)
 
-**Status (2026-10-31):** built; test-writer (11 tests) and code-reviewer (Approve with changes; W1, W2, S1–S5 applied, W3 left to device check 36) done. 292 tests, 0 failures. Waiting for device checks before merging.
+**Status (2026-10-31):** built; test-writer (11 tests) and code-reviewer (Approve with changes; W1, W2, S1–S5 applied, W3 left to device check 36) done. 292 tests, 0 failures. Device checks 33–38 all passed (Shash, 2026-10-31, notched Mac, Debug build), including 36, so W3 needed no change. Carry-overs L1–L3 are closed, apart from the VoiceOver part of L3 and click-to-open.
 
 A global shortcut (⌃⌥N) opens and closes the notch. Opened by keyboard, the panel takes key focus: Tab and the arrows move between the controls, Space and Return press them, Escape, the hotkey again or a click elsewhere closes it and hands focus back. Hover is unchanged and never takes focus. Package search: none (KeyboardShortcuts was pinned in Phase 2, D10a).
 
 Out of this branch: rebinding the shortcut (Settings), click-to-open, keeping a hover-opened notch open while VoiceOver focus is inside (L3), keyboard access to the progress bar.
 
-Device checks (Debug build is enough: no entitlement or signing change; notched Mac, Music playing):
+Device checks (Debug build is enough: no entitlement or signing change; notched Mac, Music playing). **All passed (Shash, 2026-10-31).**
 33. ⌃⌥N from closed: the notch opens with play/pause showing the hover circle; Space toggles once (also when held); Tab and ←/→ move; no rectangular focus ring on the round controls.
 34. Escape, and separately a second ⌃⌥N: the notch closes and you can type straight into the front app without clicking; the closed notch doesn't flicker.
 35. Hover-open, then ⌃⌥N: focus appears and the notch stays open; move the pointer away: it stays open until Escape.
