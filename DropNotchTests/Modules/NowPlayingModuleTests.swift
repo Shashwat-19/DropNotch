@@ -5,6 +5,8 @@ import XCTest
 final class NowPlayingModuleTests: XCTestCase {
     private final class FakeSource: NowPlayingSource {
         var stream: AsyncStream<NowPlayingInfo?>
+        /// Feeds `stream` once `start(_:_:showing:)` has made it.
+        var continuation: AsyncStream<NowPlayingInfo?>.Continuation?
         var outcome = AppleEventOutcome.ok
         /// When true, each send waits for `release`, oldest first: a command in flight or a prompt that is up.
         var holdsReplies = false
@@ -42,6 +44,7 @@ final class NowPlayingModuleTests: XCTestCase {
     private func start(_ module: NowPlayingModule, _ source: FakeSource, showing info: NowPlayingInfo) async {
         let (stream, continuation) = AsyncStream.makeStream(of: NowPlayingInfo?.self)
         source.stream = stream
+        source.continuation = continuation
         module.start()
         continuation.yield(info)
         for _ in 0..<1000 where module.info == nil { await Task.yield() }
@@ -174,6 +177,134 @@ final class NowPlayingModuleTests: XCTestCase {
         source.release(.ok)
         await new.value
         XCTAssertFalse(module.isSending)
+    }
+
+    /// Sends `info` as the player's next update and returns once the module shows it.
+    private func deliver(_ info: NowPlayingInfo?, to module: NowPlayingModule, _ source: FakeSource) async {
+        source.continuation?.yield(info)
+        for _ in 0..<1000 where module.info != info { await Task.yield() }
+        XCTAssertEqual(module.info, info, "the update never arrived")
+    }
+
+    // MARK: Optimistic play/pause
+
+    func testPlayPauseFlipsAtOnceBeforeTheSendReturns() async {
+        let (module, source) = await moduleShowing(NowPlayingInfo(player: .music, state: .paused))
+        source.holdsReplies = true
+        let play = await clickInFlight(module, source, .playPause)
+        XCTAssertEqual(module.pendingIsPlaying, true)
+        XCTAssertTrue(module.isPlaying)
+        source.release(.ok)
+        await play.value
+
+        await deliver(NowPlayingInfo(player: .music, state: .playing), to: module, source)
+        let pause = await clickInFlight(module, source, .playPause)
+        XCTAssertEqual(module.pendingIsPlaying, false)
+        XCTAssertFalse(module.isPlaying)
+        source.release(.ok)
+        await pause.value
+    }
+
+    // Music sends a burst of stale notifications after a click (D24).
+    func testBeforeTheSendReturnsOnlyAnAgreeingUpdateConfirmsTheClick() async {
+        let (module, source) = await moduleShowing(NowPlayingInfo(player: .music, state: .playing, title: "a"))
+        source.holdsReplies = true
+        let click = await clickInFlight(module, source, .playPause)
+
+        await deliver(NowPlayingInfo(player: .music, state: .playing, title: "b"), to: module, source)
+        XCTAssertEqual(module.pendingIsPlaying, false, "a stale update must not undo the click")
+        XCTAssertFalse(module.isPlaying)
+
+        await deliver(NowPlayingInfo(player: .music, state: .paused, title: "b"), to: module, source)
+        XCTAssertNil(module.pendingIsPlaying)
+        XCTAssertFalse(module.isPlaying)
+
+        source.release(.ok)
+        await click.value
+        XCTAssertNil(module.pendingIsPlaying)
+        XCTAssertFalse(module.isPlaying)
+    }
+
+    func testAFailedSendRevertsAtOnce() async {
+        for outcome in [AppleEventOutcome.denied, .timedOut, .notRunning] {
+            let (module, source) = await moduleShowing(NowPlayingInfo(player: .music, state: .paused))
+            source.holdsReplies = true
+            let click = await clickInFlight(module, source, .playPause)
+            XCTAssertTrue(module.isPlaying)
+            source.release(outcome)
+            await click.value
+            XCTAssertNil(module.pendingIsPlaying, "\(outcome)")
+            XCTAssertFalse(module.isPlaying, "\(outcome)")
+            XCTAssertEqual(source.refreshed, [], "\(outcome)")
+        }
+    }
+
+    // A command that changed nothing: once it has returned, the player's next word is final.
+    func testAfterAnOKSendTheNextUpdateIsAcceptedEvenIfItDisagrees() async {
+        let (module, source) = await moduleShowing(NowPlayingInfo(player: .spotify, state: .paused, title: "a"))
+        source.holdsReplies = true
+        let click = await clickInFlight(module, source, .playPause)
+        source.release(.ok)
+        await click.value
+        XCTAssertEqual(module.pendingIsPlaying, true, "still waiting for the player")
+        XCTAssertEqual(source.refreshed, [.spotify])
+
+        await deliver(NowPlayingInfo(player: .spotify, state: .paused, title: "b"), to: module, source)
+        XCTAssertNil(module.pendingIsPlaying)
+        XCTAssertFalse(module.isPlaying)
+    }
+
+    func testOtherCommandsNeverSetPending() async {
+        for command in [PlaybackCommand.next, .previous, .seek(to: 30)] {
+            let (module, source) = await moduleShowing(NowPlayingInfo(player: .music, state: .playing))
+            source.holdsReplies = true
+            let click = await clickInFlight(module, source, command)
+            XCTAssertNil(module.pendingIsPlaying, "\(command) in flight")
+            source.release(.ok)
+            await click.value
+            XCTAssertNil(module.pendingIsPlaying, "\(command) returned")
+            XCTAssertTrue(module.isPlaying)
+            XCTAssertEqual(source.refreshed, [], "\(command)")
+        }
+    }
+
+    func testStopClearsPending() async {
+        let (module, source) = await moduleShowing(NowPlayingInfo(player: .music, state: .paused))
+        source.holdsReplies = true
+        let click = await clickInFlight(module, source, .playPause)
+        module.stop()
+        XCTAssertNil(module.pendingIsPlaying)
+        XCTAssertFalse(module.isPlaying)
+        source.release(.ok)
+        await click.value
+    }
+
+    func testAPlayerChangeClearsPending() async {
+        for next in [NowPlayingInfo(player: .spotify, state: .paused), nil] {
+            let (module, source) = await moduleShowing(NowPlayingInfo(player: .music, state: .paused))
+            source.holdsReplies = true
+            let click = await clickInFlight(module, source, .playPause)
+            XCTAssertEqual(module.pendingIsPlaying, true)
+            await deliver(next, to: module, source)
+            XCTAssertNil(module.pendingIsPlaying, "\(String(describing: next))")
+            XCTAssertFalse(module.isPlaying, "\(String(describing: next))")
+            source.release(.ok)
+            await click.value
+        }
+    }
+
+    func testAPlayPauseReplyAfterStopSetsNothing() async {
+        let (module, source) = await moduleShowing(NowPlayingInfo(player: .music, state: .paused))
+        source.holdsReplies = true
+        let click = await clickInFlight(module, source, .playPause)
+        module.stop()
+        await start(module, source, showing: NowPlayingInfo(player: .music, state: .paused, title: "a"))
+        source.release(.ok)
+        await click.value
+        XCTAssertNil(module.pendingIsPlaying)
+        XCTAssertFalse(module.isPlaying)
+        XCTAssertFalse(module.isSending)
+        XCTAssertEqual(source.refreshed, [], "the old reply must not refresh")
     }
 
     func testOpeningReadsThePositionOfThePlayerOnScreen() async {
