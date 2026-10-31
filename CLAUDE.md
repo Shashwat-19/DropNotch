@@ -87,6 +87,14 @@ Once docs/ARCHITECTURE.md exists it is the source of truth for module layout. Ke
 
 Feature workflow: dependency-manager (package search) → planner → implement → test-writer → code-reviewer → security-auditor / performance-optimizer / accessibility-auditor where relevant → docs-writer.
 
+## Speed mode (until v0.1.0 ships)
+- Per branch: short plan (stop only if it needs a NEW decision) → build → test-writer → code-reviewer → stop for device checks.
+- Probes only when an API is unverified AND there's no cheaper way to find out.
+- security-auditor also on branches touching files, network, clipboard or permissions. performance-optimizer, accessibility-auditor and docs-writer run once, in the release branch.
+- At most 6 device checks per branch: only what a human must see. Everything else goes on the release checklist.
+- One sub-agent at a time. Commit per step.
+- Remaining order: compact-slot → hotkey → notes → file-tray → clipboard → settings → polish → release.
+
 ## Current focus
 See TASK.md.
 
