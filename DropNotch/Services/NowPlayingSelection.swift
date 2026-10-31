@@ -48,6 +48,7 @@ struct NowPlayingSelection {
             info.position = info.position ?? Self.anchor(last, at: now)
             info.artworkURL = info.artworkURL ?? last.artworkURL
             info.artwork = info.artwork ?? last.artwork
+            info.artworkMissing = last.artworkMissing
         }
         players[info.player] = info
         clock += 1
@@ -76,6 +77,12 @@ struct NowPlayingSelection {
     mutating func setArtwork(_ artwork: NowPlayingArtwork, for player: MediaPlayer) {
         guard players[player]?.trackID == artwork.trackID else { return }
         players[player]?.artwork = artwork
+    }
+
+    /// The artwork load for `trackID` found no picture; ignored once that player has moved on (D27).
+    mutating func setArtworkMissing(for player: MediaPlayer, trackID: String) {
+        guard players[player]?.trackID == trackID else { return }
+        players[player]?.artworkMissing = true
     }
 
     /// Where the last position has got to by `now`, as a new anchor: frozen if it was paused.

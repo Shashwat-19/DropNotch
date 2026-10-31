@@ -6,7 +6,12 @@ import SwiftUI
 final class NowPlayingModule: NotchModule {
     let id = "now-playing"
     let title: LocalizedStringResource = "Now Playing"
+    /// What the source last reported.
     private(set) var info: NowPlayingInfo?
+    /// What the view draws (D27): `info`, with a pending click's play/pause and the position it froze or
+    /// resumed from, a position steadied against Music's read jitter, and the last track's artwork kept until
+    /// the new track's loads or turns out missing.
+    private(set) var shown: NowPlayingInfo?
     /// A command is in flight, or the Automation prompt is up. `perform` drops clicks meanwhile (D23, D27).
     private(set) var isSending = false
     /// The player that refused Automation on the last click (D23). A click that gets through clears it.
@@ -23,17 +28,23 @@ final class NowPlayingModule: NotchModule {
     @ObservationIgnored private var currentClick = 0
     @ObservationIgnored private let settleDelay: Duration
     @ObservationIgnored private var settleTask: Task<Void, Never>?
+    /// The previous track's artwork, shown on the new track until its own arrives, it is known to have none,
+    /// or `artworkHold` passes (a read that failed never says either).
+    @ObservationIgnored private var heldArtwork: NowPlayingArtwork?
+    @ObservationIgnored private let artworkHold: Duration
+    @ObservationIgnored private var artworkHoldTask: Task<Void, Never>?
 
-    /// `settleDelay` is internal for tests.
-    init(source: any NowPlayingSource, settleDelay: Duration = .seconds(1)) {
+    /// `settleDelay` and `artworkHold` are internal for tests.
+    init(source: any NowPlayingSource, settleDelay: Duration = .seconds(1), artworkHold: Duration = .seconds(2)) {
         self.source = source
         self.settleDelay = settleDelay
+        self.artworkHold = artworkHold
     }
 
     var hasCompactContent: Bool { info?.isPlaying == true }
 
     /// What the play/pause button shows: the click's result straight away, the player's state otherwise.
-    var isPlaying: Bool { pendingIsPlaying ?? info?.isPlaying ?? false }
+    var isPlaying: Bool { shown?.isPlaying ?? false }
 
     func compactView(slot: CompactSlot) -> AnyView { AnyView(EmptyView()) }
 
@@ -53,10 +64,13 @@ final class NowPlayingModule: NotchModule {
         task?.cancel()
         task = nil
         info = nil
+        shown = nil
         isSending = false
         deniedPlayer = nil
         pendingIsPlaying = nil
         settleTask?.cancel()
+        heldArtwork = nil
+        artworkHoldTask?.cancel()
         currentClick += 1
     }
 
@@ -64,10 +78,45 @@ final class NowPlayingModule: NotchModule {
         if let pending = pendingIsPlaying {
             // Music sends bursts (D24), before or after the reply: only an update that agrees confirms the click.
             let agrees = info?.isPlaying == pending
-            let playerChanged = info?.player != self.info?.player
-            if agrees || playerChanged { pendingIsPlaying = nil }
+            let otherTrack = info?.player != self.info?.player || info?.trackID != self.info?.trackID
+            if agrees || otherTrack { pendingIsPlaying = nil }
         }
         self.info = info
+        updateShown()
+    }
+
+    /// Rebuilds `shown` from `info`. `allowsBackward` takes the reported position as it is: after a failed
+    /// command or a settle, the player's own word wins.
+    private func updateShown(allowsBackward: Bool = false) {
+        guard var next = info else {
+            shown = nil
+            return
+        }
+        let previous = shown
+        let samePlayer = previous?.player == next.player
+        let sameTrack = samePlayer && previous?.trackID == next.trackID
+        if let pending = pendingIsPlaying, sameTrack {
+            next.state = pending ? .playing : .paused
+            next.position = previous?.position
+        } else if !allowsBackward {
+            next = next.steadied(after: previous, at: Date())
+        }
+        if next.artwork != nil || next.artworkMissing || next.trackID == nil || !samePlayer {
+            heldArtwork = nil
+            artworkHoldTask?.cancel()
+        } else if !sameTrack, let old = previous?.artwork {
+            heldArtwork = old
+            artworkHoldTask?.cancel()
+            // One wake per track change while a hold is on, never repeating (ARCHITECTURE §9).
+            artworkHoldTask = Task { [weak self, artworkHold] in
+                try? await Task.sleep(for: artworkHold)
+                guard let self, !Task.isCancelled else { return }
+                self.heldArtwork = nil
+                self.updateShown()
+            }
+        }
+        if let heldArtwork { next.artwork = heldArtwork }
+        shown = next
     }
 
     /// The notch opened: re-read the position, because a seek made in the player may not have sent a
@@ -86,10 +135,17 @@ final class NowPlayingModule: NotchModule {
         currentClick += 1
         let click = currentClick
         // With the state unknown (no notification, no grant yet) a flip would only be a guess.
-        if command == .playPause, info.state != .unknown {
+        if command == .playPause, info.state != .unknown, var next = shown {
             settleTask?.cancel()
-            pendingIsPlaying = !isPlaying
+            // Pause freezes, and play resumes, at the position on screen.
+            let now = Date()
+            next.position = next.elapsed(at: now).map { PlaybackPosition(seconds: $0, at: now) }
+            next.state = next.isPlaying ? .paused : .playing
+            pendingIsPlaying = next.isPlaying
+            shown = next
         }
+        // The bar goes to the target at once; the read after the seek (D26) confirms it.
+        if case .seek(let seconds) = command { shown?.position = PlaybackPosition(seconds: seconds, at: Date()) }
         let outcome = await source.send(command, to: player)
         guard click == currentClick else { return }
         isSending = false
@@ -103,11 +159,14 @@ final class NowPlayingModule: NotchModule {
                     // `stop()` and the next play/pause cancel this instead.
                     guard let self, !Task.isCancelled else { return }
                     self.pendingIsPlaying = nil
+                    self.updateShown(allowsBackward: true)
                 }
             } else {
                 pendingIsPlaying = nil
+                updateShown(allowsBackward: true)
             }
         }
+        if case .seek = command, outcome != .ok { updateShown(allowsBackward: true) }
         switch outcome {
         case .denied:
             deniedPlayer = player

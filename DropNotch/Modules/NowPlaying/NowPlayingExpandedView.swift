@@ -5,17 +5,21 @@ struct NowPlayingExpandedView: View {
     let module: NowPlayingModule
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The old track's title and artist while they fade out; nil shows the current ones (D27).
+    @State private var fadingText: TrackText?
+    @State private var textOpacity = 1.0
 
     var body: some View {
-        if let info = module.info {
+        if let info = module.shown {
+            let text = fadingText ?? TrackText(info)
             VStack(spacing: 8) {
                 HStack(spacing: 12) {
                     NowPlayingArtworkView(artwork: info.artwork, player: info.player, size: 56)
                     VStack(alignment: .leading, spacing: 4) {
                         // Verbatim (a String, not a literal): track names are never looked up for translation.
-                        Text(info.title ?? info.player.displayName)
+                        Text(text.title)
                             .font(.subheadline.weight(.semibold))
-                            .contentTransition(.opacity)
+                            .opacity(textOpacity)
                         if module.deniedPlayer == info.player {
                             Button(action: openAutomationSettings) {
                                 // Underlined as well as coloured, so it reads as a link without colour (L6).
@@ -27,11 +31,11 @@ struct NowPlayingExpandedView: View {
                             .buttonStyle(.plain)
                             .foregroundStyle(.link)
                             .font(.subheadline)
-                        } else if info.title != nil, let artist = info.artist {
+                        } else if let artist = text.artist {
                             Text(artist)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
-                                .contentTransition(.opacity)
+                                .opacity(textOpacity)
                         }
                         // An ad can report a zero duration: no bar rather than a dead one.
                         if let duration = info.duration, duration > 0, info.position != nil {
@@ -42,9 +46,6 @@ struct NowPlayingExpandedView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                // A new track fades in over the old one. A fade is also what Reduce Motion asks for (L8).
-                .animation(.easeInOut(duration: 0.2), value: info.trackID)
-                .animation(.easeInOut(duration: 0.2), value: info.title)
                 controls(isPlaying: module.isPlaying)
             }
             .lineLimit(1)
@@ -54,6 +55,7 @@ struct NowPlayingExpandedView: View {
             .accessibilityLabel(Text(module.title))
             // The open content is inserted each time the notch opens (D19), so this runs once per open.
             .onAppear { module.didOpen() }
+            .onChange(of: TrackText(info)) { old, _ in fade(from: old) }
         } else {
             Text("Nothing playing")
                 .font(.subheadline)
@@ -89,10 +91,34 @@ struct NowPlayingExpandedView: View {
         .buttonStyle(NowPlayingControlStyle())
     }
 
+    /// The old text fades out, then the current one fades in, 0.12 s each, so the two never overlap. A fade is
+    /// what Reduce Motion substitutes for motion (L8), so it stays on.
+    private func fade(from old: TrackText) {
+        if fadingText == nil { fadingText = old }
+        withAnimation(.easeOut(duration: 0.12)) {
+            textOpacity = 0
+        } completion: {
+            // Whatever is current by now, so a second change during the fade isn't lost.
+            fadingText = nil
+            withAnimation(.easeIn(duration: 0.12)) { textOpacity = 1 }
+        }
+    }
+
     private func openAutomationSettings() {
         // Undocumented URL [I] (D23). If it stops working, the button's text still says where to go.
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation") {
             openURL(url)
         }
+    }
+}
+
+/// The title and artist lines, compared to tell when a new track's text should fade in.
+private struct TrackText: Equatable {
+    var title: String
+    var artist: String?
+
+    init(_ info: NowPlayingInfo) {
+        title = info.title ?? info.player.displayName
+        artist = info.title == nil ? nil : info.artist
     }
 }

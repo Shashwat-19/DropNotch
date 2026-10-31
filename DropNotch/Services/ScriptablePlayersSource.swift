@@ -112,9 +112,14 @@ final class ScriptablePlayersSource: NSObject, NowPlayingSource {
     /// failure leaves the app icon until the track changes.
     private func loadArtwork(_ player: MediaPlayer, pid: pid_t, generation: Int) {
         guard let info = selection.info(for: player), let trackID = info.trackID, info.artwork == nil,
-              lastArtworkTrackID[player] != trackID,
-              // Spotify's URL may come from a later read (on open): don't use up the try without one.
-              player == .music || info.artworkURL != nil else { return }
+              lastArtworkTrackID[player] != trackID else { return }
+        guard player == .music || info.artworkURL != nil else {
+            // Spotify's URL may come from a later read (on open): don't use up the try without one, but say
+            // there is no picture for now, so the view stops holding the last track's (D27).
+            selection.setArtworkMissing(for: player, trackID: trackID)
+            publish()
+            return
+        }
         lastArtworkTrackID[player] = trackID
         let url = info.artworkURL
         Task {
@@ -129,8 +134,12 @@ final class ScriptablePlayersSource: NSObject, NowPlayingSource {
                 data.flatMap { NowPlayingArtwork(trackID: trackID, data: $0) }
             }.value
             Logger.nowPlaying.debug("Artwork for \(player.bundleID, privacy: .public): \(artwork == nil ? "none" : "loaded", privacy: .public)")
-            guard let artwork, generation == self.generation, isObserving else { return }
-            selection.setArtwork(artwork, for: player)
+            guard generation == self.generation, isObserving else { return }
+            if let artwork {
+                selection.setArtwork(artwork, for: player)
+            } else {
+                selection.setArtworkMissing(for: player, trackID: trackID)
+            }
             publish()
         }
     }
