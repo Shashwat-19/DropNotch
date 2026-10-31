@@ -33,9 +33,11 @@ final class NowPlayingModuleTests: XCTestCase {
     }
 
     /// A started module showing `info`, and its source.
-    private func moduleShowing(_ info: NowPlayingInfo) async -> (NowPlayingModule, FakeSource) {
+    /// `settleDelay` defaults to longer than any test, so a click only settles when a test asks for it.
+    private func moduleShowing(_ info: NowPlayingInfo, settleDelay: Duration = .seconds(600)) async
+        -> (NowPlayingModule, FakeSource) {
         let source = FakeSource(stream: AsyncStream { _ in })
-        let module = NowPlayingModule(source: source)
+        let module = NowPlayingModule(source: source, settleDelay: settleDelay)
         await start(module, source, showing: info)
         return (module, source)
     }
@@ -226,7 +228,7 @@ final class NowPlayingModuleTests: XCTestCase {
     }
 
     func testAFailedSendRevertsAtOnce() async {
-        for outcome in [AppleEventOutcome.denied, .timedOut, .notRunning] {
+        for outcome in [AppleEventOutcome.denied, .timedOut, .notRunning, .needsConsent, .failed(-1)] {
             let (module, source) = await moduleShowing(NowPlayingInfo(player: .music, state: .paused))
             source.holdsReplies = true
             let click = await clickInFlight(module, source, .playPause)
@@ -239,19 +241,59 @@ final class NowPlayingModuleTests: XCTestCase {
         }
     }
 
-    // A command that changed nothing: once it has returned, the player's next word is final.
-    func testAfterAnOKSendTheNextUpdateIsAcceptedEvenIfItDisagrees() async {
-        let (module, source) = await moduleShowing(NowPlayingInfo(player: .spotify, state: .paused, title: "a"))
-        source.holdsReplies = true
-        let click = await clickInFlight(module, source, .playPause)
-        source.release(.ok)
-        await click.value
-        XCTAssertEqual(module.pendingIsPlaying, true, "still waiting for the player")
-        XCTAssertEqual(source.refreshed, [.spotify])
+    // Part of a Music burst can land after the reply (D24): it must not undo the click either.
+    func testAfterAnOKReplyADisagreeingUpdateStillWaits() async {
+        let (module, source) = await moduleShowing(NowPlayingInfo(player: .music, state: .paused, title: "a"))
+        await module.perform(.playPause)
+        await deliver(NowPlayingInfo(player: .music, state: .paused, title: "b"), to: module, source)
+        XCTAssertEqual(module.pendingIsPlaying, true)
+        XCTAssertTrue(module.isPlaying)
+    }
 
-        await deliver(NowPlayingInfo(player: .spotify, state: .paused, title: "b"), to: module, source)
+    // A command that changed nothing sends no notification: the player's own state comes back after the delay.
+    func testAClickThePlayerNeverConfirmsSettlesAfterTheDelay() async throws {
+        let (module, _) = await moduleShowing(NowPlayingInfo(player: .spotify, state: .paused),
+                                              settleDelay: .milliseconds(10))
+        await module.perform(.playPause)
+        XCTAssertTrue(module.isPlaying)
+        for _ in 0..<100 where module.pendingIsPlaying != nil { try await Task.sleep(for: .milliseconds(10)) }
         XCTAssertNil(module.pendingIsPlaying)
         XCTAssertFalse(module.isPlaying)
+    }
+
+    // Two quick clicks: the first click's late notification and its settle must not undo the second.
+    func testAnEarlierClickCannotUndoALaterOne() async throws {
+        let (module, source) = await moduleShowing(NowPlayingInfo(player: .music, state: .paused),
+                                                   settleDelay: .milliseconds(10))
+        await module.perform(.playPause)
+        source.holdsReplies = true
+        let second = await clickInFlight(module, source, .playPause)
+        XCTAssertEqual(module.pendingIsPlaying, false)
+        await deliver(NowPlayingInfo(player: .music, state: .playing), to: module, source)
+        try await Task.sleep(for: .milliseconds(50))
+        XCTAssertEqual(module.pendingIsPlaying, false, "the first click's update and settle came and went")
+        source.release(.ok)
+        await second.value
+    }
+
+    func testAFailedSkipKeepsAConfirmedPlayPausePending() async {
+        let (module, source) = await moduleShowing(NowPlayingInfo(player: .music, state: .paused))
+        await module.perform(.playPause)
+        source.outcome = .timedOut
+        await module.perform(.next)
+        XCTAssertEqual(module.pendingIsPlaying, true)
+    }
+
+    // No notification and no grant yet: the first click may bring up the Automation prompt, and the state
+    // is only a guess, so nothing flips.
+    func testAnUnknownStateDoesNotFlip() async {
+        let (module, source) = await moduleShowing(NowPlayingInfo(player: .music, state: .unknown))
+        source.holdsReplies = true
+        let click = await clickInFlight(module, source, .playPause)
+        XCTAssertNil(module.pendingIsPlaying)
+        XCTAssertFalse(module.isPlaying)
+        source.release(.ok)
+        await click.value
     }
 
     func testOtherCommandsNeverSetPending() async {

@@ -38,7 +38,6 @@ struct NowPlayingExpandedView: View {
                             PlaybackProgressView(info: info, duration: duration) { seconds in
                                 Task { await module.perform(.seek(to: seconds)) }
                             }
-                            .disabled(module.isSending)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
