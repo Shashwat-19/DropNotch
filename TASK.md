@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, 4, `feat/hotkey`, and 5, `feat/notes`, are merged to main and pushed to `origin`. Branch 6, `feat/file-tray`, is in progress. Next: clipboard, settings, polish, release. See "Phase 3" below.
+**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, 4, `feat/hotkey`, 5, `feat/notes`, and 6, `feat/file-tray`, are merged to main and pushed to `origin`. Next: clipboard, settings, polish, release. See "Phase 3" below.
 
 ## Goal
 Run a reverse-engineering analysis (REA) of Canopy and Atoll, turn it into a feature matrix and architecture plan for DropNotch, then scaffold the foundation. DropNotch must be original code that Shash owns.
@@ -263,15 +263,15 @@ Device checks (Debug build is enough: no entitlement or signing change; notched 
 43. Hover mode on Now Playing (no hotkey): clicking the tab icons switches tabs, controls still work with one click, and typing in the front app afterwards still works (check 37 again).
 44. Now Playing still opens with play/pause focused on ⌃⌥N, ←/→ still move, and the content sits where it did before the tabs (below the camera housing, not clipped).
 
-### Branch 6: `feat/file-tray` (D6, D32)
+### Branch 6: `feat/file-tray` (D6, D32; merged to main 2026-10-31)
 
 Drop files on the notch (closed, compact or open) to add them to a Tray tab; the notch opens on Tray while a drag is over it. Drag items out to Finder or other apps (copies only, originals stay put); AirDrop and Share for the selection, or all files when nothing is selected; remove, clear all; the tray persists across relaunches. Package search (dependency-manager, 2026-10-31): nothing worth adding, only small MIT bookmark wrappers.
 
-**Status (2026-10-31):** built. test-writer: 26 tests (found a /private dedupe bug, fixed). code-reviewer: Approve with changes (W1 copied empty-state string reworded, W2 promised folders and partial writes, S2, S3 AirDrop service kept, S5 applied; S1, S4 recorded in D32). security-auditor: Pass with changes (M1 symlinked item folder could turn Remove into a delete elsewhere, fixed with a test; L1 promised symlinks refused; L2–L6 recorded in D32). 335 tests, 0 failures. Device checks 45–50 pending.
+**Status (2026-10-31):** built. test-writer: 26 tests (found a /private dedupe bug, fixed). code-reviewer: Approve with changes (W1 copied empty-state string reworded, W2 promised folders and partial writes, S2, S3 AirDrop service kept, S5 applied; S1, S4 recorded in D32). security-auditor: Pass with changes (M1 symlinked item folder could turn Remove into a delete elsewhere, fixed with a test; L1 promised symlinks refused; L2–L6 recorded in D32). 335 tests, 0 failures. Device checks 45–50 passed (Shash, 2026-10-31, notched Mac, Debug build).
 
 Out of this branch: Quick Look and thumbnails, open/reveal in Finder, text and link drops, keyboard access to tiles and actions.
 
-Device checks (Debug build is enough: Info.plist usage strings only, no entitlement or signing change; notched Mac).
+Device checks (Debug build is enough: Info.plist usage strings only, no entitlement or signing change; notched Mac). **All passed (Shash, 2026-10-31).**
 45. Drag a file from Finder onto the closed notch, and onto a wing while music plays: it peeks, opens on Tray, the cursor shows copy (+) or link, and the dropped file appears; it is still in its Finder folder. Drop it again: no second tile. Drop one from Desktop, Documents or Downloads: note any folder prompt and its text.
 46. Drag a tile into a Finder folder: a copy appears there and the original stays. Drag a tile to the Dock's Trash: refused. Click one tile, ⌘-click a second, drag both into a Mail message. Note whether the notch closes while you drag out of it and whether the drop still lands. After any drop, moving the pointer away closes the notch.
 47. Drag a photo from Photos (or a Mail attachment, or an image from Safari): it appears in the tray, and `ls ~/Library/Application\ Support/DropNotch/Tray/` shows its folder; Remove deletes that folder.
