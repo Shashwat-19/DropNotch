@@ -215,12 +215,12 @@ Device checks (Release build, notched Mac), numbered after branch 1's. Speed mod
 
 While music plays, the closed notch shows the artwork on the left and decorative bars on the right. D28 revises D5. Package search: none (Core Animation and existing views only).
 
-Steps, one commit each: 1. `docs:` D28, this section, ARCHITECTURE §7/§9. 2. `feat:` compact frames in `NotchGeometry`. 3. `feat:` registry: both slots default to the first module; `hasCompactContent`. 4. `feat:` Now Playing compact content with the 5 s grace; compact view and bars. 5. `feat:` `NotchState` widens and narrows the closed shape; root view draws the slots. 6. Build, test-writer, code-reviewer, device checks.
+Steps, one commit each: 1. `docs:` D28, this section, ARCHITECTURE §7/§9. 2. `feat:` compact frames in `NotchGeometry`. 3. `feat:` registry: both slots default to the first module; `hasCompactContent`. 4. `feat:` Now Playing compact content with the grace (5 s, then 2 s); compact view and bars. 5. `feat:` `NotchState` widens and narrows the closed shape; root view draws the slots. 6. Build, test-writer, code-reviewer, device checks.
 
 Out of this branch: slot pickers (Settings), a real waveform (v0.2), VoiceOver for the closed notch (accessibility-auditor, release branch).
 
 Device checks (Debug build is enough: no entitlement or signing change; notched Mac, Music):
-27. Play: the shape widens smoothly to about 250 pt with the artwork left and moving bars right; pause and play quickly: no flap; pause and wait: the wings retract after about 5 s, the content fading with the shape; quit Music: they retract at once. Nothing shows outside the black shape at any point.
+27. Play: the shape widens smoothly to about 250 pt with the artwork left and moving bars right; pause and play quickly: no flap; pause and wait: the bars freeze flat at once and the wings retract after about 2 s, the content fading with the shape; quit Music: they retract at once. Nothing shows outside the black shape at any point.
 28. Hover over a wing peeks and opens the notch; closing returns to the wide shape. Move the pointer in and out while the wings are retracting: no clipped shape. With the pointer resting where a wing appears when music starts, note whether it peeks or opens unasked.
 29. Menu-bar items and app menus next to the notch: note which ones the wings cover and that they work again once the wings retract.
 30. The bars look smooth enough at 15 fps (if choppy, raise `preferredFrameRateRange` in `CompactWaveform.swift`). They are still while paused (flat), under Reduce Motion (uneven) and in Low Power Mode, toggled mid-song.

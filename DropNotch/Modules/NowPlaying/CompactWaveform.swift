@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import os
 
 /// The decorative bars beside the closed notch (D2, D28). Core Animation repeats the motion, so the app does
 /// no work between frames, as for the progress bar (D26).
@@ -80,6 +81,8 @@ final class CompactWaveformView: NSView {
     private func restart() {
         guard bounds.width > 0, bounds.height > 0 else { return }
         let animates = isPlaying && !reduceMotion && !screensAsleep && !ProcessInfo.processInfo.isLowPowerModeEnabled
+        // Next to the source's "reported" line, this shows how long a pause took to reach the bars.
+        Logger.nowPlaying.debug("Bars \(animates ? "moving" : "still", privacy: .public)")
         let width: CGFloat = 3
         let gap = (bounds.width - width * CGFloat(bars.count)) / CGFloat(bars.count - 1)
         // Our own sublayers animate every change implicitly; these jumps must be instant.
@@ -87,6 +90,7 @@ final class CompactWaveformView: NSView {
         CATransaction.setDisableActions(true)
         for (index, bar) in bars.enumerated() {
             let share = isPlaying ? Self.restingHeights[index] : Self.pausedHeight
+            // Removed, not left to finish its cycle: the bars freeze on the update that pauses.
             bar.removeAllAnimations()
             bar.backgroundColor = NSColor.white.cgColor
             bar.cornerRadius = width / 2

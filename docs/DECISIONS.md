@@ -763,7 +763,7 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - While a module fills a compact slot (D8), the closed shape is the notch plus one square wing on each side, as wide as the notch is tall: about 32 pt, so about 250 pt in all on a 14" MacBook Pro. The pill on a screen without a notch widens the same way. Peek grows from that wider shape; the open size is unchanged.
 - Now Playing fills both slots by default: artwork on the left (the open notch's `NowPlayingArtworkView`, smaller), 4 decorative bars on the right (D2).
 - In: the panel grows first, then the shape widens with the hover spring (0.25 s, no bounce) and the artwork and bars fade in. Out: the shape shrinks with the same spring, then the panel shrinks (D19). The wing content is clipped to the shape, so it never shows outside it mid-animation. Reduce Motion: the width changes at once and the bars stay still.
-- When to show: while playing, and for 5 s after playback pauses or stops while a track is still loaded. Playing again within 5 s keeps the wings. No track (the player quit) retracts them at once.
+- When to show: while playing, and for 2 s after playback pauses or stops while a track is still loaded (5 s until the revision below). Playing again within 2 s keeps the wings. No track (the player quit) retracts them at once.
 - The bars animate only while playing, the display is awake, Low Power Mode is off and Reduce Motion is off. Otherwise they are still: flat while paused, a fixed uneven pattern while playing. Core Animation draws the motion, capped at 15 fps, so the app does no work between frames (as the progress bar, D26).
 - The wings are part of the panel: hovering them peeks and opens the notch, like the notch itself.
 
@@ -775,9 +775,15 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Consequences / follow-ups:**
 - While the wings show, menu-bar items under them can't be clicked (they reach the panel instead). macOS keeps status items clear of the notch itself, not of the 32 pt beside it [I: device check].
-- The grace is a one-shot 5 s sleep per pause (ARCHITECTURE §9).
+- The grace is a one-shot 2 s sleep per pause (ARCHITECTURE §9).
 - 15 fps is a guess at what looks smooth at this size. Device check; performance-optimizer measures WindowServer cost in the release branch.
 - Toggling Low Power Mode mid-song takes effect at once (power-state notification); screen sleep and wake stop and restart the bars.
+
+**Revision (2026-10-31, after Shash's device check: the bars seemed to keep going after a pause):**
+- The bars freeze flat on the update that pauses: the player's paused notification, or the optimistic flip of a click in the notch (D27), never the player's confirmation. Their Core Animation animations are removed, not left to finish a cycle.
+- Root cause: not found in DropNotch's code. The path from a paused update to the bars was already immediate. Measured in the test host: the animations are gone within one SwiftUI render pass of the module seeing the pause (about 10 ms), and on the click before the player replies. The source publishes a paused notification straight away (`.deliverImmediately`, no read first), and neither the selection nor the steadying holds a state back. Two candidates remain, both outside the view: the player's notification arriving late, or the 5 s wings, flat bars and all, reading as "still running". To tell them apart on the device, `log stream` shows the source's "reported paused" line next to the bars' new "Bars still" line.
+- Tests: the bars stop in the same call as `update(isPlaying: false)`, on the render pass after a paused update, and on the click before the player confirms. Each one fails if `removeAllAnimations()` is taken out.
+- The grace is 2 s instead of 5 s (Shash). That still covers a quick pause and play, and Music's bursts, which are 8–100 ms apart (D27).
 
 ---
 

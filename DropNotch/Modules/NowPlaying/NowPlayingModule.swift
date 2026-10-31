@@ -40,7 +40,7 @@ final class NowPlayingModule: NotchModule {
 
     /// `settleDelay`, `artworkHold` and `compactGrace` are internal for tests.
     init(source: any NowPlayingSource, settleDelay: Duration = .seconds(1), artworkHold: Duration = .seconds(2),
-         compactGrace: Duration = .seconds(5)) {
+         compactGrace: Duration = .seconds(2)) {
         self.source = source
         self.settleDelay = settleDelay
         self.artworkHold = artworkHold
