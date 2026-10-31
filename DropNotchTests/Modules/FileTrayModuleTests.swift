@@ -290,6 +290,8 @@ final class FileTrayModuleTests: XCTestCase {
         try writeTray([item])
         let module = makeModule()
         module.start()
+        module.refresh()
+        XCTAssertNil(module.locations[item.id], "never shared through the link")
         module.clear()
         XCTAssertEqual(try String(contentsOf: document, encoding: .utf8), "keep")
         XCTAssertTrue(module.items.isEmpty)

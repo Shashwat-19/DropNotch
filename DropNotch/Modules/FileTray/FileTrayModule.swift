@@ -76,7 +76,7 @@ final class FileTrayModule: NotchModule {
             guard let bookmark = item.bookmark else {
                 // A copy that is now a symlink counts as missing: the promising app may still write to its folder
                 // and could swap the file for a link to one it can't read, which Share would then send.
-                if let url = copyURL(item),
+                if let url = copyURL(item), isOwnFolder(url.deletingLastPathComponent()),
                    let type = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.type] as? FileAttributeType,
                    type != .typeSymbolicLink { result[item.id] = url }
                 return
