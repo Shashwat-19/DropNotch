@@ -25,13 +25,14 @@ DropNotch/
                   (feat/now-playing-media), compact view (feat/now-playing-compact), settings view
     FileTray/     FileTrayModule (list, bookmarks, copies), TrayItem, FileTrayExpandedView,
                   TrayItemDragSource (drag out) (D32)
-    Clipboard/    (planned) history views, ClipboardHistoryStore
+    Clipboard/    ClipboardModule (poll, access states, history), ClipboardItem, ClipboardExpandedView (D7c, D33)
     Notes/        NotesModule (load and save), NotesExpandedView (D31)
   Services/       one protocol + implementations per system dependency:
                   Now Playing (D21–D24): NowPlayingSource, NowPlayingInfo, NoNowPlayingSource,
                   MediaPlayer, PlayerNotificationParser, NowPlayingSelection, AppleEventOutcome,
                   AppleEventSending, AppleEventSender, ScriptablePlayersSource.
-                  Planned: MediaRemote (v0.2), PasteboardWatcher, BluetoothBatteryProvider (later), …
+                  Clipboard (D33): Pasteboard (protocol, NSPasteboard conforms), PasteboardAccess.
+                  Planned: MediaRemote (v0.2), BluetoothBatteryProvider (later), …
   Settings/       Settings window, launch at login (Phase 3), layout editor, per-module settings host
   Support/        Logger categories, small shared helpers (FourCharCode+Code). Planned: file locations (section 5)
 DropNotchTests/   mirrors the folders above
@@ -153,7 +154,7 @@ Target: zero wake-ups while idle, apart from the clipboard poll. Intervals below
 
 | Timer | Interval | Runs when | Why it can't be an event |
 |---|---|---|---|
-| Clipboard `changeCount` poll | 0.5 s, tolerance 0.25 s (D7) | Clipboard module enabled and screen awake | The `changeCount` page describes only the counter; no change notification is documented [V: https://developer.apple.com/documentation/appkit/nspasteboard/changecount]. Reading one integer per tick is cheap [I: not measured]. Atoll uses 0.5 s [V]. |
+| Clipboard `changeCount` poll | 0.5 s, tolerance 0.25 s (D7) | Clipboard module enabled, history turned on in the tab, access not Always Deny, and screens awake (D33) | The `changeCount` page describes only the counter; no change notification is documented [V: https://developer.apple.com/documentation/appkit/nspasteboard/changecount]. Reading one integer per tick is cheap [I: not measured]. Atoll uses 0.5 s [V]. |
 | Hover open delay | One-shot 0.12 s | Pointer enters the closed notch | Avoids opening when the pointer just passes through. Atoll's default is 0.3 s [V]; that felt slow on the device (D18). |
 | Hover exit debounce | One-shot 0.1 s | Pointer leaves | Avoids flicker at the edge [V: Atoll uses 100 ms]. |
 | Sweep guard (not a timer) | Per mouse-moved event | Pointer inside the panel only, via the tracking area's `.mouseMoved` | Restarts the open delay above 600 pt/s sideways (D20). No events while the pointer is outside the panel. For about 0.25 s after a close starts the panel is still large (D19), so mouse-moved events reach the guard then; this is the D19 trade-off, and the guard only acts during peek. |

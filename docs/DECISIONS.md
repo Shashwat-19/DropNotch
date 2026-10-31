@@ -873,3 +873,22 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 **Alternatives:** read on a background thread so a blocked read doesn't freeze the notch (rejected: D7b, AppKit throws off the main thread under this setting). Read in the background under `ask` too and let the alert appear (rejected: an alert per copy, and a frozen notch while it waits).
 
 **Consequences:** under `default` or `ask` the history fills only by hand, until the user switches to Always Allow. That switch may apply only after DropNotch is relaunched [V: System Settings strings, §5].
+
+---
+
+## D33. Clipboard history: turned on in its tab, reads gated by access, copy-back closes a hotkey-opened notch
+
+**Date:** 2026-11-01 · **Status:** Accepted (Shash chose the four recommendations, 2026-11-01; implements D7, D7a–D7c)
+
+**Decision:**
+- `ClipboardModule` is the fourth tab (⌘4). Nothing is polled or read until the user clicks "Turn On Clipboard History" in the tab; the choice is saved as `clipboard.historyOn` in UserDefaults (a flag, never content). History lives in memory and is cleared when the module stops.
+- The poll (0.5 s, 0.25 s tolerance) runs on the main thread (D7b) and pauses while the screens sleep. On each `changeCount` change it re-reads `accessBehavior` (`Pasteboard.access`): Always Allow, or macOS 14.0–15.3, reads the item; Ask or default only marks that something new was copied, and the tab shows an "Add Clipboard" button that does one read (D7c); Always Deny stops the poll and the tab shows the System Settings path. Opening the tab re-checks access and restarts a stopped poll.
+- Read order: `types`, then skip the nspasteboard.org markers and file URLs (Finder copies belong to the tray), then text, else PNG, else TIFF. The detection call is dropped: every kept item's text is read anyway, so it saves no read. A link is a lone http or https URL in the text.
+- Limits: 25 items, newest first, duplicates move to the top. Images over 10 MB are skipped; past 50 MB of images in total, the oldest images go first.
+- Click a row, or Return on the highlighted one (↑ ↓ in the search field), to copy it back. DropNotch's own write isn't read back. Copying sends `.dismissed`, which closes a hotkey-opened notch so ⌘V reaches the front app, and leaves a hover-opened one open.
+- Search: one field, `localizedStandardContains` over the text; images show only when the field is empty. Logging: access-state changes only.
+- `Pasteboard` is a main-actor protocol over the `NSPasteboard` calls used, so tests fake the clipboard. Package search (dependency-manager, 2026-11-01): none; full clipboard apps only, and fuzzy-search packages save about 5 lines for 25 items.
+
+**Alternatives:** start at launch under Always Allow (rejected: no consent step until Settings exists); the turn-on click as the only manual read under Ask (rejected: history would never fill); no image cap (rejected: 25 large screenshots could hold several hundred MB); keep the detection call (rejected: an async hop that saves no read).
+
+**Not done:** persistence (a Settings toggle later), clear or delete items, pinning, rich text and file items. The turn-on and Add buttons are reached with Tab only when keyboard navigation is on (as other buttons, D30).
