@@ -19,6 +19,8 @@ final class NowPlayingModule: NotchModule {
     /// Play/pause as clicked, shown before the player confirms it (D27). Cleared by an update that agrees,
     /// a player change, a failed command, or `settleDelay` after an `.ok` reply the player never confirms.
     private(set) var pendingIsPlaying: Bool?
+    /// The compact slots show (D28): while playing, and for `compactGrace` after it stops with a track loaded.
+    private(set) var hasCompactContent = false
 
     private let source: any NowPlayingSource
     // Not UI state, so Observation should skip it (`@Observable` only tracks `var`s).
@@ -33,20 +35,22 @@ final class NowPlayingModule: NotchModule {
     @ObservationIgnored private var heldArtwork: NowPlayingArtwork?
     @ObservationIgnored private let artworkHold: Duration
     @ObservationIgnored private var artworkHoldTask: Task<Void, Never>?
+    @ObservationIgnored private let compactGrace: Duration
+    @ObservationIgnored private var compactGraceTask: Task<Void, Never>?
 
-    /// `settleDelay` and `artworkHold` are internal for tests.
-    init(source: any NowPlayingSource, settleDelay: Duration = .seconds(1), artworkHold: Duration = .seconds(2)) {
+    /// `settleDelay`, `artworkHold` and `compactGrace` are internal for tests.
+    init(source: any NowPlayingSource, settleDelay: Duration = .seconds(1), artworkHold: Duration = .seconds(2),
+         compactGrace: Duration = .seconds(5)) {
         self.source = source
         self.settleDelay = settleDelay
         self.artworkHold = artworkHold
+        self.compactGrace = compactGrace
     }
-
-    var hasCompactContent: Bool { info?.isPlaying == true }
 
     /// What the play/pause button shows: the click's result straight away, the player's state otherwise.
     var isPlaying: Bool { shown?.isPlaying ?? false }
 
-    func compactView(slot: CompactSlot) -> AnyView { AnyView(EmptyView()) }
+    func compactView(slot: CompactSlot) -> AnyView { AnyView(NowPlayingCompactView(module: self, slot: slot)) }
 
     func expandedView() -> AnyView { AnyView(NowPlayingExpandedView(module: self)) }
 
@@ -71,6 +75,9 @@ final class NowPlayingModule: NotchModule {
         settleTask?.cancel()
         heldArtwork = nil
         artworkHoldTask?.cancel()
+        hasCompactContent = false
+        compactGraceTask?.cancel()
+        compactGraceTask = nil
         currentClick += 1
     }
 
@@ -83,6 +90,25 @@ final class NowPlayingModule: NotchModule {
         }
         self.info = info
         updateShown()
+        updateCompact()
+    }
+
+    /// Shows the compact slots while playing; after a pause or stop, keeps them for `compactGrace` so a quick
+    /// pause or a Music burst (D24) doesn't make the shape flap (D28). No track hides them at once.
+    private func updateCompact() {
+        if info?.isPlaying == true || info == nil {
+            compactGraceTask?.cancel()
+            compactGraceTask = nil
+            hasCompactContent = info != nil
+        } else if hasCompactContent, compactGraceTask == nil {
+            // One wake per pause, never repeating (ARCHITECTURE §9).
+            compactGraceTask = Task { [weak self, compactGrace] in
+                try? await Task.sleep(for: compactGrace)
+                guard let self, !Task.isCancelled else { return }
+                self.compactGraceTask = nil
+                self.hasCompactContent = false
+            }
+        }
     }
 
     /// Rebuilds `shown` from `info`. `allowsBackward` takes the reported position as it is: after a failed
