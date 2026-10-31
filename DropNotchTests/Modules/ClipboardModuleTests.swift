@@ -1,4 +1,5 @@
 import AppKit
+import UniformTypeIdentifiers
 import XCTest
 @testable import DropNotch
 
@@ -10,6 +11,8 @@ private final class FakePasteboard: DropNotch.Pasteboard {
     var storedTypes: [NSPasteboard.PasteboardType]?
     var storedString: String?
     var storedData: [NSPasteboard.PasteboardType: Data] = [:]
+    /// Another app copies during the next string read (security-auditor L2).
+    var changesDuringRead = false
     /// "types", "string" and "data" for each read, in order.
     private(set) var reads: [String] = []
     private(set) var writes: [(type: NSPasteboard.PasteboardType, value: Any)] = []
@@ -18,6 +21,7 @@ private final class FakePasteboard: DropNotch.Pasteboard {
 
     func string(forType dataType: NSPasteboard.PasteboardType) -> String? {
         reads.append("string")
+        if changesDuringRead { changeCount += 1 }
         return dataType == .string ? storedString : nil
     }
 
@@ -90,7 +94,24 @@ final class ClipboardModuleTests: XCTestCase {
         return module
     }
 
-    private func image(_ byte: UInt8, count: Int) -> Data { Data(repeating: byte, count: count) }
+    /// A real PNG of `width` × `height` grey pixels.
+    private static func png(width: Int = 1, height: Int = 1) -> Data {
+        let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width,
+                                space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue)!
+        let data = NSMutableData()
+        let destination = CGImageDestinationCreateWithData(data, UTType.png.identifier as CFString, 1, nil)!
+        CGImageDestinationAddImage(destination, context.makeImage()!, nil)
+        CGImageDestinationFinalize(destination)
+        return data as Data
+    }
+
+    private static let onePixel = png()
+
+    /// A 1×1 PNG padded with `byte` to `count` bytes (at least one byte of padding, so different bytes differ). The header
+    /// must be real: the module checks it before keeping an image (M1).
+    private func image(_ byte: UInt8, count: Int) -> Data {
+        Self.onePixel + Data(repeating: byte, count: max(count - Self.onePixel.count, 1))
+    }
 
     // 1. Consent first.
 
@@ -336,5 +357,63 @@ final class ClipboardModuleTests: XCTestCase {
         module.stop()
         XCTAssertTrue(module.items.isEmpty)
         XCTAssertFalse(module.hasUnreadChange)
+    }
+
+    // Security-auditor fixes.
+
+    func testImageThatIsNotAPNGOrTIFFIsSkipped() {
+        let module = turnedOn()
+        pasteboard.copy(data: [.png: Data(repeating: 7, count: 64)])
+        module.tick()
+        XCTAssertTrue(module.items.isEmpty)
+    }
+
+    func testImageOverPixelCapIsSkippedByHeader() {
+        let big = Self.png(width: 5_001, height: 5_000)
+        XCTAssertLessThan(big.count, ClipboardModule.maxImageBytes)
+        XCTAssertFalse(ClipboardItem.isAcceptableImage(big))
+        XCTAssertTrue(ClipboardItem.isAcceptableImage(Self.png(width: 5_000, height: 5_000)))
+        let module = turnedOn()
+        pasteboard.copy(data: [.png: big])
+        module.tick()
+        XCTAssertTrue(module.items.isEmpty)
+    }
+
+    func testTextOverLengthCapIsSkipped() {
+        let module = turnedOn()
+        pasteboard.copy(String(repeating: "a", count: ClipboardModule.maxTextLength + 1))
+        module.tick()
+        XCTAssertTrue(module.items.isEmpty)
+        pasteboard.copy(String(repeating: "a", count: ClipboardModule.maxTextLength))
+        module.tick()
+        XCTAssertEqual(module.items.count, 1)
+    }
+
+    func testClipboardChangeDuringReadDropsTheItem() {
+        let module = turnedOn()
+        pasteboard.changesDuringRead = true
+        pasteboard.copy("maybe a password")
+        module.tick()
+        XCTAssertTrue(module.items.isEmpty)
+    }
+
+    func testLegacyPasswordManagerMarkersAreSkipped() {
+        let module = turnedOn()
+        for marker in ["com.agilebits.onepassword", "de.petermaurer.TransientPasteboardType", "net.antelle.keeweb"] {
+            pasteboard.copy("secret", extraTypes: [.init(marker)])
+            module.tick()
+        }
+        XCTAssertTrue(module.items.isEmpty)
+    }
+
+    func testClearEmptiesHistoryAndKeepsWatching() {
+        let module = turnedOn()
+        pasteboard.copy("one")
+        module.tick()
+        module.clear()
+        XCTAssertTrue(module.items.isEmpty)
+        pasteboard.copy("two")
+        module.tick()
+        XCTAssertEqual(module.items.map(\.text), ["two"])
     }
 }

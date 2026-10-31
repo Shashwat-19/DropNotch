@@ -16,12 +16,33 @@ struct ClipboardItem: Identifiable {
     /// A row-sized thumbnail, made once. The full image is never decoded for display: a 5K screenshot decodes to
     /// about 59 MB, which the 10 MB and 50 MB caps on the stored data wouldn't bound (code-reviewer W2).
     let thumbnail: NSImage?
+    /// One line for the row, made once: leading space dropped, line breaks as spaces, at most 200 characters, so a long
+    /// copy is never scanned again on redraw (security-auditor M2).
+    let preview: String
 
     init(_ content: Content) {
         self.content = content
+        let text: Substring = switch content {
+        case .text(let text), .link(let text): text.drop(while: \.isWhitespace).prefix(200)
+        case .image: ""
+        }
+        preview = text.components(separatedBy: .newlines).joined(separator: " ").trimmingCharacters(in: .whitespaces)
         thumbnail = if case .image(let data, _) = content { Self.thumbnail(of: data) } else { nil }
     }
 
+    /// Whether pasteboard bytes are a PNG or TIFF (by content, not the claimed type) of at most `maxPixels`, read from the
+    /// header alone. A small file can claim a huge size and decode to gigabytes (security-auditor M1).
+    static func isAcceptableImage(_ data: Data, maxPixels: Int = 25_000_000) -> Bool {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let type = CGImageSourceGetType(source) as String?, type == "public.png" || type == "public.tiff",
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let width = properties[kCGImagePropertyPixelWidth] as? Int,
+              let height = properties[kCGImagePropertyPixelHeight] as? Int else { return false }
+        return width * height <= maxPixels
+    }
+
+    // shortcut: the thumbnail is made on the main thread; a 25 MP PNG decodes in full once (about 100 MB, briefly).
+    // Move it off the main actor if image copies stall the notch.
     /// At most 64 px on the long side: the row draws it at 32 × 20 pt, 2× on Retina.
     private static func thumbnail(of data: Data) -> NSImage? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
@@ -43,12 +64,6 @@ struct ClipboardItem: Identifiable {
 
     var isLink: Bool {
         if case .link = content { true } else { false }
-    }
-
-    /// One line for the row: leading space trimmed, line breaks as spaces, capped so a huge copy stays cheap to lay out.
-    var preview: String {
-        String((text ?? "").trimmingCharacters(in: .whitespacesAndNewlines).prefix(200))
-            .components(separatedBy: .newlines).joined(separator: " ")
     }
 
     /// A lone http or https URL, such as one copied from a browser's address bar.

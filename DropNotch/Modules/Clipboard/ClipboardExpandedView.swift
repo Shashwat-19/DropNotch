@@ -32,6 +32,9 @@ struct ClipboardExpandedView: View {
                     if module.access == .ask, module.hasUnreadChange {
                         Button("Add Clipboard") { module.addCurrent() }
                     }
+                    if !module.items.isEmpty {
+                        Button("Clear") { module.clear() }
+                    }
                 }
                 list
             }
