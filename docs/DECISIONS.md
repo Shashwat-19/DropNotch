@@ -816,3 +816,21 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 **Alternatives:** Hotkey on a hover-opened notch closes it (rejected: the notch would close under the pointer and re-opening needs the pointer to leave first). A separate key panel for keyboard use (rejected: two windows to keep in sync). Panel-level AppKit key handling with a hand-drawn focus index (rejected: more code, and the module would have to publish its controls).
 
 **Not done (L3):** keeping the notch open while VoiceOver focus is inside a hover-opened notch; the progress bar is not reachable by keyboard (VoiceOver can still adjust it).
+
+---
+
+## D31. Notes: one plain-text note in its own tab; tabs beside the camera housing
+
+**Date:** 2026-10-31 · **Status:** Accepted (Shash chose tabs over side-by-side, 2026-10-31)
+
+**Decision:**
+- `NotesModule` keeps one note in `~/Library/Application Support/DropNotch/Notes/note.txt` (UTF-8). It loads in `start()`, saves 1 s after the last edit (one-shot task, restarted per edit), and flushes in `stop()`, which the registry calls at quit. Writes are atomic. A missing file is an empty note; a file that exists but can't be read turns saving off and shows "Couldn't open the note file", so it is never overwritten. A failed save shows "Couldn't save the note" under the editor until a save succeeds. A note deleted while the module is off starts empty and isn't written back. Logs carry error domains and codes only, never the text or the path. No network.
+- Reads and writes run on the main thread: a note is a few KB [I: not measured]. Marked `shortcut:` in the code.
+- Modules share the open notch as tabs: one icon per enabled module (`NotchModule.systemImage`) in the strip left of the camera housing, so the open size (480 × 150) doesn't change. The selected tab has a filled capsule as well as brighter colour (L6). ⌘1, ⌘2… switch tabs while the panel is key; the tabs are not Tab stops, so Tab stays with the module's controls. The selection lasts for the session.
+- ⌃⌥N opens on the last tab. On Notes the text view takes focus at once (the same explicit `onChange(initial:)` as Now Playing, D30).
+- A click in a hover-opened note takes keyboard focus through the hover machine's `.focusRequested`, which opens with keyboard focus like the hotkey but never toggles closed. Without it the cursor would sit in the note while the keys went to the app in front. The click lands on a clear overlay, so it doesn't place the cursor.
+- Escape is caught in `NotchPanel.sendEvent` for the whole panel, because NSTextView keeps Escape for word completion and it would never reach `cancelOperation` or `.onExitCommand` [I: AppKit behaviour; device check 40]. While an input method has marked text, Escape goes to it.
+
+**Alternatives:** Side-by-side, about 760 pt wide (rejected by Shash: covers more of the menu bar, and the file tray and clipboard need tabs anyway). A tab bar below the content (rejected: it adds height; the strip beside the camera housing is free). `.onKeyPress(.escape)` on the editor (rejected: per view, and depends on how SwiftUI's text view routes keys). Saving off the main thread (deferred: ordering a background write against the flush at quit is more code than a few-KB write is worth).
+
+**Not done:** several notes, rich text, search, sync; keeping the last tab across relaunches; Tab and Shift-Tab out of the note (Tab types a tab). An edit made to note.txt outside DropNotch while it runs is overwritten by the next edit in the notch, and two running copies overwrite each other (code-reviewer S5). VoiceOver can focus the editor in a hover-opened notch without the panel taking keys (S4): for the release accessibility pass.

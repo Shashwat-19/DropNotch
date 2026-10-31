@@ -25,7 +25,7 @@ DropNotch/
                   (feat/now-playing-media), compact view (feat/now-playing-compact), settings view
     FileTray/     (planned) tray views, TrayStore
     Clipboard/    (planned) history views, ClipboardHistoryStore
-    Notes/        (planned) notes views, NotesStore
+    Notes/        NotesModule (load and save), NotesExpandedView (D31)
   Services/       one protocol + implementations per system dependency:
                   Now Playing (D21–D24): NowPlayingSource, NowPlayingInfo, NoNowPlayingSource,
                   MediaPlayer, PlayerNotificationParser, NowPlayingSelection, AppleEventOutcome,
@@ -74,7 +74,7 @@ Why it looks like this (notes for a Swift newcomer):
 
 What exists today (D21–D24): `AppDelegate` creates one registry holding one `NowPlayingModule` built on `ScriptablePlayersSource`, and calls `start()` at launch and `stop()` at quit. When the app is hosting unit tests (`XCTestConfigurationFilePath` is set) it never calls `start()`, so a test run doesn't contact real players. `NowPlayingModule` reads the source's `AsyncStream<NowPlayingInfo?>` in a `Task` that `start()` creates and `stop()` cancels, then clears `info`, and sends playback commands with `send(_:to:)`. `ScriptablePlayersSource` turns the players' distributed notifications and `NSWorkspace` launch and quit into that stream, through the pure `PlayerNotificationParser` and `NowPlayingSelection`, and sends Apple Events through `AppleEventSending` (D22–D24). `NoNowPlayingSource` never yields and sends nothing; it is for tests.
 
-`NotchRootView` shows the first enabled module's `expandedView()` as an overlay on the open shape. The overlay fades in when the notch opens and is removed at once when it closes (an asymmetric transition: opacity in, identity out), so the text never sits outside the shrinking shape (D19). Tab switching, and `compactView(slot:)` and `settingsView()` (which have no caller yet), come with Phase 3.
+`NotchRootView` shows the selected tab's `expandedView()` as an overlay on the open shape, with one icon per enabled module in the strip left of the camera housing once there are two or more (D31). `ModuleRegistry.selectedTabID` holds the tab for the session; `selectedModule` falls back to the first enabled module. The overlay fades in when the notch opens and is removed at once when it closes (an asymmetric transition: opacity in, identity out), so the text never sits outside the shrinking shape (D19). `settingsView()` has no caller yet; it comes with Phase 3 Settings.
 
 Transient HUDs (timed overlays shown for a few seconds: battery, Bluetooth connect, track change) are a registry feature: a module asks for a timed peek, and the hover state machine shows it. Atoll uses the same idea for its HUDs [V: research/atoll-system-shell.md A2].
 
@@ -91,7 +91,7 @@ Transient HUDs (timed overlays shown for a few seconds: battery, Bluetooth conne
 | Data | Where | Format | Notes |
 |---|---|---|---|
 | Settings, module enabled flags, layout | `UserDefaults` via `@AppStorage`/a small settings model | Property list | Small values only. |
-| Quick notes | `~/Library/Application Support/DropNotch/Notes/` | One plain-text file per note | Human-readable, easy to back up. Saves are debounced (section 9). |
+| Quick notes | `~/Library/Application Support/DropNotch/Notes/note.txt` | One plain-text UTF-8 file (one note in the MVP, D31) | Human-readable, easy to back up. Saves are debounced (section 9), atomic, and flushed on quit. A file that can't be read is never overwritten. Not through a `FileLocations` helper yet: the module takes the file URL, which tests set. |
 | File tray items | `…/Application Support/DropNotch/tray.json` | JSON (`Codable`), atomic write | Holds bookmarks or copied-file paths (D6). |
 | Clipboard history | Memory by default; optional `…/Application Support/DropNotch/clipboard/` | JSON + image files | Persistence default is D7. Nothing goes to `UserDefaults`, because Atoll's use of it puts clipboard text in a preferences plist [V: research note §3]. |
 
@@ -126,7 +126,7 @@ Closed-state hit testing (**D5, accepted**). A window with `ignoresMouseEvents` 
 - **Now Playing (D2):** MVP providers are Apple Music and Spotify. Each listens to its player's distributed notification (event-driven) and sends commands with raw Apple Events (D22), which needs one Automation prompt per player, on the first click on a control (D23) [V: Atoll's technique; prompt timing I]. A silent permission check at start never prompts (D23). Sending an Apple Event to a player that isn't running launches it, so commands are sent only to a running player (`NSRunningApplication`), addressed to its pid, and the pid is re-checked just before each send (D22) [I: security-auditor note; device check 4, TASK.md Phase 3]. The progress bar (D26) extrapolates from a position anchor (seconds at a time, rate fixed at 1), never polled; Core Animation draws the motion. Spotify artwork is the one network request (D25); Music artwork is read by Apple Event (D26). MediaRemote is a v0.2 optional provider behind the same protocol.
 - **File tray:** AppKit drag destination on the open panel; also on the closed panel, so dragging a file onto the notch opens the tray. Items are stored per D6. AirDrop through `NSSharingService(named: .sendViaAirDrop)` [V: public API used by Atoll]. Quick Look thumbnails are generated off the main thread.
 - **Clipboard history:** `PasteboardWatcher` service reads `NSPasteboard.general.changeCount` on a timer (section 9). Content is read only when the count changes [V: Atoll does the same]. Items whose types include the concealed or transient markers (`org.nspasteboard.ConcealedType`, `org.nspasteboard.TransientType`, `org.nspasteboard.AutoGeneratedType`) are skipped [I: nspasteboard.org convention; Apple defines no concealed or transient type, https://developer.apple.com/documentation/appkit/nspasteboard/pasteboardtype]. From macOS 15.4 the general pasteboard asks the user on programmatic access [V: https://developer.apple.com/documentation/appkit/nspasteboard/accessbehavior-swift.enum]; see RISKS.md §2 and the D7 probe. Content is never logged. Re-copy writes to the pasteboard; the user pastes.
-- **Quick notes:** text editor in the expanded view, saved to files with a debounce.
+- **Quick notes (D31):** one plain-text note in a `TextEditor` in its own tab, saved 1 s after the last edit. ⌃⌥N on the Notes tab puts the cursor in the note; a click in a hover-opened note takes keyboard focus the same way. Escape closes from the note too (the panel catches it in `sendEvent`).
 - **Layout (D8):** Settings chooses which module fills the compact-left and compact-right slots and the order of tabs in the expanded view.
 
 ## 9. Energy budget
@@ -160,7 +160,7 @@ Target: zero wake-ups while idle, apart from the clipboard poll. Intervals below
 | Artwork hold | One-shot 2 s | A track change while the last track's artwork is showing, until the new artwork or its absence arrives | A failed read reports neither, so without it the old picture would stay on the new track (D27). |
 | Peek dismissal | One-shot, 2–3 s | A peek HUD is showing | Timed by definition. |
 | Screen-change debounce | One-shot 0.2 s | Display change burst | Coalesces bursts. |
-| Notes autosave | One-shot 1 s after last keystroke | Typing in notes | Batches disk writes. |
+| Notes autosave (D31) | One-shot 1 s after the last edit | Typing in the note | Batches disk writes: one atomic write per pause in typing, none while idle. The write is on the main thread (a few KB). |
 | Now-playing progress bar (D26) | No app timer: one Core Animation animation per update, capped at 10 fps with `preferredFrameRateRange` | Open notch **and** playing | Progress is extrapolated from the last anchor and the render server draws the motion: 0 app wake-ups [V: harness, 2026-10-25]. Uncapped it redrew at the display rate and added about 12 points of WindowServer CPU; at 10 fps about 3 [V: harness, 60 Hz display]. The bar moves about 2 px/s on a 3-minute track [I: device check 22]. Fallback if it misbehaves: `TimelineView` at 1 Hz. |
 | Now-playing elapsed time (D26) | About 1 Hz, driven by SwiftUI (`Text(timerInterval:pauseTime:)`) | Open notch **and** playing; still while paused; gone when the notch closes (D19), including on screen sleep | A clock has to change every second. Each tick is a SwiftUI layout of the notch's hosting view: about 0.5 % app CPU [V: harness, 2026-10-25]. It keeps ticking while its window is hidden, so closing the notch on screen sleep is what stops it. |
 | Compact-slot grace (D28) | One-shot 2 s | Playback paused or stopped while the wings show, until it plays again | Keeps the closed shape from flapping on a quick pause or a Music burst, without keeping the menu bar blocked while paused. |

@@ -74,7 +74,19 @@ final class NotchPanel: NSPanel {
     override var canBecomeKey: Bool { acceptsKeyboard }
     override var canBecomeMain: Bool { false }
 
-    // AppKit sends Escape here when no view in the panel handles it.
+    /// Escape closes a hotkey-opened notch wherever focus is (D31). A text view would otherwise keep it: NSTextView
+    /// takes Escape for word completion. An input method that is composing text keeps Escape to cancel that.
+    override func sendEvent(_ event: NSEvent) {
+        // 53 is kVK_Escape.
+        if event.type == .keyDown, event.keyCode == 53,
+           (firstResponder as? NSTextInputClient)?.hasMarkedText() != true {
+            onDismiss?()
+            return
+        }
+        super.sendEvent(event)
+    }
+
+    // ⌘. lands here; Escape is caught in `sendEvent` above (D31).
     override func cancelOperation(_ sender: Any?) {
         onDismiss?()
     }

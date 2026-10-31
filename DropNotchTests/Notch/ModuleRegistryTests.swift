@@ -8,6 +8,7 @@ final class ModuleRegistryTests: XCTestCase {
         let id: String
         let title: LocalizedStringResource = "Fake"
         var hasCompactContent = true
+        let systemImage = "square"
         private(set) var starts = 0, stops = 0
         init(_ id: String) { self.id = id }
         func compactView(slot: CompactSlot) -> AnyView { AnyView(EmptyView()) }
@@ -163,6 +164,41 @@ final class ModuleRegistryTests: XCTestCase {
         registry.tabOrder = ["nope", "a"]
         XCTAssertEqual(registry.expandedModules.map(\.id), ["a"])
     }
+    // MARK: selectedModule (D31)
+
+    func testSelectedModuleDefaultsToTheFirstEnabledTab() {
+        let registry = ModuleRegistry(modules: [FakeModule("a"), FakeModule("b")], defaults: makeDefaults())
+        XCTAssertNil(registry.selectedTabID)
+        XCTAssertEqual(registry.selectedModule?.id, "a")
+        registry.tabOrder = ["b", "a"]
+        XCTAssertEqual(registry.selectedModule?.id, "b", "first in tab order, not in the modules array")
+    }
+
+    func testSelectedModuleFollowsTheSelectedTab() {
+        let registry = ModuleRegistry(modules: [FakeModule("a"), FakeModule("b")], defaults: makeDefaults())
+        registry.selectedTabID = "b"
+        XCTAssertEqual(registry.selectedModule?.id, "b")
+    }
+
+    func testSelectedModuleFallsBackWhenTheTabIsOffOrUnknown() {
+        let registry = ModuleRegistry(modules: [FakeModule("a"), FakeModule("b"), FakeModule("c")], defaults: makeDefaults())
+        registry.selectedTabID = "a"
+        registry.setEnabled("a", false)
+        XCTAssertEqual(registry.selectedModule?.id, "b")
+        registry.setEnabled("a", true)
+        XCTAssertEqual(registry.selectedModule?.id, "a", "the selection survives the module being off")
+        registry.selectedTabID = "nope"
+        XCTAssertEqual(registry.selectedModule?.id, "a")
+    }
+
+    func testSelectedModuleIsNilWithNoEnabledModules() {
+        let registry = ModuleRegistry(modules: [FakeModule("a")], defaults: makeDefaults())
+        registry.selectedTabID = "a"
+        registry.setEnabled("a", false)
+        XCTAssertNil(registry.selectedModule)
+        XCTAssertNil(ModuleRegistry(modules: [], defaults: makeDefaults()).selectedModule)
+    }
+
     // MARK: hasCompactContent (D28)
 
     func testHasCompactContentNeedsAnEnabledSlotModuleWithContent() {
