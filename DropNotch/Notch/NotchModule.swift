@@ -18,6 +18,8 @@ protocol NotchModule: AnyObject {
     /// Stable key for layout and settings storage. Lowercase with hyphens.
     var id: String { get }
     var title: LocalizedStringResource { get }
+    /// SF Symbol for the module's tab in the open notch (D31).
+    var systemImage: String { get }
     /// Whether the compact view has anything to show right now (for example, music is playing).
     var hasCompactContent: Bool { get }
 

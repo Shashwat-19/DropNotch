@@ -14,6 +14,9 @@ final class ModuleRegistry {
     var compactLeftID: String?
     var compactRightID: String?
     var tabOrder: [String]
+    /// The open notch's tab (D31). Nil, or a module that is off, shows the first.
+    /// shortcut: kept for the session only, upgrade if the last tab should survive a relaunch.
+    var selectedTabID: String?
 
     @ObservationIgnored private let defaults: UserDefaults
     /// Modules are started only while the registry runs, so `setEnabled` before `start()`
@@ -35,6 +38,12 @@ final class ModuleRegistry {
     /// Modules shown as tabs in the open notch, in `tabOrder`.
     var expandedModules: [any NotchModule] {
         tabOrder.compactMap { id in enabledIDs.contains(id) ? modules.first { $0.id == id } : nil }
+    }
+
+    /// The module the open notch shows: the selected tab, else the first.
+    var selectedModule: (any NotchModule)? {
+        let modules = expandedModules
+        return modules.first { $0.id == selectedTabID } ?? modules.first
     }
 
     /// The module for a compact slot, if it is enabled and has something to show.

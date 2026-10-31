@@ -6,6 +6,7 @@ import SwiftUI
 final class NowPlayingModule: NotchModule {
     let id = "now-playing"
     let title: LocalizedStringResource = "Now Playing"
+    let systemImage = "music.note"
     /// What the source last reported.
     private(set) var info: NowPlayingInfo?
     /// What the view draws (D27): `info`, with a pending click's play/pause and the position it froze or

@@ -8,6 +8,7 @@ final class ModuleRegistryTests: XCTestCase {
         let id: String
         let title: LocalizedStringResource = "Fake"
         var hasCompactContent = true
+        let systemImage = "square"
         private(set) var starts = 0, stops = 0
         init(_ id: String) { self.id = id }
         func compactView(slot: CompactSlot) -> AnyView { AnyView(EmptyView()) }
