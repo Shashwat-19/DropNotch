@@ -121,6 +121,8 @@ Terms for a reader new to Swift or AppKit:
 **Date:** 2026-10-24
 **Status:** Accepted (approved by Shash)
 
+**Revised by D28** (2026-10-31): while music plays, the closed shape is wider than the notch.
+
 **Decision:** While closed, the panel is sized to exactly the notch rectangle and accepts mouse events, so a tracking area can detect hover. On a screen without a notch, the closed state is a pill at the top centre. The area outside the notch rectangle is click-through because no window covers it.
 
 **Alternatives considered:** A full-width click-through panel (`ignoresMouseEvents = true`) plus a global mouse-moved monitor.
@@ -750,3 +752,29 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - Unverified, release checklist: whether interactive glass shows a hover effect on macOS, and whether its press bounce respects Reduce Motion; the white hover circle in the non-activating panel on macOS 14/15; whether a late Music burst still flickers the icon; artwork on a track change fading old → new directly, the app icon only when missing or after the 2 s hold.
 - While playing, the steadying holds a read that is behind by under a second, so the screen can run up to a second ahead of the player. Each pause takes a read in the same whole second as the screen, which resets that lead without a visible change. A difference of 1 s or more is taken as a seek in the player's window and applied.
 - Hover feedback relies on SwiftUI `onHover` in the non-activating panel [I: device check].
+
+---
+
+## D28. Compact slot: the closed shape widens while music plays (revises D5)
+
+**Date:** 2026-10-31 · **Status:** Accepted (Shash approved the width, the animation and the 5 s grace)
+
+**Decision:**
+- While a module fills a compact slot (D8), the closed shape is the notch plus one square wing on each side, as wide as the notch is tall: about 32 pt, so about 250 pt in all on a 14" MacBook Pro. The pill on a screen without a notch widens the same way. Peek grows from that wider shape; the open size is unchanged.
+- Now Playing fills both slots by default: artwork on the left (the open notch's `NowPlayingArtworkView`, smaller), 4 decorative bars on the right (D2).
+- In: the panel grows first, then the shape widens with the hover spring (0.25 s, no bounce) and the artwork and bars fade in. Out: the shape shrinks with the same spring, then the panel shrinks (D19). The wing content is clipped to the shape, so it never shows outside it mid-animation. Reduce Motion: the width changes at once and the bars stay still.
+- When to show: while playing, and for 5 s after playback pauses or stops while a track is still loaded. Playing again within 5 s keeps the wings. No track (the player quit) retracts them at once.
+- The bars animate only while playing, the display is awake, Low Power Mode is off and Reduce Motion is off. Otherwise they are still: flat while paused, a fixed uneven pattern while playing. Core Animation draws the motion, capped at 15 fps, so the app does no work between frames (as the progress bar, D26).
+- The wings are part of the panel: hovering them peeks and opens the notch, like the notch itself.
+
+**Alternatives:**
+- Keep the wings while paused for as long as a track is loaded. Rejected (Shash): the menu-bar strip under them would stay blocked for hours after a pause.
+- Retract on pause at once. Rejected: a quick pause and play, or one of Music's bursts (D24), would make the shape flap.
+- Narrower (0.8 × height) or wider (height + 8 pt) wings. Rejected (Shash): a square wing fits the artwork with even padding.
+- A SwiftUI `TimelineView` or `repeatForever` animation for the bars. Rejected: each frame would be a SwiftUI update in the app; the render server already proved cheap for the progress bar (D26).
+
+**Consequences / follow-ups:**
+- While the wings show, menu-bar items under them can't be clicked (they reach the panel instead). macOS keeps status items clear of the notch itself, not of the 32 pt beside it [I: device check].
+- The grace is a one-shot 5 s sleep per pause (ARCHITECTURE §9).
+- 15 fps is a guess at what looks smooth at this size. Device check; performance-optimizer measures WindowServer cost in the release branch.
+- Toggling Low Power Mode mid-song takes effect at once (power-state notification); screen sleep and wake stop and restart the bars.

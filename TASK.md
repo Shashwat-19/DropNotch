@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, and 2, `feat/now-playing-media`, are merged to main. Next: compact-slot, then hotkey, notes, file-tray, clipboard, settings, polish, release. See "Phase 3" below.
+**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, and 2, `feat/now-playing-media`, are merged to main. Branch 3, `feat/compact-slot`, is in progress. Next: hotkey, notes, file-tray, clipboard, settings, polish, release. See "Phase 3" below.
 
 ## Goal
 Run a reverse-engineering analysis (REA) of Canopy and Atoll, turn it into a feature matrix and architecture plan for DropNotch, then scaffold the foundation. DropNotch must be original code that Shash owns.
@@ -210,6 +210,14 @@ Device checks (Release build, notched Mac), numbered after branch 1's. Speed mod
 20. **Passed for Music (Shash, 2026-10-31);** no app-icon flash between tracks. Spotify: Release checklist.
 22. **Passed (Shash, 2026-10-31).**
 26. Moved to the Release checklist (the lead checked `codesign`: only apple-events, hardened runtime on).
+
+### Branch 3: `feat/compact-slot` (D28 approved by Shash, 2026-10-31)
+
+While music plays, the closed notch shows the artwork on the left and decorative bars on the right. D28 revises D5. Package search: none (Core Animation and existing views only).
+
+Steps, one commit each: 1. `docs:` D28, this section, ARCHITECTURE §7/§9. 2. `feat:` compact frames in `NotchGeometry`. 3. `feat:` registry: both slots default to the first module; `hasCompactContent`. 4. `feat:` Now Playing compact content with the 5 s grace; compact view and bars. 5. `feat:` `NotchState` widens and narrows the closed shape; root view draws the slots. 6. Build, test-writer, code-reviewer, device checks.
+
+Out of this branch: slot pickers (Settings), a real waveform (v0.2), VoiceOver for the closed notch (accessibility-auditor, release branch).
 
 ## Release checklist
 

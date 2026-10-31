@@ -3,9 +3,10 @@
 DropNotch is an open-source macOS utility that turns the MacBook notch into a productivity surface. The notch opens when you hover over it and stays minimal otherwise.
 
 What works today:
-- Now Playing for Apple Music and Spotify: the open notch shows the current title and artist, with play/pause, next and previous controls.
+- Now Playing for Apple Music and Spotify: the open notch shows the current title and artist, with artwork, a progress bar you can seek, and play/pause, next and previous controls.
+- While music plays, the closed notch widens a little to show the artwork on the left and small animated bars on the right.
 
-Planned, not built yet: a progress bar and artwork for Now Playing, a compact view beside the closed notch, a hotkey to open the notch, a file tray with AirDrop, clipboard history and quick notes.
+Planned, not built yet: a hotkey to open the notch, a file tray with AirDrop, clipboard history and quick notes.
 
 ## Status
 
