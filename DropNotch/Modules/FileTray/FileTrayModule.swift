@@ -27,6 +27,8 @@ final class FileTrayModule: NotchModule {
     @ObservationIgnored private let storageURL: URL
     /// Promised files are written by the source app; the reader block runs here, off the main thread.
     @ObservationIgnored private let promiseQueue = OperationQueue()
+    /// Kept here, not in the view: a transfer outlives the open notch, whose view goes when it closes (code-reviewer S3).
+    @ObservationIgnored let airDrop = NSSharingService(named: .sendViaAirDrop)
 
     /// Both URLs are internal for tests.
     init(fileURL: URL = .applicationSupportDirectory.appending(path: "DropNotch/tray.json"),
@@ -190,16 +192,21 @@ final class FileTrayModule: NotchModule {
     }
 
     private func received(_ url: URL, error: Error?, folderID: UUID) {
+        let folder = storageURL.appending(path: folderID.uuidString)
         let item = TrayItem(id: UUID(), name: url.lastPathComponent, copyFolder: folderID)
         // The source app chose the name and wrote the file; anything outside the folder we gave it isn't ours.
-        guard error == nil, let expected = copyURL(item), expected.standardizedFileURL == url.standardizedFileURL else {
+        // Folders compared by path, as a promised folder's URL can end in "/" (code-reviewer W2).
+        let ours = item.hasSafeName && url.deletingLastPathComponent().standardizedFileURL.path == folder.standardizedFileURL.path
+        guard error == nil, ours, let location = copyURL(item) else {
             if let error {
                 Logger.tray.error("Promise failed: \((error as NSError).domain, privacy: .public) \((error as NSError).code)")
             }
-            removeFolderIfEmpty(storageURL.appending(path: folderID.uuidString))
+            // A partial write would otherwise sit in the storage with no item pointing at it.
+            if ours { try? FileManager.default.removeItem(at: url) }
+            removeFolderIfEmpty(folder)
             return
         }
-        insert(item, at: expected)
+        insert(item, at: location)
     }
 
     private func insert(_ item: TrayItem, at url: URL) {

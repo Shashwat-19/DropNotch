@@ -11,7 +11,7 @@ struct FileTrayExpandedView: View {
             if module.loadFailed {
                 message("Couldn't open the tray file")
             } else if module.items.isEmpty {
-                message("Drop files here")
+                message("Drag files onto the notch to keep them here")
             } else {
                 ScrollView(.horizontal) {
                     HStack(spacing: 4) {
@@ -72,7 +72,7 @@ struct FileTrayExpandedView: View {
 
     private var actions: some View {
         let urls = module.shareURLs
-        let airDrop = NSSharingService(named: .sendViaAirDrop)
+        let airDrop = module.airDrop
         return HStack(spacing: 4) {
             Spacer(minLength: 0)
             Button { airDrop?.perform(withItems: urls) } label: {

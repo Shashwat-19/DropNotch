@@ -19,7 +19,7 @@ struct TrayItemDragSource: NSViewRepresentable {
 final class TrayItemDragView: NSView, NSDraggingSource {
     var urls: () -> [URL] = { [] }
     var onClick: (_ extending: Bool) -> Void = { _ in }
-    private var mouseDown: NSEvent?
+    private var pendingMouseDown: NSEvent?
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -35,14 +35,14 @@ final class TrayItemDragView: NSView, NSDraggingSource {
     // One click works in the never-active panel, as in NotchHostingView.
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    override func mouseDown(with event: NSEvent) { mouseDown = event }
+    override func mouseDown(with event: NSEvent) { pendingMouseDown = event }
 
     override func mouseDragged(with event: NSEvent) {
-        guard let down = mouseDown else { return }
+        guard let down = pendingMouseDown else { return }
         // A few points of movement first, so a slightly wobbly click still selects.
         let dx = event.locationInWindow.x - down.locationInWindow.x, dy = event.locationInWindow.y - down.locationInWindow.y
         guard dx * dx + dy * dy > 9 else { return }
-        mouseDown = nil
+        pendingMouseDown = nil
         let items = urls().map { url in
             let item = NSDraggingItem(pasteboardWriter: url as NSURL)
             item.setDraggingFrame(bounds, contents: NSWorkspace.shared.icon(forFile: url.path))
@@ -53,8 +53,8 @@ final class TrayItemDragView: NSView, NSDraggingSource {
     }
 
     override func mouseUp(with event: NSEvent) {
-        if mouseDown != nil { onClick(event.modifierFlags.contains(.command)) }
-        mouseDown = nil
+        if pendingMouseDown != nil { onClick(event.modifierFlags.contains(.command)) }
+        pendingMouseDown = nil
     }
 
     // Nothing inside DropNotch takes it; the notch never drops its own items back in (NotchHostingView).

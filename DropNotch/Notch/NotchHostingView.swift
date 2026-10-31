@@ -63,6 +63,8 @@ final class NotchHostingView: NSHostingView<NotchRootView> {
     // Mouse tracking pauses during a drag, so the drag stands in for the pointer: entering peeks and opens the notch
     // on the tray, leaving closes it. A drag from the tray itself (`draggingSource` is set only for drags inside
     // DropNotch) is refused and left out of the hover machine.
+    // These replace NSHostingView's own drop handling without calling super, so a SwiftUI `.onDrop` in the notch
+    // would never fire (code-reviewer S2).
 
     /// The tray, when it is on.
     private var tray: FileTrayModule? {
