@@ -231,6 +231,22 @@ Device checks (Debug build is enough: no entitlement or signing change; notched 
 
 Reviews: test-writer (18 tests); code-reviewer: Approve with changes. Applied: grow to the union of the old and new frames (W1), device checks listed (W2), content fades out with the wings (S3), fewer observer wakes (S4), bars restart only on a size change (S5), comments (S6, S7).
 
+### Branch 4: `feat/hotkey` (D30; shortcut ⌃⌥N chosen by Shash, 2026-10-31)
+
+**Status (2026-10-31):** built; test-writer (11 tests) and code-reviewer (Approve with changes; W1, W2, S1–S5 applied, W3 left to device check 36) done. 292 tests, 0 failures. Waiting for device checks before merging.
+
+A global shortcut (⌃⌥N) opens and closes the notch. Opened by keyboard, the panel takes key focus: Tab and the arrows move between the controls, Space and Return press them, Escape, the hotkey again or a click elsewhere closes it and hands focus back. Hover is unchanged and never takes focus. Package search: none (KeyboardShortcuts was pinned in Phase 2, D10a).
+
+Out of this branch: rebinding the shortcut (Settings), click-to-open, keeping a hover-opened notch open while VoiceOver focus is inside (L3), keyboard access to the progress bar.
+
+Device checks (Debug build is enough: no entitlement or signing change; notched Mac, Music playing):
+33. ⌃⌥N from closed: the notch opens with play/pause showing the hover circle; Space toggles once (also when held); Tab and ←/→ move; no rectangular focus ring on the round controls.
+34. Escape, and separately a second ⌃⌥N: the notch closes and you can type straight into the front app without clicking; the closed notch doesn't flicker.
+35. Hover-open, then ⌃⌥N: focus appears and the notch stays open; move the pointer away: it stays open until Escape.
+36. System Settings › Keyboard › Keyboard navigation on: one Tab stop per control and Space fires once (if two stops, `.focusable(false)` on the inner Button, code-reviewer W3).
+37. Hover mode (no hotkey): one click on each control still works, and typing in the front app afterwards still works.
+38. While opened by ⌃⌥N, click another app's window or ⌘Tab: the notch closes and that app has focus.
+
 ## Release checklist
 
 Device checks moved here from feature branches (speed mode, CLAUDE.md). Run them in the release branch on a Release build on a notched Mac.
