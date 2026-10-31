@@ -11,4 +11,6 @@ extension Logger {
     static let notes = Logger(subsystem: subsystem, category: "Notes")
     /// Error domains and codes only: never file names or paths.
     static let tray = Logger(subsystem: subsystem, category: "FileTray")
+    /// Access states only: never clipboard content, types or counts of what was copied.
+    static let clipboard = Logger(subsystem: subsystem, category: "Clipboard")
 }
