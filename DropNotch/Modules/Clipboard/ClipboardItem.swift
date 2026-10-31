@@ -35,7 +35,7 @@ struct ClipboardItem: Identifiable {
     /// One line for the row: leading space trimmed, line breaks as spaces, capped so a huge copy stays cheap to lay out.
     var preview: String {
         String((text ?? "").trimmingCharacters(in: .whitespacesAndNewlines).prefix(200))
-            .replacingOccurrences(of: "\n", with: " ")
+            .components(separatedBy: .newlines).joined(separator: " ")
     }
 
     /// A lone http or https URL, such as one copied from a browser's address bar.

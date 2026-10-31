@@ -117,6 +117,8 @@ final class ClipboardModule: NotchModule {
     /// One poll: only `changeCount` until it changes, then the access check, then a read only under Always Allow (D7c).
     /// Internal so tests can drive it without the timer.
     func tick() {
+        // Consent first, whoever calls this.
+        guard isOn else { return }
         let count = pasteboard.changeCount
         guard count != lastChangeCount else { return }
         lastChangeCount = count
