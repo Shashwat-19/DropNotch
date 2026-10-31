@@ -16,6 +16,8 @@ struct NotchHoverStateMachine {
         case hotkeyPressed
         /// Escape, or the panel lost keyboard focus. Closes only a notch the hotkey opened (D30).
         case dismissed
+        /// A click in a hover-opened note (D31): takes keyboard focus and, unlike the hotkey, never closes.
+        case focusRequested
         /// The pointer moved inside the panel: screen x in points, event time in seconds.
         case pointerMoved(x: Double, time: Double)
     }
@@ -81,6 +83,11 @@ struct NotchHoverStateMachine {
             // A hover-opened notch takes focus rather than closing under the pointer.
             openedByKeyboard.toggle()
             phase = openedByKeyboard ? .open : .closed
+            openDue = false
+            return nil
+        case .focusRequested:
+            openedByKeyboard = true
+            phase = .open
             openDue = false
             return nil
         case .dismissed:

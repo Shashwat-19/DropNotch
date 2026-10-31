@@ -37,8 +37,8 @@ struct NotchRootView: View {
                     // The shape is always black, so its content uses dark colours in light mode too (L5).
                     .environment(\.colorScheme, .dark)
                     .environment(\.notchHasKeyboardFocus, state.hasKeyboardFocus)
-                    // A click in a hover-opened note takes focus as the hotkey does from there (D30, D31).
-                    .environment(\.requestNotchKeyboardFocus, NotchFocusRequest { state.send(.hotkeyPressed) })
+                    // A click in a hover-opened note takes keyboard focus (D31).
+                    .environment(\.requestNotchKeyboardFocus, NotchFocusRequest { state.send(.focusRequested) })
                     .transition(.asymmetric(insertion: .opacity, removal: .identity))
                 }
             }
@@ -46,7 +46,7 @@ struct NotchRootView: View {
             // The panel overlaps the camera housing; without this SwiftUI would push
             // the content below the screen's safe area.
             .ignoresSafeArea()
-            // Escape with a control focused can stop in SwiftUI before reaching `NotchPanel.cancelOperation` (D30).
+            // Fallback only: `NotchPanel.sendEvent` catches Escape before SwiftUI sees it (D31).
             .onExitCommand { state.send(.dismissed) }
     }
 

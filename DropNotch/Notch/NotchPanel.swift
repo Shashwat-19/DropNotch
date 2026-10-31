@@ -86,7 +86,7 @@ final class NotchPanel: NSPanel {
         super.sendEvent(event)
     }
 
-    // AppKit sends Escape here when no view in the panel handles it.
+    // ⌘. lands here; Escape is caught in `sendEvent` above (D31).
     override func cancelOperation(_ sender: Any?) {
         onDismiss?()
     }

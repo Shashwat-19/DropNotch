@@ -8,7 +8,7 @@ struct NotesExpandedView: View {
     @Environment(\.requestNotchKeyboardFocus) private var requestKeyboardFocus
 
     var body: some View {
-        Group {
+        VStack(spacing: 4) {
             if module.loadFailed {
                 Text("Couldn't open the note file")
                     .foregroundStyle(.secondary)
@@ -39,6 +39,12 @@ struct NotesExpandedView: View {
                     .accessibilityLabel(Text(module.title))
                     // Set explicitly, as in Now Playing: the panel turns key before SwiftUI inserts this view (D30).
                     .onChange(of: hasKeyboardFocus, initial: true) { if hasKeyboardFocus { isFocused = true } }
+                if module.saveFailed {
+                    Text("Couldn't save the note")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
         }
         .font(.body)

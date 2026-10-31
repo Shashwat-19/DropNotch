@@ -63,7 +63,7 @@ final class NotchState {
     /// Called by the tracking area in `NotchHostingView` and by this class's own timers.
     func send(_ event: NotchHoverStateMachine.Event) {
         // With no display the panel is ordered out; taking key focus would swallow typing into an invisible window.
-        if event == .hotkeyPressed, geometry == nil { return }
+        if event == .hotkeyPressed || event == .focusRequested, geometry == nil { return }
         let old = hover
         let effect = hover.handle(event)
         // Moves arrive many times a second; only a sweep restarting the open delay is news.

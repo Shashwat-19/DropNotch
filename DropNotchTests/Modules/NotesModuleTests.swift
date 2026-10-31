@@ -43,6 +43,37 @@ final class NotesModuleTests: XCTestCase {
     /// For asserting that nothing happens: comfortably longer than the 20 ms save delay.
     private func waitPastSaveDelay() async throws { try await Task.sleep(for: .milliseconds(150)) }
 
+    // W1: a write that fails is reported, kept in memory, and retried.
+    func testFailedSaveSetsSaveFailedAndStopRetries() async throws {
+        let module = makeModule()
+        module.start()
+        // After the load: the note's folder is now a regular file, so creating it fails.
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try Data().write(to: fileURL.deletingLastPathComponent())
+        module.text = "kept"
+        try await waitUntil { module.saveFailed }
+        try FileManager.default.removeItem(at: fileURL.deletingLastPathComponent())
+        module.stop()
+        XCTAssertEqual(fileText(), "kept")
+        XCTAssertFalse(module.saveFailed)
+    }
+
+    // W2: a note deleted while the module was off isn't written back by the next edit.
+    func testStartAfterTheFileWasDeletedClearsTheOldNote() async throws {
+        let module = makeModule()
+        module.start()
+        module.text = "old"
+        module.stop()
+        try FileManager.default.removeItem(at: fileURL)
+        module.start()
+        XCTAssertEqual(module.text, "")
+        try await waitPastSaveDelay()
+        XCTAssertNil(fileText())
+        module.text = "new"
+        module.stop()
+        XCTAssertEqual(fileText(), "new")
+    }
+
     func testIdentity() {
         let module = makeModule()
         XCTAssertEqual(module.id, "notes")

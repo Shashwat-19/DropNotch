@@ -229,6 +229,17 @@ final class NotchHoverStateMachineTests: XCTestCase {
         XCTAssertTrue(machine.openedByKeyboard)
     }
 
+    // A click asking for focus twice must never close the notch (D31).
+    func testFocusRequestedOpensWithKeyboardAndNeverCloses() {
+        for start in [Machine(), driven([.pointerEntered]), opened] {
+            var machine = start
+            XCTAssertNil(machine.handle(.focusRequested))
+            XCTAssertNil(machine.handle(.focusRequested))
+            XCTAssertEqual(machine.phase, .open)
+            XCTAssertTrue(machine.openedByKeyboard)
+        }
+    }
+
     func testSecondHotkeyCloses() {
         for start in [Machine(), driven([.pointerEntered]), opened] {
             var machine = start

@@ -17,6 +17,8 @@ final class NotesModule: NotchModule {
     }
     /// The file exists but couldn't be read. Saving stays off, so it is never overwritten with an empty note.
     private(set) var loadFailed = false
+    /// The last save failed. The note is still in memory; the next edit or `stop()` tries again.
+    private(set) var saveFailed = false
 
     @ObservationIgnored private let fileURL: URL
     @ObservationIgnored private let saveDelay: Duration
@@ -46,8 +48,13 @@ final class NotesModule: NotchModule {
             savedText = loaded
             text = loaded
         } catch CocoaError.fileReadNoSuchFile {
-            // First run: no note yet.
+            // First run, or deleted while the module was off: the old text must not be written back. `savedText`
+            // first, so clearing `text` schedules no save.
+            savedText = ""
+            text = ""
         } catch {
+            savedText = ""
+            text = ""
             loadFailed = true
             // The error code only: the path and the note stay out of the log.
             Logger.notes.error("Note read failed: \((error as NSError).domain, privacy: .public) \((error as NSError).code)")
@@ -78,8 +85,9 @@ final class NotesModule: NotchModule {
             // Atomic: a crash mid-write leaves the old note, never half of the new one.
             try Data(text.utf8).write(to: fileURL, options: .atomic)
             savedText = text
+            saveFailed = false
         } catch {
-            // Kept in memory; the next edit or `stop()` tries again.
+            saveFailed = true
             Logger.notes.error("Note save failed: \((error as NSError).domain, privacy: .public) \((error as NSError).code)")
         }
     }
