@@ -4,6 +4,7 @@ import SwiftUI
 struct NowPlayingExpandedView: View {
     let module: NowPlayingModule
     @Environment(\.openURL) private var openURL
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         if let info = module.info {
@@ -14,6 +15,7 @@ struct NowPlayingExpandedView: View {
                         // Verbatim (a String, not a literal): track names are never looked up for translation.
                         Text(info.title ?? info.player.displayName)
                             .font(.subheadline.weight(.semibold))
+                            .contentTransition(.opacity)
                         if module.deniedPlayer == info.player {
                             Button(action: openAutomationSettings) {
                                 // Underlined as well as coloured, so it reads as a link without colour (L6).
@@ -29,6 +31,7 @@ struct NowPlayingExpandedView: View {
                             Text(artist)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
+                                .contentTransition(.opacity)
                         }
                         // An ad can report a zero duration: no bar rather than a dead one.
                         if let duration = info.duration, duration > 0, info.position != nil {
@@ -40,7 +43,10 @@ struct NowPlayingExpandedView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                controls(isPlaying: info.isPlaying)
+                // A new track fades in over the old one. A fade is also what Reduce Motion asks for (L8).
+                .animation(.easeInOut(duration: 0.2), value: info.trackID)
+                .animation(.easeInOut(duration: 0.2), value: info.title)
+                controls(isPlaying: module.isPlaying)
             }
             .lineLimit(1)
             .padding(.horizontal, 24)
@@ -60,10 +66,13 @@ struct NowPlayingExpandedView: View {
         HStack(spacing: 24) {
             control(.previous, "Previous track", systemImage: "backward.fill")
             control(.playPause, isPlaying ? "Pause" : "Play", systemImage: isPlaying ? "pause.fill" : "play.fill")
+                // Play morphs into pause; under Reduce Motion it only fades.
+                .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))
+                .animation(.default, value: isPlaying)
             control(.next, "Next track", systemImage: "forward.fill")
         }
-        // Also covers the wait for the Automation prompt, so clicks don't queue up behind it (D23).
-        .disabled(module.isSending)
+        // Not disabled while a command is in flight: that dimmed the controls on every click. `perform`
+        // still drops clicks until the reply (and the Automation prompt) is back (D23).
     }
 
     private func control(_ command: PlaybackCommand, _ label: LocalizedStringKey, systemImage: String) -> some View {
@@ -74,11 +83,11 @@ struct NowPlayingExpandedView: View {
             Label(label, systemImage: systemImage)
                 .labelStyle(.iconOnly)
                 .font(.title3)
-                // At least the ~24 pt target L7 asks for, with the whole square clickable.
+                // At least the ~24 pt target L7 asks for; the whole highlight circle is clickable.
                 .frame(width: 32, height: 32)
-                .contentShape(Rectangle())
+                .contentShape(Circle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(NowPlayingControlStyle())
     }
 
     private func openAutomationSettings() {

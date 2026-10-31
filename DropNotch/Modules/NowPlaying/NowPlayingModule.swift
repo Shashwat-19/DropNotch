@@ -11,6 +11,9 @@ final class NowPlayingModule: NotchModule {
     private(set) var isSending = false
     /// The player that refused Automation on the last click (D23). A click that gets through clears it.
     private(set) var deniedPlayer: MediaPlayer?
+    /// Play/pause as clicked, shown before the player confirms it. Cleared by the first update that agrees,
+    /// by any update once the command has returned, or at once if the command fails.
+    private(set) var pendingIsPlaying: Bool?
 
     private let source: any NowPlayingSource
     // Not UI state, so Observation should skip it (`@Observable` only tracks `var`s).
@@ -18,12 +21,18 @@ final class NowPlayingModule: NotchModule {
     /// Numbers each click. `stop()` and newer clicks move it on, so a reply that arrives late (the
     /// Automation prompt can stay up indefinitely) can't undo what happened since.
     @ObservationIgnored private var currentClick = 0
+    /// The play/pause command has returned `.ok`: the next update is the player's real state, even if it
+    /// disagrees (a command that changed nothing).
+    @ObservationIgnored private var acceptsNextUpdate = false
 
     init(source: any NowPlayingSource) {
         self.source = source
     }
 
     var hasCompactContent: Bool { info?.isPlaying == true }
+
+    /// What the play/pause button shows: the click's result straight away, the player's state otherwise.
+    var isPlaying: Bool { pendingIsPlaying ?? info?.isPlaying ?? false }
 
     func compactView(slot: CompactSlot) -> AnyView { AnyView(EmptyView()) }
 
@@ -35,7 +44,7 @@ final class NowPlayingModule: NotchModule {
         guard task == nil else { return }
         // Inherits the main actor, so `info` is only touched on the main thread.
         task = Task { [weak self, source] in
-            for await info in source.updates { self?.info = info }
+            for await info in source.updates { self?.receive(info) }
         }
     }
 
@@ -45,7 +54,19 @@ final class NowPlayingModule: NotchModule {
         info = nil
         isSending = false
         deniedPlayer = nil
+        pendingIsPlaying = nil
+        acceptsNextUpdate = false
         currentClick += 1
+    }
+
+    private func receive(_ info: NowPlayingInfo?) {
+        // Music sends bursts (D24): before the command returns, only an update that agrees confirms the click.
+        if pendingIsPlaying != nil,
+           acceptsNextUpdate || info?.isPlaying == pendingIsPlaying || info?.player != self.info?.player {
+            pendingIsPlaying = nil
+            acceptsNextUpdate = false
+        }
+        self.info = info
     }
 
     /// The notch opened: re-read the position, because a seek made in the player may not have sent a
@@ -55,16 +76,27 @@ final class NowPlayingModule: NotchModule {
         source.refresh(player)
     }
 
-    /// Sends `command` to the player on screen. The state change comes back as a notification, so
-    /// nothing here guesses the new state.
+    /// Sends `command` to the player on screen. Play/pause flips `isPlaying` at once; everything else waits
+    /// for the player's notification.
     func perform(_ command: PlaybackCommand) async {
-        guard let player = info?.player, !isSending else { return }
+        guard let info, !isSending else { return }
+        let player = info.player
         isSending = true
         currentClick += 1
         let click = currentClick
+        if command == .playPause { pendingIsPlaying = !isPlaying }
         let outcome = await source.send(command, to: player)
         guard click == currentClick else { return }
         isSending = false
+        if pendingIsPlaying != nil {
+            if outcome == .ok {
+                acceptsNextUpdate = true
+                // A command that changes nothing sends no notification; this read settles the icon either way.
+                source.refresh(player)
+            } else {
+                pendingIsPlaying = nil
+            }
+        }
         switch outcome {
         case .denied:
             deniedPlayer = player
