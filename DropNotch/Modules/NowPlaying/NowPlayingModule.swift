@@ -99,7 +99,9 @@ final class NowPlayingModule: NotchModule {
                 // moment. One wake per click, never repeating (ARCHITECTURE §9).
                 settleTask = Task { [weak self, settleDelay] in
                     try? await Task.sleep(for: settleDelay)
-                    guard let self, !Task.isCancelled, click == self.currentClick else { return }
+                    // Not tied to `currentClick`: a skip or seek straight after must not keep the guess forever.
+                    // `stop()` and the next play/pause cancel this instead.
+                    guard let self, !Task.isCancelled else { return }
                     self.pendingIsPlaying = nil
                 }
             } else {

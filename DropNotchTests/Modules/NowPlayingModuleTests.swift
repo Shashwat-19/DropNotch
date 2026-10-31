@@ -276,6 +276,16 @@ final class NowPlayingModuleTests: XCTestCase {
         await second.value
     }
 
+    func testASkipStraightAfterDoesNotStopTheSettle() async throws {
+        let (module, _) = await moduleShowing(NowPlayingInfo(player: .music, state: .paused),
+                                              settleDelay: .milliseconds(10))
+        await module.perform(.playPause)
+        await module.perform(.next)
+        for _ in 0..<100 where module.pendingIsPlaying != nil { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertNil(module.pendingIsPlaying)
+        XCTAssertFalse(module.isPlaying)
+    }
+
     func testAFailedSkipKeepsAConfirmedPlayPausePending() async {
         let (module, source) = await moduleShowing(NowPlayingInfo(player: .music, state: .paused))
         await module.perform(.playPause)
