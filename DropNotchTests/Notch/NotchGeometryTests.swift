@@ -140,4 +140,84 @@ final class NotchGeometryTests: XCTestCase {
         }
         XCTAssertEqual(NotchGeometry.topOverhang, 1)
     }
+    // MARK: Compact slots (D28)
+
+    func testCompactFrameAddsASquareWingEachSideOfTheNotch() {
+        let geometry = notched(screen)
+        let closed = geometry.closedFrame
+        XCTAssertEqual(geometry.wingWidth, inset)
+        XCTAssertEqual(geometry.compactFrame, CGRect(x: closed.minX - inset, y: closed.minY,
+                                                     width: closed.width + 2 * inset, height: closed.height))
+        XCTAssertEqual(geometry.compactFrame.midX, closed.midX)
+        XCTAssertEqual(geometry.compactFrame.maxY, screen.maxY)
+    }
+
+    func testCompactPeekFrameGrowsFromTheCompactFrame() {
+        for geometry in [notched(screen), notched(screen, inset: 33.5, scale: 2), plain(screen)] {
+            let compact = geometry.compactFrame, peek = geometry.compactPeekFrame
+            XCTAssertEqual(peek.width, compact.width + NotchGeometry.peekGrowth.width)
+            XCTAssertEqual(peek.height, compact.height + NotchGeometry.peekGrowth.height)
+            XCTAssertEqual(peek.maxY, compact.maxY)
+            XCTAssertEqual(peek.midX, compact.midX)
+            XCTAssertTrue(peek.contains(compact))
+            XCTAssertTrue(peek.contains(geometry.peekFrame))
+        }
+    }
+
+    func testPillWithoutANotchAlsoGetsWings() {
+        let geometry = plain(screen, menuBarHeight: 25)
+        XCTAssertEqual(geometry.wingWidth, 25)
+        XCTAssertEqual(geometry.compactFrame.width, NotchGeometry.pillWidth + 50)
+        XCTAssertEqual(geometry.compactFrame.height, 25)
+        XCTAssertEqual(geometry.compactFrame.midX, screen.midX)
+        XCTAssertEqual(geometry.compactFrame.maxY, screen.maxY)
+    }
+
+    func testFrameForPhasePicksTheCompactVariantsWhileClosedOrPeeking() {
+        let geometry = notched(screen)
+        XCTAssertEqual(geometry.frame(for: .closed, compact: true), geometry.compactFrame)
+        XCTAssertEqual(geometry.frame(for: .peek, compact: true), geometry.compactPeekFrame)
+        XCTAssertEqual(geometry.frame(for: .open, compact: true), geometry.openFrame)
+        XCTAssertEqual(geometry.frame(for: .closed, compact: false), geometry.closedFrame)
+        XCTAssertEqual(geometry.frame(for: .peek, compact: false), geometry.peekFrame)
+        XCTAssertEqual(geometry.frame(for: .open, compact: false), geometry.openFrame)
+    }
+
+    func testCompactPanelFrameAddsTheTopOverhangOnly() {
+        let geometry = notched(screen)
+        for phase in [NotchHoverStateMachine.Phase.closed, .peek, .open] {
+            let shape = geometry.frame(for: phase, compact: true), panel = geometry.panelFrame(for: phase, compact: true)
+            XCTAssertEqual(panel, CGRect(x: shape.minX, y: shape.minY, width: shape.width,
+                                         height: shape.height + NotchGeometry.topOverhang), "\(phase)")
+        }
+        XCTAssertEqual(geometry.panelFrame(for: .open, compact: true), geometry.panelFrame(for: .open))
+    }
+
+    // The open frame is the canvas for every shape (D19), so it must hold the compact ones too.
+    func testOpenFrameContainsEveryFrame() {
+        for geometry in [notched(screen), notched(screen, inset: 33.5, scale: 1), plain(screen),
+                         NotchGeometry(screenFrame: screen, safeAreaTop: inset, auxLeftWidth: 100,
+                                       auxRightWidth: 100, menuBarHeight: inset, backingScale: 2)] {
+            for rect in [geometry.closedFrame, geometry.peekFrame, geometry.compactFrame, geometry.compactPeekFrame] {
+                XCTAssertTrue(geometry.openFrame.contains(rect), "\(rect)")
+            }
+        }
+    }
+
+    func testCompactFramesStayPixelAlignedForAFractionalInset() {
+        let geometry = notched(screen, inset: 33.5, scale: 2)
+        XCTAssertEqual(geometry.wingWidth, 33.5)
+        XCTAssertEqual(geometry.compactFrame.height, 33.5)
+        XCTAssertEqual(geometry.compactFrame.width, geometry.closedFrame.width + 67)
+        let frame = CGRect(x: 0.25, y: -0.75, width: 1501, height: 999)
+        for scale: CGFloat in [1, 2] {
+            let fractional = notched(frame, inset: 33.5, scale: scale)
+            for rect in [fractional.compactFrame, fractional.compactPeekFrame] {
+                for edge in [rect.minX, rect.maxX, rect.minY, rect.maxY] {
+                    let pixels = edge * scale
+                    XCTAssertEqual(pixels, pixels.rounded(), "edge \(edge) at scale \(scale)")
+                }
+            }
+        }
+    }
 }

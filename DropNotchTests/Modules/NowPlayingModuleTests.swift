@@ -34,12 +34,14 @@ final class NowPlayingModuleTests: XCTestCase {
     }
 
     /// A started module showing `info`, and its source.
-    /// `settleDelay` and `artworkHold` default to longer than any test, so a click only settles, and a held
-    /// artwork only expires, when a test asks for it.
+    /// `settleDelay`, `artworkHold` and `compactGrace` default to longer than any test, so a click only settles,
+    /// a held artwork only expires, and the compact grace only ends, when a test asks for it.
     private func moduleShowing(_ info: NowPlayingInfo, settleDelay: Duration = .seconds(600),
-                               artworkHold: Duration = .seconds(600)) async -> (NowPlayingModule, FakeSource) {
+                               artworkHold: Duration = .seconds(600), compactGrace: Duration = .seconds(600))
+        async -> (NowPlayingModule, FakeSource) {
         let source = FakeSource(stream: AsyncStream { _ in })
-        let module = NowPlayingModule(source: source, settleDelay: settleDelay, artworkHold: artworkHold)
+        let module = NowPlayingModule(source: source, settleDelay: settleDelay, artworkHold: artworkHold,
+                                      compactGrace: compactGrace)
         await start(module, source, showing: info)
         return (module, source)
     }
@@ -623,5 +625,91 @@ final class NowPlayingModuleTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(50)) // past the old hold
         XCTAssertNil(module.shown?.artwork)
         XCTAssertEqual(module.shown?.trackID, "U")
+    }
+    // MARK: D28: compact slots and the grace after a pause
+
+    /// Polls until the grace has hidden the compact slots, up to 5 s.
+    private func waitForCompactToHide(_ module: NowPlayingModule) async throws {
+        for _ in 0..<500 where module.hasCompactContent { try await Task.sleep(for: .milliseconds(10)) }
+    }
+
+    func testCompactShowsWhilePlaying() async {
+        let (module, source) = await moduleShowing(music(.playing, at: 0))
+        XCTAssertTrue(module.hasCompactContent)
+        await deliver(music(.playing, at: 1), to: module, source)
+        XCTAssertTrue(module.hasCompactContent)
+    }
+
+    func testCompactStaysRightAfterAPauseAndHidesOnceTheGracePasses() async throws {
+        let (module, source) = await moduleShowing(music(.playing, at: 0), compactGrace: .milliseconds(20))
+        await deliver(music(.paused, at: 1), to: module, source)
+        XCTAssertTrue(module.hasCompactContent, "a pause must not hide the slots at once")
+        try await waitForCompactToHide(module)
+        XCTAssertFalse(module.hasCompactContent)
+        XCTAssertNotNil(module.info, "the track is still loaded; only the slots hide")
+    }
+
+    // A stopped player with a track loaded counts as not playing too.
+    func testAStoppedPlayerAlsoGetsTheGrace() async throws {
+        let (module, source) = await moduleShowing(music(.playing, at: 0))
+        await deliver(music(.stopped, at: nil), to: module, source)
+        XCTAssertTrue(module.hasCompactContent)
+    }
+
+    // Margins are wide (hundreds of ms) so a slow CI run can't make these flap.
+    func testPlayingAgainWithinTheGraceKeepsItAndALaterPauseStartsAFreshGrace() async throws {
+        let grace = Duration.milliseconds(400)
+        let (module, source) = await moduleShowing(music(.playing, at: 0), compactGrace: grace)
+        await deliver(music(.paused, at: 1), to: module, source)
+        await deliver(music(.playing, at: 1), to: module, source)
+        try await Task.sleep(for: .milliseconds(250))
+        await deliver(music(.paused, at: 2), to: module, source)
+        try await Task.sleep(for: .milliseconds(250)) // past the first grace, inside the second
+        XCTAssertTrue(module.hasCompactContent, "the first grace was cancelled by playing again")
+        try await waitForCompactToHide(module)
+        XCTAssertFalse(module.hasCompactContent)
+    }
+
+    func testRepeatedPausedUpdatesDoNotExtendTheGrace() async throws {
+        let (module, source) = await moduleShowing(music(.playing, at: 0), compactGrace: .milliseconds(400))
+        await deliver(music(.paused, at: 1), to: module, source)
+        try await Task.sleep(for: .milliseconds(250))
+        await deliver(music(.paused, at: 1), to: module, source)
+        let secondPause = ContinuousClock.now
+        try await waitForCompactToHide(module)
+        XCTAssertFalse(module.hasCompactContent)
+        // The first grace ends ~150 ms after the second update; a restarted one would take 400 ms.
+        XCTAssertLessThan(ContinuousClock.now - secondPause, .milliseconds(350))
+    }
+
+    func testNoTrackHidesAtOnceEvenDuringTheGrace() async {
+        let (module, source) = await moduleShowing(music(.playing, at: 0))
+        await deliver(nil, to: module, source)
+        XCTAssertFalse(module.hasCompactContent)
+        await deliver(music(.playing, at: 0), to: module, source)
+        await deliver(music(.paused, at: 1), to: module, source)
+        XCTAssertTrue(module.hasCompactContent)
+        await deliver(nil, to: module, source)
+        XCTAssertFalse(module.hasCompactContent)
+    }
+
+    func testNeverShowsIfItNeverPlayed() async throws {
+        let (module, source) = await moduleShowing(music(.paused, at: 0), compactGrace: .milliseconds(10))
+        XCTAssertFalse(module.hasCompactContent)
+        await deliver(music(.paused, at: 1), to: module, source)
+        try await Task.sleep(for: .milliseconds(50))
+        XCTAssertFalse(module.hasCompactContent)
+    }
+
+    // After stop() and a restart, an old grace must not fire into the new session.
+    func testStopClearsCompactAndAPendingGraceCannotFlipItLater() async throws {
+        let (module, source) = await moduleShowing(music(.playing, at: 0), compactGrace: .milliseconds(20))
+        await deliver(music(.paused, at: 1), to: module, source)
+        module.stop()
+        XCTAssertFalse(module.hasCompactContent)
+        await start(module, source, showing: music(.playing, at: 0))
+        XCTAssertTrue(module.hasCompactContent)
+        try await Task.sleep(for: .milliseconds(100)) // past the old grace
+        XCTAssertTrue(module.hasCompactContent)
     }
 }
