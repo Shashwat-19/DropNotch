@@ -277,6 +277,21 @@ final class FileTrayModuleTests: XCTestCase {
         XCTAssertEqual(try String(contentsOf: sentinel, encoding: .utf8), "keep")
     }
 
+    // security-auditor M1: a planted symlink as the item folder must not turn Remove into a delete elsewhere.
+    func testRemovingACopyWhoseFolderIsASymlinkDeletesNothingThroughIt() throws {
+        let document = try original("thesis.docx", "keep")
+        let item = TrayItem(id: UUID(), name: "thesis.docx", copyFolder: UUID())
+        try FileManager.default.createDirectory(at: storageURL, withIntermediateDirectories: true)
+        let folder = storageURL.appending(path: item.copyFolder!.uuidString)
+        try FileManager.default.createSymbolicLink(at: folder, withDestinationURL: document.deletingLastPathComponent())
+        try writeTray([item])
+        let module = makeModule()
+        module.start()
+        module.clear()
+        XCTAssertEqual(try String(contentsOf: document, encoding: .utf8), "keep")
+        XCTAssertTrue(module.items.isEmpty)
+    }
+
     // MARK: - Edited tray.json
 
     func testUnsafeCopyNamesAreDroppedAndNothingOutsideStorageIsDeleted() throws {

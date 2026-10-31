@@ -197,7 +197,9 @@ final class FileTrayModule: NotchModule {
         // The source app chose the name and wrote the file; anything outside the folder we gave it isn't ours.
         // Folders compared by path, as a promised folder's URL can end in "/" (code-reviewer W2).
         let ours = item.hasSafeName && url.deletingLastPathComponent().standardizedFileURL.path == folder.standardizedFileURL.path
-        guard error == nil, ours, let location = copyURL(item) else {
+        // A promised symlink could point at a file the source can't read itself, which Share would then send (L1).
+        let isLink = (try? url.resourceValues(forKeys: [.isSymbolicLinkKey]))?.isSymbolicLink == true
+        guard error == nil, ours, !isLink, let location = copyURL(item) else {
             if let error {
                 Logger.tray.error("Promise failed: \((error as NSError).domain, privacy: .public) \((error as NSError).code)")
             }
@@ -220,14 +222,26 @@ final class FileTrayModule: NotchModule {
     /// Deletes a copy and its folder once empty. `copyURL` keeps the path inside the tray's storage, and
     /// `removeItem` deletes a symlink itself, never what it points to.
     private func deleteCopy(of item: TrayItem) {
-        guard let url = copyURL(item) else { return }
+        guard let url = copyURL(item), isOwnFolder(url.deletingLastPathComponent()) else { return }
         try? FileManager.default.removeItem(at: url)
         removeFolderIfEmpty(url.deletingLastPathComponent())
     }
 
     private func removeFolderIfEmpty(_ folder: URL) {
+        guard isOwnFolder(folder) else { return }
         if (try? FileManager.default.contentsOfDirectory(atPath: folder.path))?.isEmpty == true {
             try? FileManager.default.removeItem(at: folder)
+        }
+    }
+
+    /// Whether the storage folder and this item folder are real folders, not symlinks. Another process could plant
+    /// `Tray/<UUID>` → ~/Documents and a copy item named after a document there; Remove would then delete the
+    /// document (security-auditor M1). `attributesOfItem` doesn't follow a symlink in the last component.
+    // shortcut: checked, then deleted by path, so a swap in between still wins; upgrade to `openat`/`unlinkat`
+    // with O_NOFOLLOW if the tray ever deletes on another process's schedule.
+    private func isOwnFolder(_ folder: URL) -> Bool {
+        [storageURL, folder].allSatisfy {
+            (try? FileManager.default.attributesOfItem(atPath: $0.path))?[.type] as? FileAttributeType == .typeDirectory
         }
     }
 

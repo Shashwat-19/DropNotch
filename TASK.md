@@ -267,7 +267,7 @@ Device checks (Debug build is enough: no entitlement or signing change; notched 
 
 Drop files on the notch (closed, compact or open) to add them to a Tray tab; the notch opens on Tray while a drag is over it. Drag items out to Finder or other apps (copies only, originals stay put); AirDrop and Share for the selection, or all files when nothing is selected; remove, clear all; the tray persists across relaunches. Package search (dependency-manager, 2026-10-31): nothing worth adding, only small MIT bookmark wrappers.
 
-**Status (2026-10-31):** built; 309 tests, 0 failures before test-writer.
+**Status (2026-10-31):** built. test-writer: 26 tests (found a /private dedupe bug, fixed). code-reviewer: Approve with changes (W1 copied empty-state string reworded, W2 promised folders and partial writes, S2, S3 AirDrop service kept, S5 applied; S1, S4 recorded in D32). security-auditor: Pass with changes (M1 symlinked item folder could turn Remove into a delete elsewhere, fixed with a test; L1 promised symlinks refused; L2–L6 recorded in D32). 335 tests, 0 failures. Device checks 45–50 pending.
 
 Out of this branch: Quick Look and thumbnails, open/reveal in Finder, text and link drops, keyboard access to tiles and actions.
 
