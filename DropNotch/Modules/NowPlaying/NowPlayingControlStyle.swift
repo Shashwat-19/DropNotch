@@ -12,6 +12,8 @@ struct NowPlayingControlStyle: ButtonStyle {
     private struct Control: View {
         let configuration: ButtonStyleConfiguration
         @State private var isHovered = false
+        /// Keyboard focus (D30) shows the same circle as hover.
+        @Environment(\.isFocused) private var isFocused
         @Environment(\.accessibilityReduceMotion) private var reduceMotion
         @Environment(\.colorSchemeContrast) private var contrast
 
@@ -23,8 +25,8 @@ struct NowPlayingControlStyle: ButtonStyle {
                 // because its spacing, which decides when shapes merge, isn't documented; add it if
                 // performance-optimizer measures the three circles as costly.
                 configuration.label
-                    .glassEffect(isHovered || configuration.isPressed ? .regular.interactive() : .identity, in: .circle)
-                    .animation(.easeOut(duration: 0.15), value: isHovered)
+                    .glassEffect(isHovered || isFocused || configuration.isPressed ? .regular.interactive() : .identity, in: .circle)
+                    .animation(.easeOut(duration: 0.15), value: isHovered || isFocused)
                     .onHover { isHovered = $0 }
             } else {
                 configuration.label
@@ -38,7 +40,7 @@ struct NowPlayingControlStyle: ButtonStyle {
         private var highlight: Double {
             let strong = contrast == .increased
             if configuration.isPressed { return strong ? 0.35 : 0.25 }
-            return isHovered ? (strong ? 0.2 : 0.12) : 0
+            return isHovered || isFocused ? (strong ? 0.2 : 0.12) : 0
         }
     }
 }

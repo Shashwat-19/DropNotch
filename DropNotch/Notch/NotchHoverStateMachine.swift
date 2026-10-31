@@ -1,4 +1,4 @@
-/// Hover logic for the notch: closed → peek → open (ARCHITECTURE.md §4, D18).
+/// Hover logic for the notch: closed → peek → open (ARCHITECTURE.md §4, D18), plus the hotkey (D30).
 /// A pure value type: it only decides the next phase and which timer to run, and
 /// `NotchState` runs the timers. That keeps it testable without a window or a clock.
 struct NotchHoverStateMachine {
@@ -12,6 +12,10 @@ struct NotchHoverStateMachine {
 
     enum Event: Hashable {
         case pointerEntered, pointerExited, openDelayElapsed, exitDebounceElapsed
+        /// The global shortcut: opens the notch with keyboard focus, or closes a notch it opened (D30).
+        case hotkeyPressed
+        /// Escape, or the panel lost keyboard focus. Closes only a notch the hotkey opened (D30).
+        case dismissed
         /// The pointer moved inside the panel: screen x in points, event time in seconds.
         case pointerMoved(x: Double, time: Double)
     }
@@ -32,6 +36,8 @@ struct NotchHoverStateMachine {
 
     private(set) var phase = Phase.closed
     private(set) var pointerInside = false
+    /// Opened by the hotkey: the panel holds keyboard focus and the pointer leaving doesn't close it (D30).
+    private(set) var openedByKeyboard = false
     /// The open delay ran out during peek while the pointer was briefly outside.
     private var openDue = false
     /// The previous move inside the panel, for the sweep speed. Cleared on enter and exit,
@@ -71,8 +77,19 @@ struct NotchHoverStateMachine {
             guard phase == .peek, let previous else { return nil }
             let speed = abs(x - previous.x) / (time - previous.time)
             return speed > Self.sweepSpeed ? .startOpenDelay : nil
+        case .hotkeyPressed:
+            // A hover-opened notch takes focus rather than closing under the pointer.
+            openedByKeyboard.toggle()
+            phase = openedByKeyboard ? .open : .closed
+            openDue = false
+            return nil
+        case .dismissed:
+            guard openedByKeyboard else { return nil }
+            openedByKeyboard = false
+            phase = .closed
+            return nil
         case .exitDebounceElapsed:
-            guard !pointerInside, phase != .closed else { return nil }
+            guard !pointerInside, !openedByKeyboard, phase != .closed else { return nil }
             let wasPeek = phase == .peek
             phase = .closed
             openDue = false

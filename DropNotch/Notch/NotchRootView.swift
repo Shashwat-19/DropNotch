@@ -40,6 +40,8 @@ struct NotchRootView: View {
             // The panel overlaps the camera housing; without this SwiftUI would push
             // the content below the screen's safe area.
             .ignoresSafeArea()
+            // Escape with a control focused can stop in SwiftUI before reaching `NotchPanel.cancelOperation` (D30).
+            .onExitCommand { state.send(.dismissed) }
     }
 
     /// The compact wings either side of the notch (D8, D28), at the closed height so peek doesn't move them.

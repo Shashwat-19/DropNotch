@@ -39,6 +39,7 @@ final class NotchState {
         hover = NotchHoverStateMachine()
         displayedPhase = .closed
         displaysCompact = wantsCompact
+        syncKeyFocus()
 
         let screens = NSScreen.screens.compactMap { screen in
             screen.displayID.map { (id: $0, screen: screen, geometry: NotchGeometry(screen: screen)) }
@@ -79,6 +80,21 @@ final class NotchState {
             break
         }
         show(hover.phase)
+        syncKeyFocus()
+    }
+
+    /// Makes the panel key when the hotkey opens the notch, and hands focus back when it closes (D30).
+    private func syncKeyFocus() {
+        guard let panel, panel.acceptsKeyboard != hover.openedByKeyboard else { return }
+        // Set first: giving focus back calls `onDismiss`, which sends `.dismissed` and lands here again.
+        panel.acceptsKeyboard = hover.openedByKeyboard
+        Logger.notch.debug("Keyboard focus \(panel.acceptsKeyboard ? "taken" : "returned", privacy: .public)")
+        if panel.acceptsKeyboard {
+            // Key without activating DropNotch: the panel is non-activating.
+            panel.makeKeyAndOrderFront(nil)
+        } else {
+            panel.returnKeyFocus()
+        }
     }
 
     /// Widens or narrows the shape when a module starts or stops filling a compact slot (D28).

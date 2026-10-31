@@ -1,4 +1,5 @@
 import AppKit
+import KeyboardShortcuts
 
 /// Owns the AppKit side of the app: the notch panel and its screen observer (D16).
 @MainActor
@@ -12,9 +13,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     static let isTestHost = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        notchState.panel = NotchPanel(contentView: NotchHostingView(rootView: NotchRootView(state: notchState, registry: registry)))
-        // A test run must never start real modules: no player permission checks or Apple Events.
-        if !Self.isTestHost { registry.start() }
+        let panel = NotchPanel(contentView: NotchHostingView(rootView: NotchRootView(state: notchState, registry: registry)))
+        panel.onDismiss = { [notchState] in notchState.send(.dismissed) }
+        notchState.panel = panel
+        // A test run must never start real modules (no player permission checks or Apple Events) or take
+        // the user's global shortcut.
+        if !Self.isTestHost {
+            registry.start()
+            // Inherits the main actor. The stream ends only with the app.
+            Task { [notchState] in
+                for await _ in KeyboardShortcuts.events(.keyDown, for: .toggleNotch) {
+                    notchState.send(.hotkeyPressed)
+                }
+            }
+        }
         notchState.screensChanged()
         followCompactContent()
         screenObserver = ScreenObserver { [notchState] in notchState.screensChanged() }
@@ -32,4 +44,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         registry.stop()
     }
+}
+
+extension KeyboardShortcuts.Name {
+    /// Opens and closes the notch with keyboard focus (D30). ⌃⌥N: N for notch; not a macOS default.
+    static let toggleNotch = Self("toggleNotch", initial: .init(.n, modifiers: [.control, .option]))
 }

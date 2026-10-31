@@ -9,6 +9,8 @@ struct NowPlayingExpandedView: View {
     /// the first appearance shows the current ones.
     @State private var displayedText: TrackText?
     @State private var textOpacity = 1.0
+    /// Keyboard focus. Only the hotkey makes the panel key, so this stays nil while hovering (D30).
+    @FocusState private var focus: Focus?
 
     var body: some View {
         if let info = module.shown {
@@ -32,6 +34,7 @@ struct NowPlayingExpandedView: View {
                             .buttonStyle(.plain)
                             .foregroundStyle(.link)
                             .font(.subheadline)
+                            .keyboardControl(Focus.settingsLink, focus: $focus, action: openAutomationSettings)
                         } else if let artist = text.artist {
                             Text(artist)
                                 .font(.subheadline)
@@ -49,6 +52,8 @@ struct NowPlayingExpandedView: View {
                 }
                 controls(isPlaying: module.isPlaying)
             }
+            .defaultFocus($focus, .playPause)
+            .onMoveCommand { moveFocus($0, denied: module.deniedPlayer == info.player) }
             .lineLimit(1)
             .padding(.horizontal, 24)
             // One group named after the module, so VoiceOver announces where the controls belong (L4).
@@ -81,9 +86,8 @@ struct NowPlayingExpandedView: View {
     }
 
     private func control(_ command: PlaybackCommand, _ label: LocalizedStringKey, systemImage: String) -> some View {
-        Button {
-            Task { await module.perform(command) }
-        } label: {
+        let action = { _ = Task { await module.perform(command) } }
+        return Button(action: action) {
             // Icon-only on screen; VoiceOver reads the label.
             Label(label, systemImage: systemImage)
                 .labelStyle(.iconOnly)
@@ -93,6 +97,21 @@ struct NowPlayingExpandedView: View {
                 .contentShape(Circle())
         }
         .buttonStyle(NowPlayingControlStyle())
+        .keyboardControl(Focus(command), focus: $focus, action: action)
+    }
+
+    /// Arrows step through the controls in reading order and stop at either end (D30).
+    private func moveFocus(_ direction: MoveCommandDirection, denied: Bool) {
+        let order = (denied ? [Focus.settingsLink] : []) + [.previous, .playPause, .next]
+        guard let current = focus, let index = order.firstIndex(of: current) else {
+            focus = .playPause
+            return
+        }
+        switch direction {
+        case .left, .up: focus = order[max(index - 1, 0)]
+        case .right, .down: focus = order[min(index + 1, order.count - 1)]
+        @unknown default: break
+        }
     }
 
     /// The old text fades out, then the current one fades in, 0.12 s each, so the two never overlap. A fade is
@@ -116,6 +135,18 @@ struct NowPlayingExpandedView: View {
         }
     }
 
+    private enum Focus: Hashable {
+        case settingsLink, previous, playPause, next
+
+        init(_ command: PlaybackCommand) {
+            switch command {
+            case .previous: self = .previous
+            case .next: self = .next
+            case .playPause, .seek: self = .playPause
+            }
+        }
+    }
+
     /// The title and artist lines, compared to tell when a new track's text should fade in.
     private struct TrackText: Equatable {
         var title: String
@@ -125,5 +156,18 @@ struct NowPlayingExpandedView: View {
             title = info.title ?? info.player.displayName
             artist = info.title == nil ? nil : info.artist
         }
+    }
+}
+
+private extension View {
+    /// A button that Tab and the arrow keys reach, and Space or Return presses (D30). `.edit`, not `.activate`:
+    /// activate-focus on macOS only works with the system's keyboard navigation setting on.
+    func keyboardControl<ID: Hashable>(_ id: ID, focus: FocusState<ID?>.Binding, action: @escaping () -> Void) -> some View {
+        focusable(interactions: .edit)
+            .focused(focus, equals: id)
+            .onKeyPress(keys: [.space, .return]) { _ in
+                action()
+                return .handled
+            }
     }
 }

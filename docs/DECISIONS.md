@@ -801,3 +801,18 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 **Alternatives:** Whole-point frames in `NotchGeometry` itself. Rejected: the shape frames would lose their pixel alignment to the hardware notch; only the window needs whole points.
 
 **Trade-off:** the panel can be up to 1 pt wider and 1 pt taller than the shape at its bottom and sides, so the hover area grows by that much.
+
+## D30. Global hotkey opens the notch with keyboard focus (revises D16)
+
+**Date:** 2026-10-31 · **Status:** Accepted (Shash chose ⌃⌥N, 2026-10-31; closes carry-overs L1–L3)
+
+**Decision:**
+- `KeyboardShortcuts.Name.toggleNotch`, default ⌃⌥N (not a macOS default; ⌃⌥Space switches input source, ⌥⌘Space opens Finder search). Listened to through `KeyboardShortcuts.events(.keyDown, for:)`, the package's recommended API; not registered in the test host. Rebinding comes with Settings.
+- The hover machine gains `.hotkeyPressed` and `.dismissed` and an `openedByKeyboard` flag. The hotkey toggles the flag: from closed or peek it opens; from a hover-opened notch it takes focus instead of closing under the pointer; a second press closes. While the flag is set, the pointer leaving doesn't close the notch. `.dismissed` (Escape, or the panel losing key status, e.g. a click in another app) closes only a hotkey-opened notch.
+- `NotchPanel.canBecomeKey` follows the flag, so hover still never takes keyboard focus (D16 kept for hover). `NotchState` makes the panel key on open (non-activating, so DropNotch is never activated) and, on close, orders the panel out and straight back in, which hands key focus back to the app in front: that app stayed active throughout [I: window-server behaviour; device check].
+- Controls are `.focusable(interactions: .edit)`: `.activate` focus needs the system's keyboard-navigation setting on macOS [V: developer.apple.com, FocusInteractions]. Tab moves between them, the arrows step through them in reading order (stopping at the ends), Space and Return press the focused one, play/pause starts focused. A focused control shows the hover circle.
+- Escape is handled twice, idempotently: `NotchPanel.cancelOperation` and `.onExitCommand` on the root view, because SwiftUI can consume Escape while a control is focused [I].
+
+**Alternatives:** Hotkey on a hover-opened notch closes it (rejected: the notch would close under the pointer and re-opening needs the pointer to leave first). A separate key panel for keyboard use (rejected: two windows to keep in sync). Panel-level AppKit key handling with a hand-drawn focus index (rejected: more code, and the module would have to publish its controls).
+
+**Not done (L3):** keeping the notch open while VoiceOver focus is inside a hover-opened notch; the progress bar is not reachable by keyboard (VoiceOver can still adjust it).

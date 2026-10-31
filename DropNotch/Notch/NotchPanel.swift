@@ -65,7 +65,32 @@ final class NotchPanel: NSPanel {
         frameRect
     }
 
-    // Phase 2 has no text input, so the panel never takes keyboard focus.
-    override var canBecomeKey: Bool { false }
+    /// True only while the hotkey holds the notch open (D30, revises D16). Hover never makes the panel key,
+    /// so typing in the app in front keeps working.
+    var acceptsKeyboard = false
+    /// Escape, or keyboard focus moved elsewhere (a click in another app, or `returnKeyFocus()`).
+    var onDismiss: (@MainActor () -> Void)?
+
+    override var canBecomeKey: Bool { acceptsKeyboard }
     override var canBecomeMain: Bool { false }
+
+    // AppKit sends Escape here when no view in the panel handles it.
+    override func cancelOperation(_ sender: Any?) {
+        onDismiss?()
+    }
+
+    // Overriding is fine; only calling `resignKey()` directly is discouraged.
+    override func resignKey() {
+        super.resignKey()
+        onDismiss?()
+    }
+
+    /// Gives keyboard focus back to the app in front. The panel is non-activating, so that app stayed active
+    /// the whole time; ordering the panel out makes the window server hand key focus back to its window, and
+    /// ordering it straight back in keeps the closed notch on screen.
+    func returnKeyFocus() {
+        guard isKeyWindow else { return }
+        orderOut(nil)
+        orderFrontRegardless()
+    }
 }
