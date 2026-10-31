@@ -16,7 +16,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // A test run must never start real modules: no player permission checks or Apple Events.
         if !Self.isTestHost { registry.start() }
         notchState.screensChanged()
+        followCompactContent()
         screenObserver = ScreenObserver { [notchState] in notchState.screensChanged() }
+    }
+
+    /// Widens the closed notch while a module fills a compact slot (D28). Observation reports one change and
+    /// then has to be asked again; `onChange` runs before the new value is stored, so re-read on the next turn.
+    private func followCompactContent() {
+        let shown = withObservationTracking { registry.hasCompactContent } onChange: { [weak self] in
+            Task { @MainActor in self?.followCompactContent() }
+        }
+        notchState.setCompact(shown)
     }
 
     func applicationWillTerminate(_ notification: Notification) {

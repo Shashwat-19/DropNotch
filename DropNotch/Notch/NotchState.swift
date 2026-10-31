@@ -11,6 +11,8 @@ final class NotchState {
     /// `.closed` but the panel keeps its larger frame until the animation ends (D19).
     private(set) var displayedPhase = NotchHoverStateMachine.Phase.closed
     private(set) var geometry: NotchGeometry?
+    /// Whether the shape is drawn with the compact wings (D28). Changes together with `displayedPhase`.
+    private(set) var displaysCompact = false
 
     // Strong reference cycle (state → panel → hosting view → root view → state), on
     // purpose: AppDelegate keeps all of them for the app's lifetime.
@@ -21,6 +23,8 @@ final class NotchState {
     /// Bumped on every phase change and screen change, so a close animation's completion
     /// can tell whether anything happened after it started (D19).
     @ObservationIgnored private var changeCount = 0
+    /// What the registry last reported; `displaysCompact` follows it through `show` (D28).
+    @ObservationIgnored private var wantsCompact = false
 
     // No bounce: an overshoot past the open size would be cut flat by the panel's edges.
     private static let spring = Animation.spring(duration: 0.25, bounce: 0)
@@ -34,6 +38,7 @@ final class NotchState {
         changeCount += 1
         hover = NotchHoverStateMachine()
         displayedPhase = .closed
+        displaysCompact = wantsCompact
 
         let screens = NSScreen.screens.compactMap { screen in
             screen.displayID.map { (id: $0, screen: screen, geometry: NotchGeometry(screen: screen)) }
@@ -47,7 +52,7 @@ final class NotchState {
         }
         Logger.notch.debug("Notch panel on display \(id), notch: \(chosen.geometry.hasNotch)")
         geometry = chosen.geometry
-        setPanelFrame(chosen.geometry.panelFrame(for: .closed), reason: "screen change")
+        setPanelFrame(chosen.geometry.panelFrame(for: .closed, compact: wantsCompact), reason: "screen change")
         // Shows the panel without activating DropNotch.
         panel.orderFrontRegardless()
     }
@@ -76,6 +81,13 @@ final class NotchState {
         show(hover.phase)
     }
 
+    /// Widens or narrows the shape when a module starts or stops filling a compact slot (D28).
+    func setCompact(_ compact: Bool) {
+        guard compact != wantsCompact else { return }
+        wantsCompact = compact
+        show(hover.phase)
+    }
+
     private func startTimer(_ delay: Duration, then event: NotchHoverStateMachine.Event) {
         timers[event]?.cancel()
         let name = "\(event)"
@@ -96,34 +108,35 @@ final class NotchState {
 
     /// Grow: enlarge the panel first, then animate the shape into the new space.
     /// Shrink: animate the shape first, then shrink the panel once the animation ends (D19).
+    /// The same holds for the compact wings (D28).
     private func show(_ phase: NotchHoverStateMachine.Phase) {
-        guard phase != displayedPhase, let geometry, let panel else { return }
+        let compact = wantsCompact
+        guard phase != displayedPhase || compact != displaysCompact, let geometry, let panel else { return }
         changeCount += 1
-        let step = "\(displayedPhase) → \(phase), change \(changeCount)"
+        let step = "\(displayedPhase) → \(phase), compact \(compact), change \(changeCount)"
         Logger.notch.debug("Show \(step, privacy: .public)")
         let animation = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil : Self.spring
-        if phase == .closed {
-            let started = changeCount
-            withAnimation(animation) {
-                displayedPhase = .closed
-            } completion: { [weak self] in
-                // Skip if the pointer came back or the screen changed while the shape was shrinking.
-                guard let self, self.changeCount == started, let geometry = self.geometry else {
-                    Logger.notch.debug("Close completion skipped (started at change \(started))")
-                    return
-                }
-                self.setPanelFrame(geometry.panelFrame(for: .closed), reason: "close completion")
-            }
+        let target = geometry.panelFrame(for: phase, compact: compact)
+        // After re-entering during a close the panel is still larger; keep it, so the
+        // pointer stays inside and the shape isn't clipped mid-animation.
+        if !panel.frame.contains(target) {
+            setPanelFrame(target, reason: "grow")
         } else {
-            let target = geometry.panelFrame(for: phase)
-            // After re-entering during a close the panel is still larger; keep it, so the
-            // pointer stays inside and the shape isn't clipped mid-animation.
-            if !panel.frame.contains(target) {
-                setPanelFrame(target, reason: "grow")
-            } else {
-                Logger.notch.debug("Grow kept larger frame \(NSStringFromRect(panel.frame), privacy: .public)")
+            Logger.notch.debug("Grow kept larger frame \(NSStringFromRect(panel.frame), privacy: .public)")
+        }
+        let started = changeCount
+        withAnimation(animation) {
+            displayedPhase = phase
+            displaysCompact = compact
+        } completion: { [weak self] in
+            // Only the closed shape shrinks the panel; peek and open keep the larger frame.
+            guard phase == .closed else { return }
+            // Skip if the pointer came back or the screen changed while the shape was shrinking.
+            guard let self, self.changeCount == started, let geometry = self.geometry else {
+                Logger.notch.debug("Close completion skipped (started at change \(started))")
+                return
             }
-            withAnimation(animation) { displayedPhase = phase }
+            self.setPanelFrame(geometry.panelFrame(for: .closed, compact: compact), reason: "close completion")
         }
     }
 
