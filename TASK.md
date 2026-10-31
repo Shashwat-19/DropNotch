@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, and 4, `feat/hotkey`, are merged to main and pushed to `origin`. Next: notes, file-tray, clipboard, settings, polish, release. See "Phase 3" below.
+**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, and 4, `feat/hotkey`, are merged to main and pushed to `origin`. Branch 5, `feat/notes`, is in progress. Next after it: file-tray, clipboard, settings, polish, release. See "Phase 3" below.
 
 ## Goal
 Run a reverse-engineering analysis (REA) of Canopy and Atoll, turn it into a feature matrix and architecture plan for DropNotch, then scaffold the foundation. DropNotch must be original code that Shash owns.
@@ -246,6 +246,20 @@ Device checks (Debug build is enough: no entitlement or signing change; notched 
 36. System Settings › Keyboard › Keyboard navigation on: one Tab stop per control and Space fires once (if two stops, `.focusable(false)` on the inner Button, code-reviewer W3).
 37. Hover mode (no hotkey): one click on each control still works, and typing in the front app afterwards still works.
 38. While opened by ⌃⌥N, click another app's window or ⌘Tab: the notch closes and that app has focus.
+
+### Branch 5: `feat/notes` (D31; tabs chosen by Shash, 2026-10-31)
+
+One plain-text note in its own tab, saved locally 1 s after the last edit. ⌃⌥N on the Notes tab puts the cursor in the note; Escape closes and hands focus back. Package search: skipped; Foundation and `TextEditor` cover it, and there is nothing a package would save.
+
+Out of this branch: several notes, rich text, keeping the last tab across relaunches, Tab out of the note.
+
+Device checks (Debug build is enough: no entitlement or signing change; notched Mac).
+39. ⌃⌥N, ⌘2: the placeholder "Type a note" sits where the cursor is; type at once without clicking; ⌘1 and ⌘2 switch tabs and the selected icon shows a filled capsule.
+40. While typing in the note, Escape: the notch closes, the front app takes typing straight away, and no completion list appears. With a Japanese or Chinese input method mid-composition, Escape cancels the composition and the notch stays open.
+41. Close with ⌃⌥N and reopen: it opens on Notes with the text intact. Quit from the menu bar within 1 s of typing, relaunch: the last characters are there. `cat ~/Library/Application\ Support/DropNotch/Notes/note.txt` shows the note.
+42. Hover-open, Notes tab, click in the note: the cursor appears and typing goes into the note, not the front app; moving the pointer away doesn't close it; Escape closes it.
+43. Hover mode on Now Playing (no hotkey): clicking the tab icons switches tabs, controls still work with one click, and typing in the front app afterwards still works (check 37 again).
+44. Now Playing still opens with play/pause focused on ⌃⌥N, ←/→ still move, and the content sits where it did before the tabs (below the camera housing, not clipped).
 
 ## Release checklist
 
