@@ -11,6 +11,7 @@ struct NowPlayingExpandedView: View {
     @State private var textOpacity = 1.0
     /// Keyboard focus. Only the hotkey makes the panel key, so this stays nil while hovering (D30).
     @FocusState private var focus: Focus?
+    @Environment(\.notchHasKeyboardFocus) private var hasKeyboardFocus
 
     var body: some View {
         if let info = module.shown {
@@ -52,7 +53,9 @@ struct NowPlayingExpandedView: View {
                 }
                 controls(isPlaying: module.isPlaying)
             }
-            .defaultFocus($focus, .playPause)
+            // Set explicitly: the panel turns key in the same turn as the open, before SwiftUI inserts this view,
+            // and a hover-opened notch already has it, so `.defaultFocus` alone doesn't land (code-reviewer W1).
+            .onChange(of: hasKeyboardFocus, initial: true) { if hasKeyboardFocus { focus = .playPause } }
             .onMoveCommand { moveFocus($0, denied: module.deniedPlayer == info.player) }
             .lineLimit(1)
             .padding(.horizontal, 24)
@@ -86,6 +89,7 @@ struct NowPlayingExpandedView: View {
     }
 
     private func control(_ command: PlaybackCommand, _ label: LocalizedStringKey, systemImage: String) -> some View {
+        // `_ =` discards the Task, so the closure is the `() -> Void` that Button and `onKeyPress` take.
         let action = { _ = Task { await module.perform(command) } }
         return Button(action: action) {
             // Icon-only on screen; VoiceOver reads the label.
@@ -98,6 +102,8 @@ struct NowPlayingExpandedView: View {
         }
         .buttonStyle(NowPlayingControlStyle())
         .keyboardControl(Focus(command), focus: $focus, action: action)
+        // The style's circle shows focus; the system's rectangular ring would sit around it as well.
+        .focusEffectDisabled()
     }
 
     /// Arrows step through the controls in reading order and stop at either end (D30).
@@ -165,7 +171,8 @@ private extension View {
     func keyboardControl<ID: Hashable>(_ id: ID, focus: FocusState<ID?>.Binding, action: @escaping () -> Void) -> some View {
         focusable(interactions: .edit)
             .focused(focus, equals: id)
-            .onKeyPress(keys: [.space, .return]) { _ in
+            // Key-down only: holding Space mustn't toggle play/pause again on every repeat.
+            .onKeyPress(keys: [.space, .return], phases: .down) { _ in
                 action()
                 return .handled
             }

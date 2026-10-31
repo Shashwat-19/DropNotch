@@ -113,6 +113,9 @@ final class NotchPanelTests: XCTestCase {
         panel.onDismiss = { dismissals += 1 }
         panel.cancelOperation(nil)
         XCTAssertEqual(dismissals, 1)
+        // Focus moving elsewhere (a click in another app) dismisses too.
+        panel.resignKey()
+        XCTAssertEqual(dismissals, 2)
     }
 
     func testPanelHasAnAccessibleName() {

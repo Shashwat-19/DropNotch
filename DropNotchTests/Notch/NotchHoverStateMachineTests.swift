@@ -257,6 +257,13 @@ final class NotchHoverStateMachineTests: XCTestCase {
         XCTAssertFalse(machine.openedByKeyboard)
     }
 
+    func testDismissedClosesANotchTheHotkeyTookFromHover() {
+        var machine = driven([.pointerEntered, .openDelayElapsed, .hotkeyPressed])
+        XCTAssertNil(machine.handle(.dismissed))
+        XCTAssertEqual(machine.phase, .closed)
+        XCTAssertFalse(machine.openedByKeyboard)
+    }
+
     // Dismissal only undoes the hotkey; hover keeps its own rules.
     func testDismissedWithoutTheHotkeyDoesNothing() {
         for start in [Machine(), driven([.pointerEntered]), opened] {

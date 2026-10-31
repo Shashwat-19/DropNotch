@@ -33,6 +33,7 @@ struct NotchRootView: View {
                         .padding(.top, (state.geometry?.closedFrame.height ?? 0) + NotchGeometry.topOverhang)
                         // The shape is always black, so its content uses dark colours in light mode too (L5).
                         .environment(\.colorScheme, .dark)
+                        .environment(\.notchHasKeyboardFocus, state.hasKeyboardFocus)
                         .transition(.asymmetric(insertion: .opacity, removal: .identity))
                 }
             }
@@ -61,4 +62,9 @@ struct NotchRootView: View {
             .padding(geometry.wingWidth * 0.2)
             .frame(width: geometry.wingWidth, height: geometry.closedFrame.height)
     }
+}
+
+extension EnvironmentValues {
+    /// Whether the hotkey holds the notch open with keyboard focus (D30), for modules' open content.
+    @Entry var notchHasKeyboardFocus = false
 }

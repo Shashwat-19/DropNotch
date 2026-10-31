@@ -13,6 +13,8 @@ final class NotchState {
     private(set) var geometry: NotchGeometry?
     /// Whether the shape is drawn with the compact wings (D28). Changes together with `displayedPhase`.
     private(set) var displaysCompact = false
+    /// The hotkey holds the notch open and the panel is key (D30). The open content moves focus to its controls.
+    private(set) var hasKeyboardFocus = false
 
     // Strong reference cycle (state → panel → hosting view → root view → state), on
     // purpose: AppDelegate keeps all of them for the app's lifetime.
@@ -60,6 +62,8 @@ final class NotchState {
 
     /// Called by the tracking area in `NotchHostingView` and by this class's own timers.
     func send(_ event: NotchHoverStateMachine.Event) {
+        // With no display the panel is ordered out; taking key focus would swallow typing into an invisible window.
+        if event == .hotkeyPressed, geometry == nil { return }
         let old = hover
         let effect = hover.handle(event)
         // Moves arrive many times a second; only a sweep restarting the open delay is news.
@@ -80,6 +84,7 @@ final class NotchState {
             break
         }
         show(hover.phase)
+        // Keep last: handing focus back calls `send` again from inside `orderOut`, so the rest must be done.
         syncKeyFocus()
     }
 
@@ -88,6 +93,7 @@ final class NotchState {
         guard let panel, panel.acceptsKeyboard != hover.openedByKeyboard else { return }
         // Set first: giving focus back calls `onDismiss`, which sends `.dismissed` and lands here again.
         panel.acceptsKeyboard = hover.openedByKeyboard
+        hasKeyboardFocus = hover.openedByKeyboard
         Logger.notch.debug("Keyboard focus \(panel.acceptsKeyboard ? "taken" : "returned", privacy: .public)")
         if panel.acceptsKeyboard {
             // Key without activating DropNotch: the panel is non-activating.
