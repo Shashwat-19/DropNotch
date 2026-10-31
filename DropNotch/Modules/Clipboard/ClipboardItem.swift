@@ -1,4 +1,5 @@
 import AppKit
+import ImageIO
 
 /// One copied thing in the clipboard history (D7). Lives in memory only.
 struct ClipboardItem: Identifiable {
@@ -12,12 +13,24 @@ struct ClipboardItem: Identifiable {
 
     let id = UUID()
     let content: Content
-    /// Decoded once here rather than on every redraw. `NSImage` decodes lazily, on first draw.
-    let image: NSImage?
+    /// A row-sized thumbnail, made once. The full image is never decoded for display: a 5K screenshot decodes to
+    /// about 59 MB, which the 10 MB and 50 MB caps on the stored data wouldn't bound (code-reviewer W2).
+    let thumbnail: NSImage?
 
     init(_ content: Content) {
         self.content = content
-        if case .image(let data, _) = content { image = NSImage(data: data) } else { image = nil }
+        thumbnail = if case .image(let data, _) = content { Self.thumbnail(of: data) } else { nil }
+    }
+
+    /// At most 64 px on the long side: the row draws it at 32 × 20 pt, 2× on Retina.
+    private static func thumbnail(of data: Data) -> NSImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: 64,
+        ]
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary).map { NSImage(cgImage: $0, size: .zero) }
     }
 
     /// The text, for search and the row. Nil for an image.

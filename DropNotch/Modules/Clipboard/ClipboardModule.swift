@@ -29,6 +29,9 @@ final class ClipboardModule: NotchModule {
     private(set) var items: [ClipboardItem] = []
     /// Under Ask, something was copied since the last read, so the tab offers "Add Clipboard" (D7c).
     private(set) var hasUnreadChange = false
+    /// Always Allow was chosen while DropNotch ran. It may apply only after a relaunch (D7c), so it is treated as Ask
+    /// until then, and the tab says so (code-reviewer W1).
+    private(set) var needsRelaunch = false
 
     @ObservationIgnored private let pasteboard: any Pasteboard
     @ObservationIgnored private let defaults: UserDefaults
@@ -36,6 +39,8 @@ final class ClipboardModule: NotchModule {
     @ObservationIgnored private var timer: Timer?
     @ObservationIgnored private var lastChangeCount: Int?
     @ObservationIgnored private var sleepObservers: [NSObjectProtocol] = []
+    /// Whether Always Allow held when the module was made, at launch. Reading the setting reads no content.
+    @ObservationIgnored private let allowedAtLaunch: Bool
 
     private static let isOnKey = "clipboard.historyOn"
 
@@ -44,6 +49,7 @@ final class ClipboardModule: NotchModule {
         self.pasteboard = pasteboard
         self.defaults = defaults
         isOn = defaults.bool(forKey: Self.isOnKey)
+        allowedAtLaunch = pasteboard.access == .allowed
     }
 
     func compactView(slot: CompactSlot) -> AnyView { AnyView(EmptyView()) }
@@ -89,14 +95,14 @@ final class ClipboardModule: NotchModule {
     /// The tab appeared: picks up a change in System Settings, and restarts a poll stopped by Always Deny.
     func refresh() {
         guard isOn, isRunning else { return }
-        access = pasteboard.access
+        access = currentAccess()
         watch()
     }
 
     /// Starts the poll if history is on and access isn't denied.
     private func watch() {
         guard isOn, isRunning, timer == nil else { return }
-        access = pasteboard.access
+        access = currentAccess()
         guard access != .denied else { return }
         // 0.5 s with 0.25 s tolerance, so the system can batch the wake (D7). No notification exists for a change.
         let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
@@ -107,6 +113,14 @@ final class ClipboardModule: NotchModule {
         self.timer = timer
         Logger.clipboard.debug("Clipboard poll started")
         tick()
+    }
+
+    /// `Pasteboard.access`, except that Always Allow is trusted only if it held at launch: a background read that
+    /// macOS still treats as Ask would freeze the notch behind the alert (D7c).
+    private func currentAccess() -> PasteboardAccess {
+        let access = pasteboard.access
+        needsRelaunch = access == .allowed && !allowedAtLaunch
+        return needsRelaunch ? .ask : access
     }
 
     private func stopTimer() {
@@ -124,7 +138,7 @@ final class ClipboardModule: NotchModule {
         lastChangeCount = count
         let previous = access
         // Checked before every read: denied reads fail silently (D7a).
-        access = pasteboard.access
+        access = currentAccess()
         if access != previous { Logger.clipboard.info("Clipboard access changed: \(String(describing: self.access), privacy: .public)") }
         switch access {
         case .allowed: capture()
@@ -139,7 +153,7 @@ final class ClipboardModule: NotchModule {
         hasUnreadChange = false
         lastChangeCount = pasteboard.changeCount
         capture()
-        access = pasteboard.access
+        access = currentAccess()
     }
 
     /// Puts an item back on the clipboard and moves it to the top.

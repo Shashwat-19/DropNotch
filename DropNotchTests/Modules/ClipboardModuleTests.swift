@@ -145,8 +145,9 @@ final class ClipboardModuleTests: XCTestCase {
     // 4. Always Deny, then back to Always Allow.
 
     func testDeniedReadsNothingAndRefreshAfterAllowResumes() {
-        pasteboard.access = .denied
+        // Always Allow at launch (the fake's default when `module` was made), so it is trusted again after the deny (W1).
         module.turnOn()
+        pasteboard.access = .denied
         module.start()
         pasteboard.copy("one")
         module.tick()
@@ -162,6 +163,25 @@ final class ClipboardModuleTests: XCTestCase {
         pasteboard.copy("three")
         module.tick()
         XCTAssertEqual(module.items.map(\.text), ["three"])
+    }
+
+    /// Always Allow chosen while running may apply only after a relaunch, so it stays Ask: no background read (W1, D7c).
+    func testAllowChosenAfterLaunchIsTreatedAsAskUntilRelaunch() {
+        pasteboard.access = .ask
+        let module = ClipboardModule(pasteboard: pasteboard, defaults: defaults)
+        module.turnOn()
+        pasteboard.access = .allowed
+        pasteboard.copy("secret")
+        module.tick()
+        XCTAssertEqual(pasteboard.reads, [])
+        XCTAssertEqual(module.access, .ask)
+        XCTAssertTrue(module.needsRelaunch)
+        XCTAssertTrue(module.hasUnreadChange)
+
+        let relaunched = ClipboardModule(pasteboard: pasteboard, defaults: defaults)
+        relaunched.tick()
+        XCTAssertEqual(relaunched.items.map(\.text), ["secret"])
+        XCTAssertFalse(relaunched.needsRelaunch)
     }
 
     // 5. Marked and file items.

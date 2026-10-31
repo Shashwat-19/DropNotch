@@ -22,7 +22,9 @@ struct ClipboardExpandedView: View {
             } else if module.access == .denied {
                 message("Clipboard access is blocked in System Settings › Privacy & Security › Paste from Other Apps.")
             } else {
-                if module.access == .ask {
+                if module.needsRelaunch {
+                    message("Always Allow applies after you quit and reopen DropNotch. Until then, macOS asks before each read.")
+                } else if module.access == .ask {
                     message("macOS asks before each read. To keep history automatically, choose Always Allow in Privacy & Security › Paste from Other Apps.")
                 }
                 HStack {
@@ -100,11 +102,15 @@ struct ClipboardExpandedView: View {
     private func row(_ item: ClipboardItem, isHighlighted: Bool) -> some View {
         Button { copy(item) } label: {
             HStack(spacing: 8) {
-                if let image = item.image {
-                    Image(nsImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 32, height: 20)
+                if item.text == nil {
+                    Group {
+                        if let thumbnail = item.thumbnail {
+                            Image(nsImage: thumbnail).resizable().scaledToFit()
+                        } else {
+                            Image(systemName: "photo")
+                        }
+                    }
+                    .frame(width: 32, height: 20)
                     Text("Image")
                 } else {
                     Image(systemName: item.isLink ? "link" : "doc.text")
@@ -129,8 +135,8 @@ struct ClipboardExpandedView: View {
         .accessibilityHint(Text("Copies to the clipboard"))
     }
 
-    /// Copies, then closes a notch opened with the hotkey, so ⌘V goes to the app in front. A hover-opened notch
-    /// stays open: `.dismissed` only closes a keyboard-opened one.
+    /// Copies, then closes a notch that has keyboard focus (hotkey, or a click in the search field), so ⌘V goes to the
+    /// app in front. A hover-opened notch stays open: `.dismissed` only closes a keyboard-opened one.
     private func copy(_ item: ClipboardItem) {
         module.copy(item)
         query = ""
