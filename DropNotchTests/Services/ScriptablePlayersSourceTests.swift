@@ -663,5 +663,59 @@ final class ScriptablePlayersSourceTests: XCTestCase {
         XCTAssertEqual(urls, [url, url])
         withExtendedLifetime(stream) {}
     }
-}
 
+    // MARK: D27: a load that finds no picture says so
+
+    func testMusicArtworkThatLoadsNoPictureMarksTheTrackMissing() async {
+        let read = NowPlayingInfo(player: .music, state: .playing, title: "Song", trackID: "A1")
+        for data in [nil, Data("not an image".utf8)] {
+            let sender = FakeSender(current: read, artwork: data)
+            let source = makeSource(sender, running: [.music])
+            let collector = Collector(source.updates)
+            await until { collector.values.last??.artworkMissing == true }
+            XCTAssertEqual(collector.values.last??.artworkMissing, true, "\(String(describing: data))")
+            XCTAssertEqual(collector.values.last??.trackID, "A1")
+            XCTAssertNil(collector.values.last??.artwork)
+            let artworkReads = await sender.calls.filter { $0 == .artwork(.music) }
+            XCTAssertEqual(artworkReads.count, 1)
+            withExtendedLifetime(source) {}
+        }
+    }
+
+    func testAFailedSpotifyFetchMarksTheTrackMissing() async {
+        let url = URL(string: "https://i.scdn.co/image/a")!
+        let read = NowPlayingInfo(player: .spotify, state: .playing, title: "Song", trackID: "a", artworkURL: url)
+        let loader = FakeArtworkLoader(data: nil)
+        let source = makeSource(FakeSender(current: read), running: [.spotify], loader: loader)
+        let collector = Collector(source.updates)
+        await until { collector.values.last??.artworkMissing == true }
+        XCTAssertEqual(collector.values.last??.artworkMissing, true)
+        XCTAssertNil(collector.values.last??.artwork)
+        let urls = await loader.urls
+        XCTAssertEqual(urls, [url])
+    }
+
+    // Spotify with no URL yet: missing for now, but the try isn't used up, so the read on open still fetches.
+    func testSpotifyWithNoURLIsMissingUntilAReadBringsOne() async {
+        let url = URL(string: "https://i.scdn.co/image/a")!
+        let sender = FakeSender(holdsReads: true)
+        let loader = FakeArtworkLoader(data: Self.png())
+        let source = makeSource(sender, running: [.spotify], loader: loader)
+        let collector = Collector(source.updates)
+        await waitForCalls(sender, count: 2) // the start check and read, held
+        await sender.releaseRead(with: NowPlayingInfo(player: .spotify, state: .playing, title: "A", trackID: "a"))
+        await until { collector.values.last??.artworkMissing == true }
+        XCTAssertEqual(collector.values.last??.artworkMissing, true)
+        var urls = await loader.urls
+        XCTAssertEqual(urls, [], "no URL, nothing fetched")
+
+        source.refresh(.spotify) // the notch opening
+        await waitForCalls(sender, count: 4)
+        await sender.releaseRead(with: NowPlayingInfo(player: .spotify, state: .playing, title: "A", trackID: "a",
+                                                      artworkURL: url))
+        await until { collector.values.last??.artwork != nil }
+        XCTAssertEqual(collector.values.last??.artwork?.trackID, "a")
+        urls = await loader.urls
+        XCTAssertEqual(urls, [url])
+    }
+}

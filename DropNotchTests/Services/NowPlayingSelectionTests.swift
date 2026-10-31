@@ -358,5 +358,36 @@ final class NowPlayingSelectionTests: XCTestCase {
         XCTAssertEqual(selection.current?.duration, 210)
         XCTAssertNil(selection.current?.position, "the newer report's position stands")
     }
-}
 
+    // MARK: D27: a track known to have no artwork
+
+    func testArtworkMissingIsSetOnlyForTheTrackOnScreen() {
+        selection.report(spotifyTrack("a", .playing, at: 0), carriesTrack: true, at: t0)
+        selection.setArtworkMissing(for: .spotify, trackID: "b")
+        XCTAssertEqual(selection.current?.artworkMissing, false, "another track's load says nothing about a")
+        selection.setArtworkMissing(for: .music, trackID: "a")
+        XCTAssertEqual(selection.current?.artworkMissing, false)
+        XCTAssertNil(selection.info(for: .music), "a player that isn't there isn't added")
+        selection.setArtworkMissing(for: .spotify, trackID: "a")
+        XCTAssertEqual(selection.current?.artworkMissing, true)
+    }
+
+    func testArtworkMissingStaysThroughTheSameTrackAndGoesWithANewOne() {
+        selection.report(spotifyTrack("a", .playing, at: 0), carriesTrack: true, at: t0)
+        selection.setArtworkMissing(for: .spotify, trackID: "a")
+        selection.report(spotifyTrack("a", .paused, at: nil), carriesTrack: true, at: t0)
+        XCTAssertEqual(selection.current?.artworkMissing, true, "a same-track report carries it over")
+        selection.report(NowPlayingInfo(player: .spotify, state: .playing), carriesTrack: false, at: t0)
+        XCTAssertEqual(selection.current?.artworkMissing, true, "a state-only report keeps it")
+        selection.report(spotifyTrack("b", .playing, at: 0), carriesTrack: true, at: t0)
+        XCTAssertEqual(selection.current?.artworkMissing, false, "a new track starts unknown")
+        selection.report(spotifyTrack(nil, .playing, at: 0), carriesTrack: true, at: t0)
+        XCTAssertEqual(selection.current?.artworkMissing, false)
+    }
+
+    func testArtworkMissingForAPlayerWithNoTrackIDIsDropped() {
+        selection.report(spotifyTrack(nil, .playing, at: 0), carriesTrack: true, at: t0)
+        selection.setArtworkMissing(for: .spotify, trackID: "a")
+        XCTAssertEqual(selection.current?.artworkMissing, false)
+    }
+}

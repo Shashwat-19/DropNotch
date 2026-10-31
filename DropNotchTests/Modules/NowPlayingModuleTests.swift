@@ -1,3 +1,4 @@
+import AppKit
 import XCTest
 @testable import DropNotch
 
@@ -33,11 +34,12 @@ final class NowPlayingModuleTests: XCTestCase {
     }
 
     /// A started module showing `info`, and its source.
-    /// `settleDelay` defaults to longer than any test, so a click only settles when a test asks for it.
-    private func moduleShowing(_ info: NowPlayingInfo, settleDelay: Duration = .seconds(600)) async
-        -> (NowPlayingModule, FakeSource) {
+    /// `settleDelay` and `artworkHold` default to longer than any test, so a click only settles, and a held
+    /// artwork only expires, when a test asks for it.
+    private func moduleShowing(_ info: NowPlayingInfo, settleDelay: Duration = .seconds(600),
+                               artworkHold: Duration = .seconds(600)) async -> (NowPlayingModule, FakeSource) {
         let source = FakeSource(stream: AsyncStream { _ in })
-        let module = NowPlayingModule(source: source, settleDelay: settleDelay)
+        let module = NowPlayingModule(source: source, settleDelay: settleDelay, artworkHold: artworkHold)
         await start(module, source, showing: info)
         return (module, source)
     }
@@ -386,5 +388,224 @@ final class NowPlayingModuleTests: XCTestCase {
         XCTAssertEqual(PlaybackProgressView.seconds(at: 260, width: 200, duration: 180), 180)
         XCTAssertEqual(PlaybackProgressView.seconds(at: 10, width: 0, duration: 180), 0)
     }
-}
 
+    // MARK: D27: what the view draws (`shown`)
+
+    /// Music track `id` in `state`, at `seconds` now, as the selection anchors it for each notification and read.
+    private func music(_ state: NowPlayingInfo.State, at seconds: TimeInterval?, id: String? = "T",
+                       artwork: NowPlayingArtwork? = nil, missing: Bool = false) -> NowPlayingInfo {
+        NowPlayingInfo(player: .music, state: state, title: "t", trackID: id, duration: 200,
+                       position: seconds.map { PlaybackPosition(seconds: $0, at: Date()) }, artwork: artwork,
+                       artworkMissing: missing)
+    }
+
+    /// Where `shown` has got to by now.
+    private func shownSeconds(_ module: NowPlayingModule) -> TimeInterval? { module.shown?.elapsed(at: Date()) }
+
+    private func artwork(_ id: String) throws -> NowPlayingArtwork {
+        let rep = try XCTUnwrap(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 4, pixelsHigh: 4, bitsPerSample: 8,
+                                                 samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                                 colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0))
+        let data = try XCTUnwrap(rep.representation(using: .png, properties: [:]))
+        return try XCTUnwrap(NowPlayingArtwork(trackID: id, data: data))
+    }
+
+    // Clip (a), Music: 0:04 -> 0:00 -> 0:00 -> 0:00 -> 0:04 while clicking play/pause. Each click brings Music's
+    // burst: the old state, then the new one, same track, positions anchored by the selection; then a read a
+    // few tenths behind.
+    func testClipAPauseFreezesAtTheClickedPositionAndPlayResumesFromIt() async throws {
+        let start = Date()
+        let (module, source) = await moduleShowing(music(.playing, at: 4))
+        let now = { 4 + Date().timeIntervalSince(start) } // where Music really is while playing
+        source.holdsReplies = true
+
+        let pause = await clickInFlight(module, source, .playPause)
+        let frozen = try XCTUnwrap(module.shown?.position?.seconds)
+        XCTAssertEqual(frozen, 4, accuracy: 0.1)
+        XCTAssertEqual(module.shown?.state, .paused)
+        let steps: [(String, NowPlayingInfo)] = [
+            ("old state", music(.playing, at: now())),
+            ("new state", music(.paused, at: now())),
+            ("read 0.2 s behind", music(.paused, at: frozen - 0.2)),
+        ]
+        for (step, info) in steps {
+            await deliver(info, to: module, source)
+            XCTAssertEqual(module.shown?.state, .paused, step)
+            XCTAssertEqual(shownSeconds(module), frozen, "paused: \(step) neither zeroes nor moves the time")
+        }
+        source.release(.ok)
+        await pause.value
+        XCTAssertEqual(shownSeconds(module), frozen)
+
+        let play = await clickInFlight(module, source, .playPause)
+        let resumedAt = Date()
+        XCTAssertEqual(module.shown?.state, .playing)
+        XCTAssertEqual(module.shown?.position?.seconds, frozen, "play resumes where the pause froze")
+        // The selection anchors Music's paused position (the read's) until something says otherwise.
+        for (step, info) in [("old state", music(.paused, at: frozen - 0.2)),
+                             ("new state", music(.playing, at: frozen - 0.2)),
+                             ("read 0.2 s behind", music(.playing, at: frozen - 0.2 + Date().timeIntervalSince(resumedAt)))] {
+            await deliver(info, to: module, source)
+            XCTAssertEqual(module.shown?.state, .playing, step)
+            let seconds = try XCTUnwrap(shownSeconds(module), step)
+            XCTAssertGreaterThanOrEqual(seconds, frozen, "\(step) went back")
+            XCTAssertEqual(seconds, frozen + Date().timeIntervalSince(resumedAt), accuracy: 0.05, step)
+        }
+        source.release(.ok)
+        await play.value
+        XCTAssertEqual(module.shown?.state, .playing)
+        XCTAssertNil(module.pendingIsPlaying)
+    }
+
+    // Clip (b), Music: 0:07 -> 0:09 -> 0:03. A stale burst (old state first) and then a read 0.3 s behind.
+    func testClipBTheTimeNeverGoesBackOrRunsAheadOfRealTime() async throws {
+        let start = Date()
+        let (module, source) = await moduleShowing(music(.playing, at: 7))
+        let real = { 7 + Date().timeIntervalSince(start) }
+        var last = try XCTUnwrap(shownSeconds(module))
+        for (step, info) in [("stale state", music(.paused, at: real())),
+                             ("current state", music(.playing, at: real())),
+                             ("read 0.3 s behind", music(.playing, at: real() - 0.3))] {
+            await deliver(info, to: module, source)
+            let seconds = try XCTUnwrap(shownSeconds(module), step)
+            XCTAssertGreaterThanOrEqual(seconds, last, "\(step) went back")
+            XCTAssertLessThanOrEqual(seconds, real(), "\(step) ran ahead of the time that passed")
+            XCTAssertEqual(seconds, real(), accuracy: 0.05, step)
+            last = seconds
+        }
+        XCTAssertEqual(module.shown?.state, .playing)
+    }
+
+    func testASeekMovesTheBarAtOnceBothWays() async throws {
+        let (module, source) = await moduleShowing(music(.playing, at: 50))
+        source.holdsReplies = true
+        for target in [120.0, 5] {
+            let seek = await clickInFlight(module, source, .seek(to: target))
+            XCTAssertEqual(try XCTUnwrap(shownSeconds(module)), target, accuracy: 0.05, "before the reply")
+            source.release(.ok)
+            await seek.value
+            await deliver(music(.playing, at: target), to: module, source) // the read after the seek (D26)
+            XCTAssertEqual(try XCTUnwrap(shownSeconds(module)), target, accuracy: 0.05, "after the read")
+        }
+    }
+
+    func testAFailedSeekGoesBackToThePlayersPosition() async throws {
+        let start = Date()
+        let (module, source) = await moduleShowing(music(.playing, at: 50))
+        source.holdsReplies = true
+        let seek = await clickInFlight(module, source, .seek(to: 120))
+        source.release(.timedOut)
+        await seek.value
+        XCTAssertEqual(try XCTUnwrap(shownSeconds(module)), 50 + Date().timeIntervalSince(start), accuracy: 0.05)
+    }
+
+    // A move of a second or more is a seek in the player's own window: applied, backward or forward.
+    func testAJumpOfASecondOrMoreIsApplied() async throws {
+        for state in [NowPlayingInfo.State.playing, .paused] {
+            let (module, source) = await moduleShowing(music(state, at: 50))
+            for target in [48.5, 53, 10] {
+                await deliver(music(state, at: target), to: module, source)
+                XCTAssertEqual(try XCTUnwrap(shownSeconds(module)), target, accuracy: 0.05, "\(state) to \(target)")
+            }
+        }
+    }
+
+    func testANewTrackResetsThePosition() async throws {
+        let (module, source) = await moduleShowing(music(.playing, at: 50))
+        await deliver(music(.playing, at: 0.3, id: "U"), to: module, source)
+        XCTAssertEqual(try XCTUnwrap(shownSeconds(module)), 0.3, accuracy: 0.05)
+        await deliver(music(.playing, at: nil, id: "V"), to: module, source)
+        XCTAssertNil(module.shown?.position, "a new track with no position yet has none")
+    }
+
+    func testAMissingPositionOnTheSameTrackKeepsShowns() async throws {
+        let start = Date()
+        let (module, source) = await moduleShowing(music(.playing, at: 30))
+        await deliver(music(.playing, at: nil), to: module, source)
+        XCTAssertEqual(try XCTUnwrap(shownSeconds(module)), 30 + Date().timeIntervalSince(start), accuracy: 0.05)
+
+        let (paused, pausedSource) = await moduleShowing(music(.paused, at: 30))
+        await deliver(music(.paused, at: nil), to: paused, pausedSource)
+        XCTAssertEqual(shownSeconds(paused), 30)
+    }
+
+    func testAClickOnATrackThatChangesMeanwhileShowsTheNewTrack() async throws {
+        let (module, source) = await moduleShowing(music(.playing, at: 50))
+        source.holdsReplies = true
+        let click = await clickInFlight(module, source, .playPause)
+        await deliver(music(.playing, at: 0, id: "U"), to: module, source)
+        XCTAssertNil(module.pendingIsPlaying)
+        XCTAssertEqual(module.shown?.state, .playing)
+        XCTAssertEqual(try XCTUnwrap(shownSeconds(module)), 0, accuracy: 0.05)
+        source.release(.ok)
+        await click.value
+    }
+
+    // A settle takes the player's word as it is, even backwards.
+    func testASettleShowsThePlayersPosition() async throws {
+        let (module, source) = await moduleShowing(music(.paused, at: 50), settleDelay: .milliseconds(10))
+        await deliver(music(.paused, at: 49.7), to: module, source) // steadied away
+        XCTAssertEqual(shownSeconds(module), 50)
+        await module.perform(.playPause) // the player never confirms it
+        for _ in 0..<100 where module.pendingIsPlaying != nil { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertNil(module.pendingIsPlaying)
+        XCTAssertEqual(module.shown?.state, .paused)
+        XCTAssertEqual(try XCTUnwrap(shownSeconds(module)), 49.7, accuracy: 0.001)
+    }
+
+    // MARK: D27: artwork held across a track change
+
+    func testTheLastArtworkIsHeldUntilTheNewOneArrives() async throws {
+        let (a, b) = (try artwork("T"), try artwork("U"))
+        let (module, source) = await moduleShowing(music(.playing, at: 10, artwork: a))
+        await deliver(music(.playing, at: 0, id: "U"), to: module, source)
+        XCTAssertNil(module.info?.artwork)
+        XCTAssertEqual(module.shown?.artwork, a, "no artwork yet: the old one stays")
+        await deliver(music(.paused, at: 0.1, id: "U"), to: module, source)
+        XCTAssertEqual(module.shown?.artwork, a, "the hold outlasts a same-track update")
+        await deliver(music(.paused, at: 0.1, id: "U", artwork: b), to: module, source)
+        XCTAssertEqual(module.shown?.artwork, b, "replaced as soon as it arrives")
+    }
+
+    func testArtworkMissingShowsTheAppIconAtOnce() async throws {
+        let (module, source) = await moduleShowing(music(.playing, at: 10, artwork: try artwork("T")))
+        await deliver(music(.playing, at: 0, id: "U"), to: module, source)
+        XCTAssertNotNil(module.shown?.artwork)
+        await deliver(music(.playing, at: 0.1, id: "U", missing: true), to: module, source)
+        XCTAssertNil(module.shown?.artwork)
+    }
+
+    func testTheHoldExpires() async throws {
+        let (module, source) = await moduleShowing(music(.playing, at: 10, artwork: try artwork("T")),
+                                                   artworkHold: .milliseconds(10))
+        await deliver(music(.playing, at: 0, id: "U"), to: module, source)
+        for _ in 0..<100 where module.shown?.artwork != nil { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertNil(module.shown?.artwork)
+        XCTAssertEqual(module.shown?.trackID, "U")
+    }
+
+    func testNoTrackIDOrAPlayerChangeDropsTheHold() async throws {
+        let others = [music(.playing, at: 0, id: nil),
+                      NowPlayingInfo(player: .spotify, state: .playing, title: "s", trackID: "S")]
+        for next in others {
+            let (module, source) = await moduleShowing(music(.playing, at: 10, artwork: try artwork("T")))
+            await deliver(next, to: module, source)
+            XCTAssertNil(module.shown?.artwork, "\(next)")
+        }
+    }
+
+    // After stop() and a restart, a held artwork must not come back, nor fire into the new session.
+    func testStopClearsTheHold() async throws {
+        let (module, source) = await moduleShowing(music(.playing, at: 10, artwork: try artwork("T")),
+                                                   artworkHold: .milliseconds(10))
+        await deliver(music(.playing, at: 0, id: "U"), to: module, source)
+        XCTAssertNotNil(module.shown?.artwork)
+        module.stop()
+        XCTAssertNil(module.shown)
+        await start(module, source, showing: music(.playing, at: 0, id: "U"))
+        XCTAssertNil(module.shown?.artwork)
+        try await Task.sleep(for: .milliseconds(50)) // past the old hold
+        XCTAssertNil(module.shown?.artwork)
+        XCTAssertEqual(module.shown?.trackID, "U")
+    }
+}
