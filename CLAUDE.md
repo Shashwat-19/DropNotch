@@ -43,7 +43,7 @@ Once docs/ARCHITECTURE.md exists it is the source of truth for module layout. Ke
 ### Ownership and licences (non-negotiable)
 1. Canopy (getcanopy.pro) is closed-source and paid. Use public material only: the homepage, /changelog and /privacy. Never download, decompile, disassemble, class-dump, or inspect its binary or bundled resources.
 2. Atoll and Boring Notch are GPL-3.0. Reading their source to learn which APIs and techniques they use is fine. Copying, pasting or closely paraphrasing their code, assets or UI strings into DropNotch is not.
-3. Clean-room split: only the `reference-analyst` agent reads ./reference/. It writes technique notes in its own words to docs/research/. Implementation work uses those notes and Apple documentation, not ./reference/.
+3. Clean-room split: only the `reference-analyst` agent reads ./reference/. It writes technique notes in its own words to docs/research/. Implementation work uses those notes and Apple documentation, not ./reference/. One exception: `code-reviewer` may grep ./reference/ for distinctive tokens, only to detect copied text (see its agent file); it reads nothing else there.
 4. Every dependency: record its licence in docs/DECISIONS.md and confirm DropNotch can still be licensed as MIT or GPL-3.0.
 
 ### Project
