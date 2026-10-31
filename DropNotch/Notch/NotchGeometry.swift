@@ -21,6 +21,10 @@ struct NotchGeometry: Equatable {
     let closedFrame: CGRect
     let peekFrame: CGRect
     let openFrame: CGRect
+    /// The closed shape while a module fills the compact slots: one square wing each side, as wide as the
+    /// notch is tall (D28).
+    let compactFrame: CGRect
+    let compactPeekFrame: CGRect
 
     /// - Parameters:
     ///   - safeAreaTop: `NSScreen.safeAreaInsets.top`; non-zero only under a camera housing.
@@ -41,30 +45,39 @@ struct NotchGeometry: Equatable {
             closed = Self.topCentred(midX: screenFrame.midX, top: screenFrame.maxY,
                                      size: CGSize(width: Self.pillWidth, height: height))
         }
+        let compact = closed.insetBy(dx: -closed.height, dy: 0)
         let peek = CGSize(width: closed.width + Self.peekGrowth.width,
                           height: closed.height + Self.peekGrowth.height)
-        let open = CGSize(width: max(Self.openSize.width, peek.width),
+        let compactPeek = CGSize(width: compact.width + Self.peekGrowth.width, height: peek.height)
+        // At least as large as every other frame, so it can serve as the canvas (D19).
+        let open = CGSize(width: max(Self.openSize.width, compactPeek.width),
                           height: max(Self.openSize.height, peek.height))
 
         closedFrame = Self.pixelAligned(closed, scale: backingScale)
         peekFrame = Self.pixelAligned(Self.topCentred(midX: closed.midX, top: closed.maxY, size: peek),
                                       scale: backingScale)
+        compactFrame = Self.pixelAligned(compact, scale: backingScale)
+        compactPeekFrame = Self.pixelAligned(Self.topCentred(midX: closed.midX, top: closed.maxY, size: compactPeek),
+                                             scale: backingScale)
         openFrame = Self.pixelAligned(Self.topCentred(midX: closed.midX, top: closed.maxY, size: open),
                                       scale: backingScale)
     }
 
-    /// Where the shape is drawn in each phase.
-    func frame(for phase: NotchHoverStateMachine.Phase) -> CGRect {
+    /// Width of one compact wing (D28).
+    var wingWidth: CGFloat { (compactFrame.width - closedFrame.width) / 2 }
+
+    /// Where the shape is drawn in each phase; `compact` while a module fills the compact slots (D28).
+    func frame(for phase: NotchHoverStateMachine.Phase, compact: Bool = false) -> CGRect {
         switch phase {
-        case .closed: closedFrame
-        case .peek: peekFrame
+        case .closed: compact ? compactFrame : closedFrame
+        case .peek: compact ? compactPeekFrame : peekFrame
         case .open: openFrame
         }
     }
 
     /// The panel's frame: the shape's frame plus `topOverhang` above the screen.
-    func panelFrame(for phase: NotchHoverStateMachine.Phase) -> CGRect {
-        let frame = frame(for: phase)
+    func panelFrame(for phase: NotchHoverStateMachine.Phase, compact: Bool = false) -> CGRect {
+        let frame = frame(for: phase, compact: compact)
         return CGRect(x: frame.minX, y: frame.minY, width: frame.width, height: frame.height + Self.topOverhang)
     }
 
