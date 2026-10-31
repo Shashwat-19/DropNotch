@@ -29,4 +29,14 @@ final class ClipboardItemTests: XCTestCase {
         XCTAssertFalse(item.isLink)
         XCTAssertTrue(ClipboardItem(.link("https://example.com")).isLink)
     }
+
+    /// Crafted header sizes never trap or pass (automated security review).
+    func testPixelCheckRejectsOverflowAndNonPositiveSizes() {
+        XCTAssertFalse(ClipboardItem.fits(width: .max, height: .max, maxPixels: 25_000_000))
+        XCTAssertFalse(ClipboardItem.fits(width: 1 << 32, height: 1 << 32, maxPixels: .max))
+        XCTAssertFalse(ClipboardItem.fits(width: 0, height: 10, maxPixels: 100))
+        XCTAssertFalse(ClipboardItem.fits(width: -10, height: -10, maxPixels: 1_000))
+        XCTAssertTrue(ClipboardItem.fits(width: 5_000, height: 5_000, maxPixels: 25_000_000))
+        XCTAssertFalse(ClipboardItem.fits(width: 5_001, height: 5_000, maxPixels: 25_000_000))
+    }
 }

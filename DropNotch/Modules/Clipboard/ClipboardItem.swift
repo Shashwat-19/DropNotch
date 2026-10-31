@@ -38,7 +38,14 @@ struct ClipboardItem: Identifiable {
               let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
               let width = properties[kCGImagePropertyPixelWidth] as? Int,
               let height = properties[kCGImagePropertyPixelHeight] as? Int else { return false }
-        return width * height <= maxPixels
+        return fits(width: width, height: height, maxPixels: maxPixels)
+    }
+
+    /// Overflow-safe: a crafted header's sizes could multiply past `Int.max`, and Swift traps on overflow.
+    static func fits(width: Int, height: Int, maxPixels: Int) -> Bool {
+        guard width > 0, height > 0 else { return false }
+        let (pixels, overflow) = width.multipliedReportingOverflow(by: height)
+        return !overflow && pixels <= maxPixels
     }
 
     // shortcut: the thumbnail is made on the main thread; a 25 MP PNG decodes in full once (about 100 MB, briefly).
