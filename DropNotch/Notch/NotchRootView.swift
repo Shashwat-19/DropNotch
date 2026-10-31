@@ -53,7 +53,7 @@ struct NotchRootView: View {
     }
 
     private func compactSlot(_ slot: CompactSlot, _ geometry: NotchGeometry) -> some View {
-        registry.compactModule(for: slot)?.compactView(slot: slot)
+        registry.slotModule(for: slot)?.compactView(slot: slot)
             // Even padding on all sides of a square wing.
             .padding(geometry.wingWidth * 0.2)
             .frame(width: geometry.wingWidth, height: geometry.closedFrame.height)

@@ -39,8 +39,14 @@ final class ModuleRegistry {
 
     /// The module for a compact slot, if it is enabled and has something to show.
     func compactModule(for slot: CompactSlot) -> (any NotchModule)? {
+        slotModule(for: slot).flatMap { $0.hasCompactContent ? $0 : nil }
+    }
+
+    /// The enabled module assigned to a compact slot, with or without content. The notch draws this while the
+    /// wings are still showing, so the content fades out with the shape instead of vanishing first (D28).
+    func slotModule(for slot: CompactSlot) -> (any NotchModule)? {
         let id = slot == .left ? compactLeftID : compactRightID
-        return modules.first { $0.id == id && enabledIDs.contains($0.id) && $0.hasCompactContent }
+        return modules.first { $0.id == id && enabledIDs.contains($0.id) }
     }
 
     /// Whether either compact slot has something to show, which widens the closed notch (D28).

@@ -20,7 +20,7 @@ final class NotchState {
     @ObservationIgnored private var hover = NotchHoverStateMachine()
     /// One timer per kind, keyed by the event it delivers (open delay, exit debounce).
     @ObservationIgnored private var timers: [NotchHoverStateMachine.Event: Task<Void, Never>] = [:]
-    /// Bumped on every phase change and screen change, so a close animation's completion
+    /// Bumped on every phase, compact and screen change, so a close animation's completion
     /// can tell whether anything happened after it started (D19).
     @ObservationIgnored private var changeCount = 0
     /// What the registry last reported; `displaysCompact` follows it through `show` (D28).
@@ -118,9 +118,11 @@ final class NotchState {
         let animation = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil : Self.spring
         let target = geometry.panelFrame(for: phase, compact: compact)
         // After re-entering during a close the panel is still larger; keep it, so the
-        // pointer stays inside and the shape isn't clipped mid-animation.
+        // pointer stays inside and the shape isn't clipped mid-animation. With the wings the old and
+        // new shapes can each be larger in a different direction (wider, taller), so grow to both:
+        // every frame shares the top edge and centre, and the open canvas contains them all.
         if !panel.frame.contains(target) {
-            setPanelFrame(target, reason: "grow")
+            setPanelFrame(panel.frame.union(target), reason: "grow")
         } else {
             Logger.notch.debug("Grow kept larger frame \(NSStringFromRect(panel.frame), privacy: .public)")
         }

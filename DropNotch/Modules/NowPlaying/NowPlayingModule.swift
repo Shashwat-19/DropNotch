@@ -99,7 +99,8 @@ final class NowPlayingModule: NotchModule {
         if info?.isPlaying == true || info == nil {
             compactGraceTask?.cancel()
             compactGraceTask = nil
-            hasCompactContent = info != nil
+            // Only on a change: every playing update would otherwise wake the notch's observer.
+            if hasCompactContent != (info != nil) { hasCompactContent = info != nil }
         } else if hasCompactContent, compactGraceTask == nil {
             // One wake per pause, never repeating (ARCHITECTURE §9).
             compactGraceTask = Task { [weak self, compactGrace] in

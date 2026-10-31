@@ -91,9 +91,12 @@ final class ModuleRegistryTests: XCTestCase {
         XCTAssertEqual(registry.compactModule(for: .right)?.id, "a")
         a.hasCompactContent = false
         XCTAssertNil(registry.compactModule(for: .left))
+        // The slot's module stays drawable while the wings retract (D28).
+        XCTAssertEqual(registry.slotModule(for: .left)?.id, "a")
         a.hasCompactContent = true
         registry.setEnabled("a", false)
         XCTAssertNil(registry.compactModule(for: .left))
+        XCTAssertNil(registry.slotModule(for: .left))
     }
 
     func testInitStartsAndStopsNothing() {

@@ -19,6 +19,7 @@ final class CompactWaveformView: NSView {
     private var isPlaying = false
     private var reduceMotion = false
     private var screensAsleep = false
+    private var laidOutSize = CGSize.zero
     /// Bar heights as a share of the view's height: still while playing, and the range each bar moves through.
     private static let restingHeights: [CGFloat] = [0.5, 0.9, 0.65, 0.8]
     private static let pausedHeight: CGFloat = 0.2
@@ -53,8 +54,11 @@ final class CompactWaveformView: NSView {
         restart()
     }
 
+    // Only a new size restarts the bars; any other layout pass would snap them back to the low height.
     override func layout() {
         super.layout()
+        guard bounds.size != laidOutSize else { return }
+        laidOutSize = bounds.size
         restart()
     }
 
@@ -95,6 +99,8 @@ final class CompactWaveformView: NSView {
             // Height, not a scale, so the rounded ends keep their shape.
             let animation = CABasicAnimation(keyPath: "bounds.size.height")
             animation.fromValue = bounds.height * Self.lowHeight
+            // The square root lifts each peak above its resting height (0.5 → 0.71, 0.9 → 0.95), so the bars
+            // move between low and nearly full while keeping their uneven order.
             animation.toValue = bounds.height * Self.restingHeights[index].squareRoot()
             animation.duration = Self.periods[index]
             animation.autoreverses = true

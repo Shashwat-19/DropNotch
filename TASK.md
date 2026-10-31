@@ -219,6 +219,16 @@ Steps, one commit each: 1. `docs:` D28, this section, ARCHITECTURE §7/§9. 2. `
 
 Out of this branch: slot pickers (Settings), a real waveform (v0.2), VoiceOver for the closed notch (accessibility-auditor, release branch).
 
+Device checks (Debug build is enough: no entitlement or signing change; notched Mac, Music):
+27. Play: the shape widens smoothly to about 250 pt with the artwork left and moving bars right; pause and play quickly: no flap; pause and wait: the wings retract after about 5 s, the content fading with the shape; quit Music: they retract at once. Nothing shows outside the black shape at any point.
+28. Hover over a wing peeks and opens the notch; closing returns to the wide shape. Move the pointer in and out while the wings are retracting: no clipped shape. With the pointer resting where a wing appears when music starts, note whether it peeks or opens unasked.
+29. Menu-bar items and app menus next to the notch: note which ones the wings cover and that they work again once the wings retract.
+30. The bars look smooth enough at 15 fps (if choppy, raise `preferredFrameRateRange` in `CompactWaveform.swift`). They are still while paused (flat), under Reduce Motion (uneven) and in Low Power Mode, toggled mid-song.
+31. Display sleep and wake while playing: the bars move again after wake.
+32. Reduce Motion: the width changes at once, with no flash or clipped frame.
+
+Reviews: test-writer (18 tests); code-reviewer: Approve with changes. Applied: grow to the union of the old and new frames (W1), device checks listed (W2), content fades out with the wings (S3), fewer observer wakes (S4), bars restart only on a size change (S5), comments (S6, S7).
+
 ## Release checklist
 
 Device checks moved here from feature branches (speed mode, CLAUDE.md). Run them in the release branch on a Release build on a notched Mac.
