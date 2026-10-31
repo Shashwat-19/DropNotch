@@ -853,3 +853,43 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 **Alternatives:** SwiftUI `.onDrop`/`.onDrag` (rejected: no control over the drag operation, and file-promise support through `NSItemProvider` isn't documented for macOS). Resolving bookmarks at launch (rejected: a folder prompt with no context). Bookmarking the symlink itself (rejected: dragging out would hand over a link). A package: none found worth adding (dependency-manager, 2026-10-31: only small MIT bookmark wrappers saving about 10 lines).
 
 **Not done:** Quick Look and thumbnails (type icons only), open/reveal in Finder, text and web-link drops, keyboard access to tiles and actions (release accessibility pass), a size limit for copies, cleaning up a copy left behind by a crash mid-drop. A file that falls back to a copy isn't checked for duplicates, and shows only once the copy finishes (code-reviewer S4). Leftover copies after a crash or an unreadable tray.json aren't swept (security-auditor L2). With nothing selected, AirDrop and Share send every file, including any bookmark another process planted in tray.json, shown under its real name (L3). Folders are created with default permissions inside the 0700 ~/Library; tray.json holds full paths in its bookmarks, unencrypted and in backups (L4). No usage strings for removable or network volumes (L5). Bookmarks resolve on the main thread, so an unresponsive mounted server can stall the notch (L6). Nothing in code ends the drag hover after a drop or a drag out; it relies on AppKit sending `mouseExited` afterwards (S1, device check 46).
+
+---
+
+## D7c. Clipboard contents are read automatically only under Always Allow
+
+**Date:** 2026-10-31 · **Status:** Accepted (Shash, after the preview-flag re-run; refines D7a)
+
+**Decision:**
+- Read item contents in the background only when `accessBehavior` is `alwaysAllow` (and on macOS 14.0–15.3, which has no pasteboard alert and no `accessBehavior` [I: the API and the alert arrived in 15.4]).
+- Under `default` or `ask`: never read contents in the background. The Clipboard tab explains that macOS will ask, and that choosing Always Allow in System Settings › Privacy & Security › Paste from Other Apps keeps history automatic. A read happens only from an explicit user action in the tab.
+- Under `alwaysDeny`: don't read; the tab shows "blocked in System Settings".
+- `changeCount` and the detection call (`detectedPatterns(for:)`) stay allowed in every state: neither raised an alert.
+
+**Evidence:** docs/research/clipboard-probe-2026-10-24.md §5. Under the preview setting a background `string(forType:)` raised the alert and blocked the main thread for 149 s, until Shash answered it [V]. The first alert moved the setting to `ask`, even after Allow [V].
+
+**Why:** D7b keeps every pasteboard call on the main thread, so a read that waits for an alert freezes the whole notch. An alert that the user caused with a click in the tab is expected; one that comes from nowhere while they copy in another app is not.
+
+**Alternatives:** read on a background thread so a blocked read doesn't freeze the notch (rejected: D7b, AppKit throws off the main thread under this setting). Read in the background under `ask` too and let the alert appear (rejected: an alert per copy, and a frozen notch while it waits).
+
+**Consequences:** under `default` or `ask` the history fills only by hand, until the user switches to Always Allow. That switch may apply only after DropNotch is relaunched [V: System Settings strings, §5].
+
+---
+
+## D33. Clipboard history: turned on in its tab, reads gated by access, copy-back closes a hotkey-opened notch
+
+**Date:** 2026-11-01 · **Status:** Accepted (Shash chose the four recommendations, 2026-11-01; implements D7, D7a–D7c)
+
+**Decision:**
+- `ClipboardModule` is the fourth tab (⌘4). Nothing is polled or read until the user clicks "Turn On Clipboard History" in the tab; the choice is saved as `clipboard.historyOn` in UserDefaults (a flag, never content). History lives in memory and is cleared when the module stops.
+- The poll (0.5 s, 0.25 s tolerance) runs on the main thread (D7b) and pauses while the screens sleep. On each `changeCount` change it re-reads `accessBehavior` (`Pasteboard.access`): Always Allow, or macOS 14.0–15.3, reads the item; Ask or default only marks that something new was copied, and the tab shows an "Add Clipboard" button that does one read (D7c); Always Deny stops the poll and the tab shows the System Settings path. Opening the tab re-checks access and restarts a stopped poll. Always Allow is trusted only if it held at launch; chosen later, it is treated as Ask and the tab asks for a relaunch, since System Settings says the change may apply only after quitting (code-reviewer W1).
+- Read order: `types`, then skip the nspasteboard.org markers and file URLs (Finder copies belong to the tray), then text, else PNG, else TIFF. The detection call is dropped: every kept item's text is read anyway, so it saves no read. A link is a lone http or https URL in the text.
+- Limits: 25 items, newest first, duplicates move to the top. Images over 10 MB are skipped; past 50 MB of images in total, the oldest images go first. Rows show a 64 px thumbnail made once with ImageIO, never the decoded full image (W2). An image must be a real PNG or TIFF by its header, of at most 25 MP (checked without overflow), so a small file claiming a huge size is never decoded (security-auditor M1; automated security review). Text over 1,000,000 UTF-16 units is skipped, not cut (M2). An item is dropped if `changeCount` moved during the read (L2). The older nspasteboard.org markers are skipped too (L1).
+- A "Clear" button empties the history (M3). Turning history off goes in the Settings branch.
+- Click a row, or Return on the highlighted one (↑ ↓ in the search field), to copy it back. DropNotch's own write isn't read back. Copying sends `.dismissed`, which closes a notch that has keyboard focus (opened with the hotkey, or after a click in the search field) so ⌘V reaches the front app, and leaves a hover-opened one open (code-reviewer S3).
+- Search: one field, `localizedStandardContains` over the text; images show only when the field is empty. Logging: access-state changes only.
+- `Pasteboard` is a main-actor protocol over the `NSPasteboard` calls used, so tests fake the clipboard. Package search (dependency-manager, 2026-11-01): none; full clipboard apps only, and fuzzy-search packages save about 5 lines for 25 items.
+
+**Alternatives:** start at launch under Always Allow (rejected: no consent step until Settings exists); the turn-on click as the only manual read under Ask (rejected: history would never fill); no image cap (rejected: 25 large screenshots could hold several hundred MB); keep the detection call (rejected: an async hop that saves no read).
+
+**Not done:** the history shows to anyone watching a shared screen or a recording when the notch opens on the Clipboard tab (security-auditor L3; for polish). Thumbnails are made on the main thread (`shortcut:`). An image over 10 MB is read in full on the main thread before it is skipped, since AppKit gives no size first (S2). "Add Clipboard" disappears even when the read returns nothing, as after a refused alert; a change made during the alert brings it back on the next poll (S1, kept). Persistence (a Settings toggle later), clear or delete items, pinning, rich text and file items. The turn-on and Add buttons are reached with Tab only when keyboard navigation is on (as other buttons, D30).

@@ -39,6 +39,8 @@ struct NotchRootView: View {
                     .environment(\.notchHasKeyboardFocus, state.hasKeyboardFocus)
                     // A click in a hover-opened note takes keyboard focus (D31).
                     .environment(\.requestNotchKeyboardFocus, NotchFocusRequest { state.send(.focusRequested) })
+                    // Clipboard copy-back closes a keyboard-opened notch so ⌘V reaches the front app.
+                    .environment(\.dismissNotch, NotchFocusRequest { state.send(.dismissed) })
                     .transition(.asymmetric(insertion: .opacity, removal: .identity))
                 }
             }
@@ -106,6 +108,8 @@ extension EnvironmentValues {
     @Entry var notchHasKeyboardFocus = false
     /// Takes keyboard focus for a hover-opened notch (D31). Modules don't see `NotchState`.
     @Entry var requestNotchKeyboardFocus = NotchFocusRequest {}
+    /// Closes a keyboard-opened notch and hands focus back; does nothing to a hover-opened one.
+    @Entry var dismissNotch = NotchFocusRequest {}
 }
 
 /// A struct rather than a bare closure, so SwiftUI can compare it and skip redrawing the views that read it.

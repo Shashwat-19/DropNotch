@@ -70,3 +70,25 @@ Shash asked for a run under Apple's developer-preview flag for the pasteboard pr
 - **Follow-ups:** D7b (pasteboard calls on the main thread). Re-running copies 4–6 under the preview flag is the first step of the Clipboard module (TASK.md).
 - The flag was deleted afterwards: `defaults delete com.shashwat.ClipboardProbe EnablePasteboardPrivacyDeveloperPreview` [V: `defaults read` reports the key missing].
 
+
+## 5. Preview-flag re-run of copies 4–6 (2026-10-31)
+
+First step of the Clipboard module (TASK.md). Same probe design as §1, rebuilt in the session scratchpad with the main-actor fix (D7b): every pasteboard call, including the `detectedPatterns(for:)` await, runs on the main thread. Ad-hoc signed with the hardened runtime (`flags=0x10002(adhoc,runtime)`) [V: `codesign -dv`]. macOS 27.0.1 (26A434) [V: probe log]. Preview flag set with `defaults write com.shashwat.ClipboardProbe EnablePasteboardPrivacyDeveloperPreview -bool yes`. No clipboard or notch app running apart from a Debug DropNotch, which has no clipboard code [V: `lsappinfo`]. Copies made with `pbcopy`, 4 s apart; Shash watched the screen.
+
+| Copy | Read | Result | Time taken | `accessBehavior` after |
+|---|---|---|---|---|
+| — | at launch | changeCount 102 | — | `default` |
+| 4 | `detectedPatterns(for:)` (web URL, number), awaited on the main actor | 0 matched, no crash, no alert | 0.06 s | `default` |
+| 5 | string | **blocked the main thread until Shash answered an alert**; returned `nil` | 149.44 s | `ask` |
+| 6 | string (copied while copy 5 was blocked) | 22 characters, no second alert reported | 0.00 s | `ask` |
+
+[V: probe log; alert reported by Shash, who clicked Allow. The wording and buttons weren't noted.]
+
+What this shows:
+- **The detection call doesn't alert and doesn't crash on the main thread** under the preview setting [V]. D7b holds.
+- **A text read under `default` raises the alert and blocks the calling thread until the user answers** [V: 149 s inside `string(forType:)`]. On the main thread (D7b) that would freeze the whole notch: no hover, no animation, no hotkey.
+- **After the first alert the setting is `ask`, not `alwaysAllow`**, even though Shash clicked Allow [V]. Apple documents this: the first alert moves the app from `default` to `ask` and lists it in System Settings [V: https://developer.apple.com/documentation/appkit/nspasteboard/accessbehavior-swift.enum/default]. The pane is Privacy & Security › **Paste from Other Apps** [V: `PASTEBOARD_ACCESS` in SecurityPrivacyExtension.appex's English strings]. The same strings warn that a change there may apply only after the app is quit [V: `PASTEBOARD_ACCESS_QUIT_ALLOW_TITLE`].
+- The copy 5 read returned `nil` after Allow. Copy 6 had replaced the clipboard during the wait, which is probably why [I]. Copy 6's read 40 ms later gave no second alert [V: none reported]; whether Allow covers a short window or the rest of the session is unknown [I].
+- Apple says access under `ask` that is "both user originated and paste related" is always allowed with no alert [V: …/accessbehavior-swift.enum/ask]. Whether a button click in DropNotch counts as that is untested [I].
+
+Follow-up: D7c. The flag was deleted afterwards (`defaults read` reports the key missing) and the probe quit on its own after copy 6 [V].
