@@ -88,7 +88,7 @@ final class ModuleRegistryTests: XCTestCase {
         let a = FakeModule("a")
         let registry = ModuleRegistry(modules: [a], defaults: makeDefaults())
         XCTAssertEqual(registry.compactModule(for: .left)?.id, "a")
-        XCTAssertNil(registry.compactModule(for: .right))
+        XCTAssertEqual(registry.compactModule(for: .right)?.id, "a")
         a.hasCompactContent = false
         XCTAssertNil(registry.compactModule(for: .left))
         a.hasCompactContent = true

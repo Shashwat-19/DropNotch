@@ -26,7 +26,9 @@ final class ModuleRegistry {
         self.defaults = defaults
         // A module with no saved flag is on.
         enabledIDs = Set(modules.map(\.id).filter { defaults.object(forKey: Self.key($0)) as? Bool ?? true })
+        // Now Playing fills both sides: artwork left, bars right (D28).
         compactLeftID = modules.first?.id
+        compactRightID = modules.first?.id
         tabOrder = modules.map(\.id)
     }
 
@@ -40,6 +42,9 @@ final class ModuleRegistry {
         let id = slot == .left ? compactLeftID : compactRightID
         return modules.first { $0.id == id && enabledIDs.contains($0.id) && $0.hasCompactContent }
     }
+
+    /// Whether either compact slot has something to show, which widens the closed notch (D28).
+    var hasCompactContent: Bool { compactModule(for: .left) != nil || compactModule(for: .right) != nil }
 
     /// Starts every enabled module.
     func start() {
