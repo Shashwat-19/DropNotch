@@ -853,3 +853,23 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 **Alternatives:** SwiftUI `.onDrop`/`.onDrag` (rejected: no control over the drag operation, and file-promise support through `NSItemProvider` isn't documented for macOS). Resolving bookmarks at launch (rejected: a folder prompt with no context). Bookmarking the symlink itself (rejected: dragging out would hand over a link). A package: none found worth adding (dependency-manager, 2026-10-31: only small MIT bookmark wrappers saving about 10 lines).
 
 **Not done:** Quick Look and thumbnails (type icons only), open/reveal in Finder, text and web-link drops, keyboard access to tiles and actions (release accessibility pass), a size limit for copies, cleaning up a copy left behind by a crash mid-drop. A file that falls back to a copy isn't checked for duplicates, and shows only once the copy finishes (code-reviewer S4). Leftover copies after a crash or an unreadable tray.json aren't swept (security-auditor L2). With nothing selected, AirDrop and Share send every file, including any bookmark another process planted in tray.json, shown under its real name (L3). Folders are created with default permissions inside the 0700 ~/Library; tray.json holds full paths in its bookmarks, unencrypted and in backups (L4). No usage strings for removable or network volumes (L5). Bookmarks resolve on the main thread, so an unresponsive mounted server can stall the notch (L6). Nothing in code ends the drag hover after a drop or a drag out; it relies on AppKit sending `mouseExited` afterwards (S1, device check 46).
+
+---
+
+## D7c. Clipboard contents are read automatically only under Always Allow
+
+**Date:** 2026-10-31 · **Status:** Accepted (Shash, after the preview-flag re-run; refines D7a)
+
+**Decision:**
+- Read item contents in the background only when `accessBehavior` is `alwaysAllow` (and on macOS 14.0–15.3, which has no pasteboard alert and no `accessBehavior` [I: the API and the alert arrived in 15.4]).
+- Under `default` or `ask`: never read contents in the background. The Clipboard tab explains that macOS will ask, and that choosing Always Allow in System Settings › Privacy & Security › Paste from Other Apps keeps history automatic. A read happens only from an explicit user action in the tab.
+- Under `alwaysDeny`: don't read; the tab shows "blocked in System Settings".
+- `changeCount` and the detection call (`detectedPatterns(for:)`) stay allowed in every state: neither raised an alert.
+
+**Evidence:** docs/research/clipboard-probe-2026-10-24.md §5. Under the preview setting a background `string(forType:)` raised the alert and blocked the main thread for 149 s, until Shash answered it [V]. The first alert moved the setting to `ask`, even after Allow [V].
+
+**Why:** D7b keeps every pasteboard call on the main thread, so a read that waits for an alert freezes the whole notch. An alert that the user caused with a click in the tab is expected; one that comes from nowhere while they copy in another app is not.
+
+**Alternatives:** read on a background thread so a blocked read doesn't freeze the notch (rejected: D7b, AppKit throws off the main thread under this setting). Read in the background under `ask` too and let the alert appear (rejected: an alert per copy, and a frozen notch while it waits).
+
+**Consequences:** under `default` or `ask` the history fills only by hand, until the user switches to Always Allow. That switch may apply only after DropNotch is relaunched [V: System Settings strings, §5].
