@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, 4, `feat/hotkey`, 5, `feat/notes`, and 6, `feat/file-tray`, are merged to main and pushed to `origin`. Next: clipboard, settings, polish, release. See "Phase 3" below.
+**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, 4, `feat/hotkey`, 5, `feat/notes`, and 6, `feat/file-tray`, are merged to main and pushed to `origin`. Branch 7, `feat/clipboard`, is built and reviewed, waiting for device checks 51–56. Next: settings, polish, release. See "Phase 3" below.
 
 ## Goal
 Run a reverse-engineering analysis (REA) of Canopy and Atoll, turn it into a feature matrix and architecture plan for DropNotch, then scaffold the foundation. DropNotch must be original code that Shash owns.
@@ -279,9 +279,29 @@ Device checks (Debug build is enough: Info.plist usage strings only, no entitlem
 49. One tile selected, AirDrop: the AirDrop window comes up in front and works. Share: the share menu opens; note whether the notch closes under it. With nothing selected, both send every file.
 50. Clear All: the tray is empty and the originals are still in Finder. ⌘1–⌘3 switch tabs; in hover mode one click selects a tile, and typing in the front app afterwards still works.
 
+### Branch 7: `feat/clipboard` (D7, D7a–D7c, D33)
+
+A Clipboard tab (⌘4): the last 25 text, link and image items, in memory only. History starts only after "Turn On Clipboard History" in the tab. Under Always Allow it fills by itself; under Ask it never reads in the background (a read blocks the notch until the macOS alert is answered, D7c), so the tab explains and offers "Add Clipboard"; under Always Deny it shows the System Settings path. Search, ↑/↓ and Return, click to copy back; copying closes a keyboard-opened notch so ⌘V lands in the front app. Clear empties the history. Package search (dependency-manager, 2026-11-01): none worth adding.
+
+**Status (2026-11-01):** step 0 probe re-run done (docs/research/clipboard-probe-2026-10-24.md §5, D7c; preview flag deleted). Built; test-writer (19 tests; tick consent guard and CRLF preview fixed); code-reviewer: Approve with changes (W1 Always Allow trusted only if it held at launch, W2 thumbnails, S3 wording applied; S1 kept, S2 recorded, S4 no rename). security-auditor: Pass with changes (M1 image header and 25 MP cap, M2 1M-unit text cap and stored preview, M3 Clear button, L1 legacy markers, L2 mid-read change, all with tests; L3 screen sharing recorded in D33; Turn Off moves to Settings). 361 tests, 0 failures. No entitlement, Info.plist or signing change, so a Debug build is enough.
+
+Out of this branch: persistence and Turn Off (Settings), deleting single items, pinning, rich text and files, hiding history while the screen is shared.
+
+Device checks (Debug build, notched Mac).
+51. ⌃⌥N, ⌘4: four tab icons fit left of the camera housing. The turn-on text is readable; click Turn On. Copy text in Safari, a URL from its address bar, and a screenshot to the clipboard (⌘⌃⇧4): they appear newest first, with text, link and thumbnail icons. Copy a password from the Passwords app (or 1Password): it doesn't appear. Copy a file in Finder: it doesn't appear.
+52. ⌃⌥N on Clipboard: the cursor is in Search and typing filters. ↑/↓ move the highlight (if they move the text cursor instead, note it). Return copies and closes the notch; ⌘V in TextEdit pastes it. Copy back the screenshot and paste it into Preview (File › New from Clipboard).
+53. Hover mode: one click on a row copies it and the notch stays open; ⌘V in the front app works without clicking it first. A click in Search takes typing. Clear empties the list.
+54. Ask: `defaults write com.shashwat.DropNotch EnablePasteboardPrivacyDeveloperPreview -bool yes`, relaunch. The tab shows the Ask explanation. Copy in another app: no alert, "Add Clipboard" appears, and the notch keeps opening and closing on hover. Click Add Clipboard: the macOS alert appears; Allow: the item appears.
+55. In System Settings › Privacy & Security › Paste from Other Apps, set DropNotch to Always Allow while it runs. Reopen the tab: the "quit and reopen" line. Copy something: no alert, no freeze. Quit and relaunch: copies appear by themselves. Then Always Deny and relaunch: "blocked in System Settings". Afterwards `defaults delete com.shashwat.DropNotch EnablePasteboardPrivacyDeveloperPreview` and set the setting back as you like.
+56. During 51–55, `log stream --predicate 'subsystem == "com.shashwat.DropNotch" AND category == "Clipboard"' --level debug` shows only "Clipboard poll started" and access changes, never content.
+
 ## Release checklist
 
 Device checks moved here from feature branches (speed mode, CLAUDE.md). Run them in the release branch on a Release build on a notched Mac.
+
+From branch 7, `feat/clipboard`:
+- **Pending.** Energy with history on: about 2 wakes a second from the poll and none while the screens sleep; CPU idle otherwise. Memory stays under about 60 MB of images after 25 large screenshots.
+- **Pending.** VoiceOver reads each row's preview with the "Copies to the clipboard" hint; the Clipboard group is labelled; Increase Contrast shows the highlight.
 
 From branch 5, `feat/notes`:
 - **Pending.** 40 (input method). With a Japanese or Chinese input method mid-composition in the note, Escape cancels the composition and the notch stays open; a second Escape closes it.
