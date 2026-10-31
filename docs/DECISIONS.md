@@ -583,7 +583,7 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Decision:**
 - At start, for each running player, `AEDeterminePermissionToAutomateTarget(…, askUserIfNeeded: false)` runs on the Apple Event queue. It never prompts. Only if it returns `noErr` is the current state and track read (D22). Otherwise nothing is sent and the module waits for the player's next notification (D24).
-- The first click on a control calls it with `askUserIfNeeded: true` on the same queue, then sends. That call blocks until the user answers the system prompt [I], so it never runs on the main thread. Controls are disabled while a command is in flight. Every later click calls it again, so a grant turned on in System Settings works without a relaunch [I: device check 2].
+- The first click on a control calls it with `askUserIfNeeded: true` on the same queue, then sends. That call blocks until the user answers the system prompt [I], so it never runs on the main thread. While a command is in flight, further clicks are dropped (since D27 the controls are no longer drawn disabled, which dimmed them on every click). Every later click calls it again, so a grant turned on in System Settings works without a relaunch [I: device check 2].
 - The permission check uses the play/pause event for the target app; Automation consent is per target app [I].
 - Every event is sent with `kAEDoNotPromptForUserConsent`, so a send or read fails with -1744 instead of prompting, and only `permission(ask: true)` after a click can show the prompt (security-auditor M1, 2026-10-25) [I: from the SDK header `AppleEvents.h`; not seen on a device].
 - No custom screen before the system prompt: the prompt shows our `NSAppleEventsUsageDescription`, and the click that triggers it is the explanation.
@@ -719,3 +719,25 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - A seek made in the player's own window while the notch is open may not show until the next notification or open [I: device check 18].
 - The bar's animation is capped at 10 fps: uncapped it added about 12 points of WindowServer CPU, capped about 3 [V: performance-optimizer harness, 2026-10-25]. The elapsed-time text updates about once a second while open and playing (about 0.5 % app CPU), and screen sleep now closes the notch so neither runs while the display sleeps (ARCHITECTURE §9).
 - Revisit favourite if a later probe finds `pLov` reliable for some tracks.
+
+## D27. Now Playing UI feel: optimistic play/pause, glass controls, crossfades
+
+**Date:** 2026-10-31 · **Status:** Accepted (Shash asked for the four changes; the details below are the lead's, reviewed by code-reviewer)
+
+**Decision:**
+- Play/pause flips the icon (and its VoiceOver label) on click. The flip is cleared by an update that agrees, by a change of player, at once by a failed command, or 1 s after an `.ok` reply that no update confirmed (a command that changed nothing). A disagreeing update never clears it, before or after the reply, because Music's bursts (D24) can land on either side. With the state `.unknown` (no notification, no grant) nothing flips: it would be a guess while the Automation prompt is up.
+- The controls and the bar are no longer `.disabled` while a command is in flight. `perform` still drops those clicks (D23).
+- Play morphs into pause with `contentTransition(.symbolEffect(.replace))`; under Reduce Motion it fades instead.
+- Controls on macOS 26+: `glassEffect(.regular.interactive(), in: .circle)` in a custom `ButtonStyle` [V: macOS 27 SDK swiftinterface; developer.apple.com "Applying Liquid Glass to custom views": interactive glass reacts to pointer and presses]. On macOS 14/15: a white circle at 12 % on hover, 25 % pressed (20 %/35 % with Increase Contrast), and a 0.9 press scale, which Reduce Motion turns off. The notch background stays solid black.
+- Title, artist and artwork crossfade over 0.2 s on a change. A fade is what Reduce Motion substitutes for motion (L8), so the crossfades stay on under it.
+
+**Alternatives:**
+- Reconcile with the first update after the reply, plus an extra read. Rejected (code-reviewer W1, W3, W4): the read doesn't carry the play state (`NowPlayingSelection.refreshed`), `publish` drops unchanged values so nothing may arrive, and a late burst would flicker the icon.
+- Make the read after a command authoritative for the play state. Rejected for now: it changes D24/D26 selection merging for a corner case the 1 s settle already covers.
+- `.buttonStyle(.glass)`. Rejected: Apple's docs don't say how it sizes a button or whether it honours `buttonBorderShape`, and the controls need a fixed 32 pt circle (L7).
+- `GlassEffectContainer` around the three controls, which Apple advises for rendering cost. Deferred (`shortcut:` comment): its `spacing`, which decides when shapes merge, isn't documented. performance-optimizer measures it in the release branch.
+
+**Trade-offs / follow-ups:**
+- The settle is a one-shot 1 s sleep per play/pause click (ARCHITECTURE §9).
+- Unverified, release checklist: whether interactive glass shows a hover effect on macOS, and whether its press bounce respects Reduce Motion; the white hover circle in the non-activating panel on macOS 14/15; whether a late Music burst still flickers the icon; the artwork fading old → app icon → new on a track change (the selection drops the old artwork first).
+- The glass circle is visible at rest, as asked; the macOS 14/15 circle appears on hover only.

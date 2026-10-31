@@ -216,6 +216,7 @@ Device checks (Release build, notched Mac), numbered after branch 1's. Speed mod
 Device checks moved here from feature branches (speed mode, CLAUDE.md). Run them in the release branch on a Release build on a notched Mac.
 
 From branch 2, `feat/now-playing-media`:
+- **Pending.** UI feel (D27): interactive glass shows hover and press feedback on macOS 26+; its press bounce respects Reduce Motion; on macOS 14/15 the white hover circle appears in the non-activating panel; a late Music burst doesn't flicker the play/pause icon; artwork on a track change (does it fade old → app icon → new?).
 21. **Pending.** Network (`nettop` or a firewall): only `i.scdn.co`, at most one request per Spotify track change, none for Music, none while idle. Offline: app icon, no retries.
 23. **Pending.** Energy: 0 wake-ups while closed and while paused; about 1 a second while open and playing (the elapsed time); WindowServer within about 3 points of its baseline; display sleep with the notch open closes it.
 24. **Pending.** Memory stays flat over 50 track changes.
