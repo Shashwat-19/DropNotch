@@ -157,6 +157,7 @@ Target: zero wake-ups while idle, apart from the clipboard poll. Intervals below
 | Hover exit debounce | One-shot 0.1 s | Pointer leaves | Avoids flicker at the edge [V: Atoll uses 100 ms]. |
 | Sweep guard (not a timer) | Per mouse-moved event | Pointer inside the panel only, via the tracking area's `.mouseMoved` | Restarts the open delay above 600 pt/s sideways (D20). No events while the pointer is outside the panel. For about 0.25 s after a close starts the panel is still large (D19), so mouse-moved events reach the guard then; this is the D19 trade-off, and the guard only acts during peek. |
 | Play/pause settle | One-shot 1 s | After a play/pause click the player accepted, until an update confirms it | A command that changed nothing sends no notification, so nothing else would undo the optimistic icon (D27). |
+| Artwork hold | One-shot 2 s | A track change while the last track's artwork is showing, until the new artwork or its absence arrives | A failed read reports neither, so without it the old picture would stay on the new track (D27). |
 | Peek dismissal | One-shot, 2–3 s | A peek HUD is showing | Timed by definition. |
 | Screen-change debounce | One-shot 0.2 s | Display change burst | Coalesces bursts. |
 | Notes autosave | One-shot 1 s after last keystroke | Typing in notes | Batches disk writes. |

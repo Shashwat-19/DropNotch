@@ -731,6 +731,14 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - Controls on macOS 26+: `glassEffect(.regular.interactive(), in: .circle)` in a custom `ButtonStyle` [V: macOS 27 SDK swiftinterface; developer.apple.com "Applying Liquid Glass to custom views": interactive glass reacts to pointer and presses]. On macOS 14/15: a white circle at 12 % on hover, 25 % pressed (20 %/35 % with Increase Contrast), and a 0.9 press scale, which Reduce Motion turns off. The notch background stays solid black.
 - Title, artist and artwork crossfade over 0.2 s on a change. A fade is what Reduce Motion substitutes for motion (L8), so the crossfades stay on under it.
 
+**Revision (2026-10-31, after Shash's clip):**
+- Root cause of the time jumps: `PlaybackProgressView` took "now" from `TimelineView`'s `context.date`. While the timeline is paused (always, unless VoiceOver is on), that date stays at the view's first render [V: scratch probe, 2026-10-31: 0.23 s while real time ran to 5 s]. After any update while playing, the elapsed text ran ahead by however long the view had existed, and snapped back on pause. The bar was right: it uses its own clock. The view now uses `Date()`.
+- Music's play/pause burst is the old state first, then the new one 8–100 ms later, both carrying the track; its position read lags and jitters by a few tenths of a second, never 0 [V: probe, 2026-10-31].
+- The module keeps `shown` (what the view draws) apart from `info` (what the source reported). A click freezes (pause) or resumes (play) at the position on screen; a seek moves the bar to the target at once. On the same track, a position that is missing, or within 1 s of `shown`, carries on from `shown`: while paused either way, while playing only backwards (`NowPlayingInfo.steadied`). A failed command or a settle takes the player's position as it is.
+- Artwork: on a track change the last picture stays until the new one loads, then crossfades straight to it. The app icon appears only when the source says the load found none (`artworkMissing`), or after a 2 s hold (a failed read never says either).
+- Text: the old title and artist fade out over 0.12 s, then the new ones fade in over 0.12 s, so they never overlap.
+- Glass (and the macOS 14/15 circle) shows only while the pointer is over a control or it is pressed.
+
 **Alternatives:**
 - Reconcile with the first update after the reply, plus an extra read. Rejected (code-reviewer W1, W3, W4): the read doesn't carry the play state (`NowPlayingSelection.refreshed`), `publish` drops unchanged values so nothing may arrive, and a late burst would flicker the icon.
 - Make the read after a command authoritative for the play state. Rejected for now: it changes D24/D26 selection merging for a corner case the 1 s settle already covers.
@@ -740,4 +748,5 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 **Trade-offs / follow-ups:**
 - The settle is a one-shot 1 s sleep per play/pause click (ARCHITECTURE §9).
 - Unverified, release checklist: whether interactive glass shows a hover effect on macOS, and whether its press bounce respects Reduce Motion; the white hover circle in the non-activating panel on macOS 14/15; whether a late Music burst still flickers the icon; the artwork fading old → app icon → new on a track change (the selection drops the old artwork first).
-- The glass circle is visible at rest, as asked; the macOS 14/15 circle appears on hover only.
+- The steadying biases the position ahead of the player's by under a second (it keeps small forward differences while paused, and any backward one under 1 s). A larger difference is taken as a seek in the player's window and applied, so a long run of toggles can, rarely, step back once.
+- Hover feedback relies on SwiftUI `onHover` in the non-activating panel [I: device check].
