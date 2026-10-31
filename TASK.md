@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, and 2, `feat/now-playing-media`, are merged to main. Branch 3, `feat/compact-slot`, is in progress. Next: hotkey, notes, file-tray, clipboard, settings, polish, release. See "Phase 3" below.
+**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, and 3, `feat/compact-slot`, are merged to main. Next: hotkey, notes, file-tray, clipboard, settings, polish, release. See "Phase 3" below.
 
 ## Goal
 Run a reverse-engineering analysis (REA) of Canopy and Atoll, turn it into a feature matrix and architecture plan for DropNotch, then scaffold the foundation. DropNotch must be original code that Shash owns.
@@ -211,7 +211,9 @@ Device checks (Release build, notched Mac), numbered after branch 1's. Speed mod
 22. **Passed (Shash, 2026-10-31).**
 26. Moved to the Release checklist (the lead checked `codesign`: only apple-events, hardened runtime on).
 
-### Branch 3: `feat/compact-slot` (D28 approved by Shash, 2026-10-31)
+### Branch 3: `feat/compact-slot` (D28 approved by Shash, 2026-10-31; merged to main 2026-10-31)
+
+**Status (2026-10-31):** device checks 27–32 passed (Shash, notched Mac, Music), after two device fixes: the pixel row of wallpaper above the wings (D29) and the 2 s grace (D28 revision). 281 tests, 0 failures. Not pushed: this clone has no `origin` remote.
 
 While music plays, the closed notch shows the artwork on the left and decorative bars on the right. D28 revises D5. Package search: none (Core Animation and existing views only).
 
@@ -219,7 +221,7 @@ Steps, one commit each: 1. `docs:` D28, this section, ARCHITECTURE §7/§9. 2. `
 
 Out of this branch: slot pickers (Settings), a real waveform (v0.2), VoiceOver for the closed notch (accessibility-auditor, release branch).
 
-Device checks (Debug build is enough: no entitlement or signing change; notched Mac, Music):
+Device checks (Debug build is enough: no entitlement or signing change; notched Mac, Music). **All passed (Shash, 2026-10-31):** no gap at the top edge, the bars go flat at once on a pause from Music and from the notch, the wings retract after about 2 s.
 27. Play: the shape widens smoothly to about 250 pt with the artwork left and moving bars right; pause and play quickly: no flap; pause and wait: the bars freeze flat at once and the wings retract after about 2 s, the content fading with the shape; quit Music: they retract at once. Nothing shows outside the black shape at any point.
 28. Hover over a wing peeks and opens the notch; closing returns to the wide shape. Move the pointer in and out while the wings are retracting: no clipped shape. With the pointer resting where a wing appears when music starts, note whether it peeks or opens unasked.
 29. Menu-bar items and app menus next to the notch: note which ones the wings cover and that they work again once the wings retract.
