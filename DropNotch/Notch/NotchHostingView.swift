@@ -21,6 +21,8 @@ final class NotchHostingView: NSHostingView<NotchRootView> {
                                   owner: self, userInfo: nil)
         addTrackingArea(area)
         hoverArea = area
+        // Files and file promises dropped on the notch go to the tray (D32), whether it is closed, compact or open.
+        registerForDraggedTypes([.fileURL] + NSFilePromiseReceiver.readableDraggedTypes.map { NSPasteboard.PasteboardType($0) })
     }
 
     @available(*, unavailable)
@@ -54,6 +56,65 @@ final class NotchHostingView: NSHostingView<NotchRootView> {
         // grows on entry. `mouseLocation` is "now", so it's only the fallback.
         let x = event.cgEvent?.location.x ?? NSEvent.mouseLocation.x
         rootView.state.send(.pointerMoved(x: x, time: event.timestamp))
+    }
+
+    // MARK: Drops (D32)
+
+    // Mouse tracking pauses during a drag, so the drag stands in for the pointer: entering peeks and opens the notch
+    // on the tray, leaving closes it. A drag from the tray itself (`draggingSource` is set only for drags inside
+    // DropNotch) is refused and left out of the hover machine.
+    // These replace NSHostingView's own drop handling without calling super, so a SwiftUI `.onDrop` in the notch
+    // would never fire (code-reviewer S2).
+
+    /// The tray, when it is on.
+    private var tray: FileTrayModule? {
+        rootView.registry.expandedModules.lazy.compactMap { $0 as? FileTrayModule }.first
+    }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard sender.draggingSource == nil, let tray else { return [] }
+        rootView.registry.selectedTabID = tray.id
+        rootView.state.send(.pointerEntered)
+        return Self.dropOperation(sender)
+    }
+
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        sender.draggingSource == nil && tray != nil ? Self.dropOperation(sender) : []
+    }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) {
+        guard sender?.draggingSource == nil, tray != nil else { return }
+        rootView.state.send(.pointerExited)
+    }
+
+    override func prepareForDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        sender.draggingSource == nil && tray != nil
+    }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        guard sender.draggingSource == nil, let tray else { return false }
+        var urls: [URL] = []
+        var promises: [NSFilePromiseReceiver] = []
+        // Per dragged item, the first class it offers: a real file URL before a promise, so a file is bookmarked
+        // rather than copied (D6).
+        sender.enumerateDraggingItems(options: [], for: self, classes: [NSURL.self, NSFilePromiseReceiver.self],
+                                      searchOptions: [.urlReadingFileURLsOnly: true]) { item, _, _ in
+            switch item.item {
+            case let url as URL: urls.append(url)
+            case let promise as NSFilePromiseReceiver: promises.append(promise)
+            default: break
+            }
+        }
+        tray.add(urls)
+        tray.receive(promises)
+        return !urls.isEmpty || !promises.isEmpty
+    }
+
+    /// `.copy`, else `.link`; never `.move` or `.generic`, which Finder takes as a move, so the original would leave
+    /// its folder. The tray only points at the file either way.
+    static func dropOperation(_ info: NSDraggingInfo) -> NSDragOperation {
+        let mask = info.draggingSourceOperationMask
+        return mask.contains(.copy) ? .copy : mask.intersection(.link)
     }
 
     private func logPointer(_ name: String, _ event: NSEvent) {
