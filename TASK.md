@@ -303,6 +303,8 @@ A native Settings window from the menu-bar item. General: launch at login (`SMAp
 
 Out of this branch: module-specific settings, confirmation before Clear, saving clipboard images, an asymmetric closed shape (S3), stopping every module from being turned off (S4).
 
+Layout change before the checks (Shash, 2026-11-01; D35): tabs and a Settings gear in one group right of the camera housing; ⌘, opens Settings while the notch has keyboard focus; the open shape widens to keep the row clear of the housing.
+
 Device checks (notched Mac; Debug build except 57).
 57. **Release build, copied to /Applications.** General › Launch at login on: DropNotch appears in System Settings › General › Login Items. Log out and in: it starts. Off in Settings: it leaves Login Items. Turn it off in System Settings, reopen the General tab: the toggle shows off.
 58. With an external display set as main: "Show the notch on" Built-in ↔ Main moves the notch at once, and hover works there. With Built-in chosen, close the lid: it falls back to the main display.

@@ -120,10 +120,12 @@ final class NotchGeometryTests: XCTestCase {
     }
 
     func testOpenFrameNeverSmallerThanPeekForAWideNotch() {
-        // Notch wider than openSize: open must follow the widest peek (compact, D28) rather than shrink below it.
+        // Notch wider than openSize: open must follow the widest peek (compact, D28) rather than shrink below it, and
+        // leave room for the top row right of the housing (D35).
         let geometry = NotchGeometry(screenFrame: screen, safeAreaTop: inset, auxLeftWidth: 100,
                                      auxRightWidth: 100, menuBarHeight: inset, backingScale: 2)
-        XCTAssertEqual(geometry.openFrame.width, geometry.compactPeekFrame.width)
+        XCTAssertEqual(geometry.openFrame.width,
+                       max(geometry.compactPeekFrame.width, geometry.closedFrame.width + 2 * NotchGeometry.topRowWidth))
         XCTAssertTrue(geometry.openFrame.contains(geometry.peekFrame))
         XCTAssertTrue(geometry.openFrame.contains(geometry.compactPeekFrame))
     }
