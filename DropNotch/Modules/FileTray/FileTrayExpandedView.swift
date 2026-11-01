@@ -55,13 +55,22 @@ struct FileTrayExpandedView: View {
         return order + [.clearAll]
     }
 
-    /// Arrows step through the tiles and actions and stop at either end, as in Now Playing (D30).
+    /// Arrows step through the tiles and actions and stop at either end, as in Now Playing (D30); Tab also reaches Clear All.
     private func moveFocus(_ direction: MoveCommandDirection) {
         focus = Self.focus(after: focus, in: focusOrder, moving: direction)
     }
 
     /// Pure so it can be tested: nil or a stop that's gone goes to the first stop.
     static func focus(after current: Focus?, in order: [Focus], moving direction: MoveCommandDirection) -> Focus? {
+        if current == .clearAll {
+            // Clear All is a Tab stop only (D40): holding → can't land on it before a Space empties the tray.
+            // From it, ← and ↑ go back to the last arrow stop; → and ↓ stay.
+            switch direction {
+            case .left, .up: return order.last { $0 != .clearAll } ?? current
+            default: return current
+            }
+        }
+        let order = order.filter { $0 != .clearAll }
         guard let current, let index = order.firstIndex(of: current) else { return order.first }
         switch direction {
         case .left, .up: return order[max(index - 1, 0)]

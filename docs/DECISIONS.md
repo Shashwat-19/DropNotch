@@ -999,12 +999,12 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Decision:**
 - Now Playing's `keyboardControl` modifier (D30) moves to `Notch/NotchKeyboardControl.swift` and is reused: a focusable view (`.edit` interactions, so it works with the system's keyboard navigation setting off) that Space or Return presses on key-down.
-- File Tray: each tile and each enabled action (AirDrop, Share, Remove, Clear All) is a focus stop. Tab and ←/→ (also ↑/↓) step through them in reading order and stop at either end; the hotkey focuses the first tile. Space or Return on a tile adds or removes it from the selection, as ⌘-click does. Removing the focused selection moves focus to the first remaining stop. A focused tile scrolls into view.
+- File Tray: each tile and each enabled action (AirDrop, Share, Remove, Clear All) is a focus stop. Tab and ←/→ (also ↑/↓) step through them in reading order and stop at either end, except that only Tab reaches Clear All (revision below); the hotkey focuses the first tile. Space or Return on a tile adds or removes it from the selection, as ⌘-click does. Removing the focused selection moves focus to the first remaining stop. A focused tile scrolls into view.
 - Share is a `Button` that opens `NSSharingServicePicker` below itself, anchored to an empty AppKit view (`TrayShareMenu`). `ShareLink` has no action SwiftUI code can call, so Return couldn't open it. The same picker serves clicks and keys.
 - Clipboard: Turn On, Add Clipboard and Clear are focus stops; the hotkey focuses Turn On while history is off, Search otherwise (as before). Tab from Search reaches the buttons. ← and → stay with the text in Search, and ↑/↓/Return keep moving and copying the highlighted row. Clearing moves focus back to Search.
 - The focus ring is the system's own on these controls (the round Now Playing controls hide it because their style draws a circle).
 
-**Known:** Clear All is the last arrow stop and runs on Space with no confirmation or undo, so holding → then Space empties the tray (accessibility-auditor, 2026-11-01; not a regression: a click does the same). Confirmation before Clear was already out of D34; for Shash to decide after v0.1.0. The originals are never touched.
+**Revision (Shash, 2026-11-01):** Clear All is a Tab stop only. The arrows skip it, so holding → can't land on it before a Space; ← or ↑ from it go back to the last arrow stop. It still runs with no confirmation or undo once focused (accessibility-auditor; a click does the same, and confirmation before Clear stays out, D34). The originals are never touched.
 
 **Alternatives:** Keeping `ShareLink` and leaving Share mouse-only (rejected: the finding is exactly that buttons can't be reached). Arrows between the clipboard buttons (rejected: ← and → belong to the text in Search, and the rows already use ↑/↓). Deleting a focused tile with ⌫ (not asked; Remove covers it).
 

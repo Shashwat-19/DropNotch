@@ -31,7 +31,7 @@ macOS asks for each permission only when you first use the feature that needs it
 ### Known issues
 - This build isn't signed with an Apple Developer ID or notarised, so macOS blocks it the first time you open it; follow the Open Anyway steps in [README › Install](README.md#install), once for each new version.
 - DropNotch runs only on macOS 14 or later on Apple silicon Macs.
-- Clear All empties the tray straight away, with no confirmation or undo, including when pressed with Space; your original files are never touched.
+- Clear All empties the tray straight away, with no confirmation or undo, including Space once Tab has reached it; your original files are never touched.
 - VoiceOver finds nothing in the closed notch; press ⌃⌥N to open it instead.
 - Not every check on a real Mac has been run yet, so expect some rough edges.
 - Now Playing relies on notifications that Music and Spotify don't document, so a player update could stop track details appearing; the controls would still work.

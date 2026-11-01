@@ -46,7 +46,30 @@ final class FileTrayExpandedViewTests: XCTestCase {
     func testArrowsStopAtEitherEnd() {
         let order = View.focusOrder(tiles: [a], canShare: true, canAirDrop: true, hasSelection: false)
         XCTAssertEqual(View.focus(after: .tile(a), in: order, moving: .left), .tile(a))
+        XCTAssertEqual(View.focus(after: .share, in: order, moving: .right), .share)
+    }
+
+    // Clear All has no confirmation, so arrows never land on it; Tab does (D40).
+    func testArrowsNeverReachClearAll() {
+        let order = View.focusOrder(tiles: [a], canShare: true, canAirDrop: false, hasSelection: false)
+        XCTAssertEqual(order.last, .clearAll)
+        var focus: View.Focus? = nil
+        for _ in 0..<5 { focus = View.focus(after: focus, in: order, moving: .right) }
+        XCTAssertEqual(focus, .share)
+        XCTAssertEqual(View.focus(after: .share, in: order, moving: .down), .share)
+    }
+
+    func testFromClearAllBackArrowsReturnToTheLastArrowStop() {
+        let order = View.focusOrder(tiles: [a], canShare: true, canAirDrop: false, hasSelection: true)
+        XCTAssertEqual(View.focus(after: .clearAll, in: order, moving: .left), .remove)
+        XCTAssertEqual(View.focus(after: .clearAll, in: order, moving: .up), .remove)
         XCTAssertEqual(View.focus(after: .clearAll, in: order, moving: .right), .clearAll)
+        XCTAssertEqual(View.focus(after: .clearAll, in: order, moving: .down), .clearAll)
+    }
+
+    func testWithOnlyClearAllArrowsDoNothing() {
+        XCTAssertNil(View.focus(after: nil, in: [.clearAll], moving: .right))
+        XCTAssertEqual(View.focus(after: .clearAll, in: [.clearAll], moving: .left), .clearAll)
     }
 
     func testFromNothingFocusedAnyArrowGoesToTheFirstStop() {
