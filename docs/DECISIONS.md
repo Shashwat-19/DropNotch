@@ -992,3 +992,16 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - Clipboard rows dim only while the notch has keyboard focus (only then is a row highlighted); a hover-opened list stays white. Tray tiles dim only while one is selected.
 
 **Alternatives:** B, a faint fill with no outline (kept a shape cue, but read as the same capsule Shash disliked); C, brightness only (rejected: state would rest on brightness alone, failing L6).
+
+## D40. Keyboard access to the tray and clipboard buttons; Share opens the system picker directly
+
+**Date:** 2026-11-01 · **Status:** Accepted (Shash, 2026-11-01: release/v0.1.0 item 1, from the feat/polish accessibility-auditor finding)
+
+**Decision:**
+- Now Playing's `keyboardControl` modifier (D30) moves to `Notch/NotchKeyboardControl.swift` and is reused: a focusable view (`.edit` interactions, so it works with the system's keyboard navigation setting off) that Space or Return presses on key-down.
+- File Tray: each tile and each enabled action (AirDrop, Share, Remove, Clear All) is a focus stop. Tab and ←/→ (also ↑/↓) step through them in reading order and stop at either end; the hotkey focuses the first tile. Space or Return on a tile adds or removes it from the selection, as ⌘-click does. Removing the focused selection moves focus to the first remaining stop. A focused tile scrolls into view.
+- Share is a `Button` that opens `NSSharingServicePicker` below itself, anchored to an empty AppKit view (`TrayShareMenu`). `ShareLink` has no action SwiftUI code can call, so Return couldn't open it. The same picker serves clicks and keys.
+- Clipboard: Turn On, Add Clipboard and Clear are focus stops; the hotkey focuses Turn On while history is off, Search otherwise (as before). Tab from Search reaches the buttons. ← and → stay with the text in Search, and ↑/↓/Return keep moving and copying the highlighted row. Clearing moves focus back to Search.
+- The focus ring is the system's own on these controls (the round Now Playing controls hide it because their style draws a circle).
+
+**Alternatives:** Keeping `ShareLink` and leaving Share mouse-only (rejected: the finding is exactly that buttons can't be reached). Arrows between the clipboard buttons (rejected: ← and → belong to the text in Search, and the rows already use ↑/↓). Deleting a focused tile with ⌫ (not asked; Remove covers it).
