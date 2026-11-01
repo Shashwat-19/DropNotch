@@ -20,8 +20,8 @@ final class NowPlayingModule: NotchModule {
     /// Play/pause as clicked, shown before the player confirms it (D27). Cleared by an update that agrees,
     /// a player change, a failed command, or `settleDelay` after an `.ok` reply the player never confirms.
     private(set) var pendingIsPlaying: Bool?
-    /// The compact slots show (D28): while playing, and for `compactGrace` after it stops with a track loaded.
     let hasCompactView = true
+    /// The compact slots show (D28): while playing, and for `compactGrace` after it stops with a track loaded.
     private(set) var hasCompactContent = false
 
     private let source: any NowPlayingSource

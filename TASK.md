@@ -299,9 +299,17 @@ Device checks (Debug build is enough: no entitlement, Info.plist or signing chan
 
 A native Settings window from the menu-bar item. General: launch at login (`SMAppService`), the hotkey recorder, built-in or main display. Modules: on/off and tab order, compact-slot pickers. Privacy: Spotify artwork downloads, clipboard history on/off, keep history after quitting (text and links, off by default), Clear Clipboard History, Clear Tray. About: version, licence, third-party notices, GitHub link. Package search: skipped (D34).
 
-**Status (2026-11-01):** built; Debug build and 362 tests, 0 failures, before the reviews.
+**Status (2026-11-01):** built. security-auditor: Pass with changes (M1, L1–L4 applied). test-writer: 26 tests, no bugs. code-reviewer: Approve with changes (W1, S1, S5–S9 applied; S2–S4 recorded in D34, S4 for Shash). 389 tests, 0 failures. Device checks 57–62 open.
 
-Out of this branch: module-specific settings, confirmation before Clear, saving clipboard images.
+Out of this branch: module-specific settings, confirmation before Clear, saving clipboard images, an asymmetric closed shape (S3), stopping every module from being turned off (S4).
+
+Device checks (notched Mac; Debug build except 57).
+57. **Release build, copied to /Applications.** General › Launch at login on: DropNotch appears in System Settings › General › Login Items. Log out and in: it starts. Off in Settings: it leaves Login Items. Turn it off in System Settings, reopen the General tab: the toggle shows off.
+58. With an external display set as main: "Show the notch on" Built-in ↔ Main moves the notch at once, and hover works there. With Built-in chosen, close the lid: it falls back to the main display.
+59. Modules: reorder tabs and turn one off; ⌃⌥N: the tab icons follow the order, ⌘1…⌘n match, and a selected tab that was turned off falls back to the first. Turn Now Playing off while music plays: the closed notch narrows at once.
+60. Compact slots while music plays: Right = Nothing leaves an empty black right wing (S3: acceptable?). Both Nothing: the notch narrows. Relaunch: the choices persist.
+61. Privacy: history and Keep on; copy text, a link and a screenshot; quit and relaunch: text and link come back, the screenshot doesn't. `ls -l ~/Library/Application\ Support/DropNotch/clipboard.json` shows `-rw-------`; `tmutil isexcluded` on it says Excluded. Clear, Keep off and history off each remove the file. Artwork off: the next Spotify track shows Spotify's icon.
+62. Settings from the menu bar while another app is in front: the window comes forward; no tab clips. The recorder takes a new shortcut and it opens the notch. About: the notices sheet shows the KeyboardShortcuts licence, Done closes it, the GitHub link opens the browser.
 
 ## Release checklist
 

@@ -7,6 +7,7 @@ final class ModuleRegistryTests: XCTestCase {
     private final class FakeModule: NotchModule {
         let id: String
         let title: LocalizedStringResource = "Fake"
+        var hasCompactView = true
         var hasCompactContent = true
         let systemImage = "square"
         private(set) var starts = 0, stops = 0
@@ -293,5 +294,14 @@ final class ModuleRegistryTests: XCTestCase {
         registry.moveTab("c", by: 1)
         registry.moveTab("nope", by: 1)
         XCTAssertEqual(registry.tabOrder, ["a", "b", "c"])
+    }
+
+    func testSavedSlotWithoutCompactViewIsEmpty() {
+        let defaults = makeDefaults()
+        defaults.set("b", forKey: "layout.compactLeft")
+        let b = FakeModule("b")
+        b.hasCompactView = false
+        let registry = ModuleRegistry(modules: [FakeModule("a"), b], defaults: defaults)
+        XCTAssertNil(registry.compactLeftID, "Settings doesn't offer a module without a compact view (code-reviewer S5)")
     }
 }

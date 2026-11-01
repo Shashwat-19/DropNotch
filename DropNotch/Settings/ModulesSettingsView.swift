@@ -15,11 +15,15 @@ struct ModulesSettingsView: View {
             } header: {
                 Text("Tabs")
             } footer: {
-                Text("The first tab opens with ⌘1, the next with ⌘2, and so on.").foregroundStyle(.secondary)
+                Text("In the open notch, ⌘1 opens the first module that's on, ⌘2 the next, and so on.").foregroundStyle(.secondary)
             }
-            Section("Closed notch") {
+            Section {
                 slotPicker("Left of the notch", selection: $registry.compactLeftID)
                 slotPicker("Right of the notch", selection: $registry.compactRightID)
+            } header: {
+                Text("Closed notch")
+            } footer: {
+                Text("The closed notch widens on both sides while either side has something to show.").foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

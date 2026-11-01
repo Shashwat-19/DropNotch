@@ -11,7 +11,7 @@ struct PrivacySettingsView: View {
             Section {
                 Toggle("Download Spotify artwork", isOn: $artworkDownloads)
             } footer: {
-                Text("One image per track from Spotify's image server, i.scdn.co. Off, the notch shows Spotify's icon. Music artwork never uses the network.")
+                Text("One image per track from Spotify's image server, i.scdn.co. When it's off, the notch shows Spotify's icon. Music artwork never uses the network.")
                     .foregroundStyle(.secondary)
             }
             if let clipboard {

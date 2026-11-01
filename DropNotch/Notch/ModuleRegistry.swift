@@ -32,9 +32,10 @@ final class ModuleRegistry {
         let ids = modules.map(\.id)
         // Saved values are checked against today's modules: one may have been removed or added since.
         // Unsaved, Now Playing fills both sides: artwork left, bars right (D28). Saved as "", the slot is empty.
+        // Only a module with a compact view, as Settings offers: any other id would leave its picker blank.
         func slot(_ key: String) -> String? {
             guard let saved = defaults.string(forKey: key) else { return ids.first }
-            return ids.contains(saved) ? saved : nil
+            return modules.contains { $0.id == saved && $0.hasCompactView } ? saved : nil
         }
         compactLeftID = slot(Self.compactLeftKey)
         compactRightID = slot(Self.compactRightKey)

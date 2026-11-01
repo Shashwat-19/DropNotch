@@ -2,8 +2,8 @@ import SwiftUI
 import os
 
 /// Clipboard history (ARCHITECTURE §8, D7, D7a–D7c): the last `limit` text, link and image items, newest first, in
-/// memory, never logged. Text and links are saved to disk only if the user turns that on in Settings (D34). Nothing is read until the user turns history on in the tab. Contents are read in the
-/// background only under Always Allow; under Ask a read waits for the user's "Add Clipboard" click (D7c).
+/// memory, never logged. Text and links are saved to disk only if the user turns that on in Settings (D34). Nothing is
+/// read until the user turns history on in the tab. Contents are read in the background only under Always Allow; under Ask a read waits for the user's "Add Clipboard" click (D7c).
 @MainActor
 @Observable
 final class ClipboardModule: NotchModule {
@@ -271,7 +271,7 @@ final class ClipboardModule: NotchModule {
                                                     attributes: [.posixPermissions: 0o700])
             try JSONEncoder().encode(items.compactMap(\.text)).write(to: storeURL, options: .atomic)
         } catch {
-            Logger.clipboard.error("Clipboard save failed: \((error as NSError).domain, privacy: .public) \((error as NSError).code)")
+            Logger.clipboard.error("Clipboard write failed: \((error as NSError).domain, privacy: .public) \((error as NSError).code)")
             return
         }
         // An atomic write replaces the file, so its permissions and backup flag are set again each time, separately, so
@@ -279,7 +279,7 @@ final class ClipboardModule: NotchModule {
         do {
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: storeURL.path)
         } catch {
-            Logger.clipboard.error("Clipboard save failed: \((error as NSError).domain, privacy: .public) \((error as NSError).code)")
+            Logger.clipboard.error("Clipboard file permissions failed: \((error as NSError).domain, privacy: .public) \((error as NSError).code)")
         }
         do {
             var store = storeURL
@@ -287,7 +287,7 @@ final class ClipboardModule: NotchModule {
             values.isExcludedFromBackup = true
             try store.setResourceValues(values)
         } catch {
-            Logger.clipboard.error("Clipboard save failed: \((error as NSError).domain, privacy: .public) \((error as NSError).code)")
+            Logger.clipboard.error("Clipboard backup exclusion failed: \((error as NSError).domain, privacy: .public) \((error as NSError).code)")
         }
     }
 
