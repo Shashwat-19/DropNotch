@@ -33,7 +33,7 @@ DropNotch isn't signed with an Apple Developer ID yet, so macOS blocks it the fi
 
 1. **Drag to Applications.** Open the DMG and drag **DropNotch** onto **Applications**.
    <!-- screenshot: docs/images/install-1-dmg-window.png (the DMG window with the arrow) -->
-2. **Open DropNotch.** Open it from Applications. If macOS says "DropNotch" Not Opened, click **Done**, not Move to Bin/Trash.
+2. **Open DropNotch.** Open it from Applications. macOS shows "DropNotch.app" Not Opened: Apple could not verify "DropNotch.app" is free of malware that may harm your Mac or compromise your privacy. Click **Done**, not **Move to Bin** (**Move to Trash** in US English).
    <!-- screenshot: docs/images/install-2-not-opened.png (the "Not Opened" dialog, Done highlighted) -->
 3. **Open Anyway.** Open **System Settings › Privacy & Security** and scroll down to **Security**. Next to "DropNotch" was blocked to protect your Mac, click **Open Anyway**, then **Open Anyway** again in the dialog, and enter your password or use Touch ID. The button shows for about an hour after you try to open the app.
    <!-- screenshot: docs/images/install-3-open-anyway.png (Privacy & Security with the Open Anyway button) -->

@@ -13,6 +13,12 @@ xcodebuild -quiet -scheme DropNotch -configuration Release -destination 'platfor
 app=build/DerivedData/Build/Products/Release/DropNotch.app
 version=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$app/Contents/Info.plist")
 dmg="build/DropNotch-$version.dmg"
+# A mounted volume with the same name makes Finder's alias to the window background point at it, and the new DMG then
+# opens with no background (seen 2026-11-01).
+if [ -e "/Volumes/DropNotch $version" ]; then
+    echo "Eject /Volumes/DropNotch $version first." >&2
+    exit 1
+fi
 staging=$(mktemp -d)
 
 # The window's background with the first-launch steps (scripts/dmg-background), 1x and 2x in one TIFF so Finder picks

@@ -48,12 +48,12 @@ struct Background: View {
         .frame(width: size.width, height: size.height)
     }
 
-    // The wording of the macOS 15+ dialogs, as in README › Install.
+    // The wording of the macOS dialogs, as in README › Install. Step 2 checked on macOS 27.0.1 (R1); step 3 not yet.
     private var guide: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("First launch").font(.system(size: 14, weight: .semibold))
             step(1, "Drag DropNotch onto Applications.")
-            step(2, "Open DropNotch. If macOS says “DropNotch” Not Opened, click Done, not Move to Bin/Trash.")
+            step(2, "Open DropNotch. If macOS says “DropNotch.app” Not Opened, click Done, not Move to Bin (Move to Trash).")
             step(3, "Open System Settings › Privacy & Security, scroll to Security, click Open Anyway and confirm.")
         }
         .font(.system(size: 13))
