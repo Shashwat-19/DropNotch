@@ -19,6 +19,20 @@ final class ScreenObserverTests: XCTestCase {
         XCTAssertNil(ScreenObserver.chooseDisplay([]))
     }
 
+    // MARK: Settings › General › "Show the notch on" (D34)
+
+    func testMainAlwaysPicksTheMenuBarScreenEvenWhenALaterOneHasANotch() {
+        XCTAssertEqual(ScreenObserver.chooseDisplay([(id: 1, hasNotch: false), (id: 2, hasNotch: true)], on: .main), 1)
+        XCTAssertEqual(ScreenObserver.chooseDisplay([(id: 3, hasNotch: true), (id: 4, hasNotch: false)], on: .main), 3)
+        XCTAssertNil(ScreenObserver.chooseDisplay([], on: .main))
+    }
+
+    func testBuiltInExplicitlyMatchesTheDefault() {
+        let candidates: [(id: CGDirectDisplayID, hasNotch: Bool)] = [(id: 1, hasNotch: false), (id: 2, hasNotch: true)]
+        XCTAssertEqual(ScreenObserver.chooseDisplay(candidates, on: .builtIn), 2)
+        XCTAssertEqual(ScreenObserver.chooseDisplay([(id: 5, hasNotch: false), (id: 6, hasNotch: false)], on: .builtIn), 5)
+    }
+
     @MainActor
     func testBurstOfScreenChangesCallsOnChangeOnce() async throws {
         var calls = 0

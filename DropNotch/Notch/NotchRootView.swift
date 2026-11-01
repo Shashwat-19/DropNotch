@@ -6,6 +6,8 @@ struct NotchRootView: View {
     let state: NotchState
     let registry: ModuleRegistry
 
+    @Environment(\.openSettings) private var openSettings
+
     var body: some View {
         // The panel's frame, not the shape's: the shape fills the 1 pt strip above the screen too, so its top
         // edge is off-screen in every state and during every animation (D29).
@@ -27,12 +29,15 @@ struct NotchRootView: View {
             // The selected tab's module (D31). Fades in on open and vanishes at once on close, so the text
             // never pokes out of the shrinking shape (D19).
             .overlay {
-                if state.displayedPhase == .open, let module = registry.selectedModule {
+                if state.displayedPhase == .open {
                     VStack(spacing: 0) {
-                        // The tabs sit in the strip beside the camera housing; the module starts below it.
-                        tabs.frame(height: state.geometry?.closedFrame.height ?? 0)
-                        module.expandedView().frame(maxHeight: .infinity)
+                        // The tabs sit in the strip right of the camera housing; the module starts below it. The row
+                        // shows with every module off too, so Settings stays reachable (code-reviewer W1, D35).
+                        topRow.frame(height: state.geometry?.closedFrame.height ?? 0)
+                        registry.selectedModule?.expandedView().frame(maxHeight: .infinity)
                     }
+                    // Keeps the row at the top when no module fills the space below it.
+                    .frame(maxHeight: .infinity, alignment: .top)
                     .padding(.top, NotchGeometry.topOverhang)
                     // The shape is always black, so its content uses dark colours in light mode too (L5).
                     .environment(\.colorScheme, .dark)
@@ -52,18 +57,42 @@ struct NotchRootView: View {
             .onExitCommand { state.send(.dismissed) }
     }
 
-    /// One icon per module, left of the camera housing, once there is more than one module (D31).
-    private var tabs: some View {
+    /// Right of the camera housing (D35): one icon per module once there is more than one (D31), then Settings.
+    /// The leading padding keeps every button clear of the housing; the geometry makes the strip wide enough.
+    private var topRow: some View {
         let modules = registry.expandedModules
-        return HStack(spacing: 4) {
+        return HStack(spacing: NotchGeometry.topRowSpacing) {
+            Spacer(minLength: 0)
             if modules.count > 1 {
                 ForEach(Array(modules.enumerated()), id: \.element.id) { index, module in
                     tab(module, index: index)
                 }
             }
-            Spacer(minLength: 0)
+            settingsButton
         }
-        .padding(.leading, 20)
+        .padding(.leading, (state.geometry?.openTopRowLeading ?? 0) + NotchGeometry.topRowInset)
+        .padding(.trailing, NotchGeometry.topRowInset)
+    }
+
+    /// Opens Settings in front, the same way as the menu-bar item (D14), which can hide behind the notch on a crowded
+    /// menu bar. Activating DropNotch takes key focus from the panel, which closes a keyboard-opened notch (D30).
+    private var settingsButton: some View {
+        Button {
+            NSApp.activate()
+            openSettings()
+        } label: {
+            Label("Settings", systemImage: "gearshape")
+                .labelStyle(.iconOnly)
+                .frame(width: NotchGeometry.topRowItemSize.width, height: NotchGeometry.topRowItemSize.height)
+                .foregroundStyle(.secondary)
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        // ⌘, while the panel is key, like the tabs' ⌘1… Not a Tab stop either.
+        .keyboardShortcut(",")
+        .focusable(false)
+        // On macOS this is the tooltip and also VoiceOver's hint: "Settings, button, Open Settings".
+        .help("Open Settings (⌘,)")
     }
 
     private func tab(_ module: any NotchModule, index: Int) -> some View {
@@ -71,7 +100,7 @@ struct NotchRootView: View {
         return Button { registry.selectedTabID = module.id } label: {
             Label { Text(module.title) } icon: { Image(systemName: module.systemImage) }
                 .labelStyle(.iconOnly)
-                .frame(width: 28, height: 24)
+                .frame(width: NotchGeometry.topRowItemSize.width, height: NotchGeometry.topRowItemSize.height)
                 // A filled capsule as well as brighter, so the selection doesn't rest on colour alone (L6).
                 .background(Capsule().fill(.white.opacity(selected ? 0.2 : 0)))
                 .foregroundStyle(selected ? .primary : .secondary)

@@ -1,0 +1,58 @@
+import KeyboardShortcuts
+import os
+import ServiceManagement
+import SwiftUI
+
+/// Launch at login, the hotkey and the notch's display (D30, D34).
+struct GeneralSettingsView: View {
+    let notchState: NotchState
+
+    /// Read from the system, never saved by DropNotch: the user can change it in System Settings › Login Items.
+    /// Waiting for approval shows as on, so the toggle can withdraw it (security-auditor L4).
+    @State private var loginStatus = SMAppService.mainApp.status
+    @State private var loginError = false
+    @AppStorage(NotchDisplay.key) private var display = NotchDisplay.builtIn
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Launch at login", isOn: Binding(get: { loginStatus == .enabled || loginStatus == .requiresApproval },
+                                                      set: setLaunchAtLogin))
+                if loginStatus == .requiresApproval {
+                    // Registered, but macOS waits for the user to allow it in Login Items.
+                    LabeledContent("Allow DropNotch in System Settings › General › Login Items.") {
+                        Button("Open Login Items") { SMAppService.openSystemSettingsLoginItems() }
+                    }
+                }
+                if loginError {
+                    Text("Couldn't change the login item. Try again, or add DropNotch in System Settings › General › Login Items.")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Section {
+                KeyboardShortcuts.Recorder("Open and close the notch", name: .toggleNotch)
+                Picker("Show the notch on", selection: $display) {
+                    Text("Built-in display").tag(NotchDisplay.builtIn)
+                    Text("Main display").tag(NotchDisplay.main)
+                }
+                .onChange(of: display) { notchState.screensChanged() }
+            } footer: {
+                Text("Built-in display falls back to the main display when the built-in one is closed or has no notch.")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .onAppear { loginStatus = SMAppService.mainApp.status }
+    }
+
+    private func setLaunchAtLogin(_ on: Bool) {
+        do {
+            if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+            loginError = false
+        } catch {
+            loginError = true
+            Logger.settings.error("Login item change failed: \((error as NSError).domain, privacy: .public) \((error as NSError).code)")
+        }
+        loginStatus = SMAppService.mainApp.status
+    }
+}

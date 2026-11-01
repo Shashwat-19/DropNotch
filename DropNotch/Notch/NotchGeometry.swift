@@ -16,6 +16,18 @@ struct NotchGeometry: Equatable {
     /// How far the panel reaches above the screen. A pointer pushed against the top edge
     /// reports y == screen maxY, which a frame ending there counts as outside (D20).
     static let topOverhang: CGFloat = 1
+    /// The open notch's top row sits right of the camera housing (D35): module tabs, then the Settings button.
+    static let topRowItemSize = CGSize(width: 28, height: 24)
+    /// Space between neighbouring buttons in the row.
+    static let topRowSpacing: CGFloat = 2
+    /// Clear space between the camera housing and the first button, and after the last.
+    static let topRowInset: CGFloat = 8
+    /// Four module tabs and the Settings button. A fifth module needs this raised, or the row would overflow.
+    static let topRowMaxItems = 5
+    /// Width the row needs right of the housing.
+    static var topRowWidth: CGFloat {
+        CGFloat(topRowMaxItems) * topRowItemSize.width + CGFloat(topRowMaxItems - 1) * topRowSpacing + 2 * topRowInset
+    }
 
     let hasNotch: Bool
     let closedFrame: CGRect
@@ -49,8 +61,11 @@ struct NotchGeometry: Equatable {
         let peek = CGSize(width: closed.width + Self.peekGrowth.width,
                           height: closed.height + Self.peekGrowth.height)
         let compactPeek = CGSize(width: compact.width + Self.peekGrowth.width, height: peek.height)
-        // At least as large as every other frame, so it can serve as the canvas (D19).
-        let open = CGSize(width: max(Self.openSize.width, compactPeek.width),
+        // At least as large as every other frame, so it can serve as the canvas (D19), and wide enough for the top
+        // row right of the housing (D35): centred on the notch, so each side gets `topRowWidth`. A pill is ours to
+        // draw over, so only a real notch is kept clear.
+        let housing = hasNotch ? closed.width : 0
+        let open = CGSize(width: max(Self.openSize.width, compactPeek.width, housing + 2 * Self.topRowWidth),
                           height: max(Self.openSize.height, peek.height))
 
         closedFrame = Self.pixelAligned(closed, scale: backingScale)
@@ -61,6 +76,13 @@ struct NotchGeometry: Equatable {
                                              scale: backingScale)
         openFrame = Self.pixelAligned(Self.topCentred(midX: closed.midX, top: closed.maxY, size: open),
                                       scale: backingScale)
+    }
+
+    /// Where the free strip right of the camera housing starts, from the open shape's leading edge (D35). The housing
+    /// is the closed frame, which comes from the screen's `auxiliaryTopLeftArea` and `auxiliaryTopRightArea`. Without
+    /// a notch, the middle of the shape. Both edges are pixel-aligned, so the row's padding lands on whole pixels.
+    var openTopRowLeading: CGFloat {
+        (hasNotch ? closedFrame.maxX : openFrame.midX) - openFrame.minX
     }
 
     /// Width of one compact wing (D28).

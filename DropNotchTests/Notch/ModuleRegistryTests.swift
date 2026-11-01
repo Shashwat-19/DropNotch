@@ -7,6 +7,7 @@ final class ModuleRegistryTests: XCTestCase {
     private final class FakeModule: NotchModule {
         let id: String
         let title: LocalizedStringResource = "Fake"
+        var hasCompactView = true
         var hasCompactContent = true
         let systemImage = "square"
         private(set) var starts = 0, stops = 0
@@ -232,5 +233,75 @@ final class ModuleRegistryTests: XCTestCase {
         registry.compactRightID = nil
         XCTAssertFalse(registry.hasCompactContent)
         XCTAssertFalse(ModuleRegistry(modules: [], defaults: makeDefaults()).hasCompactContent)
+    }
+
+    // MARK: Saved layout (D34)
+
+    private func registry(_ ids: [String], _ defaults: UserDefaults) -> ModuleRegistry {
+        ModuleRegistry(modules: ids.map { FakeModule($0) }, defaults: defaults)
+    }
+
+    func testCompactSlotsAndTabOrderSurviveANewRegistry() {
+        let defaults = makeDefaults()
+        let first = registry(["a", "b", "c"], defaults)
+        first.compactLeftID = "b"
+        first.compactRightID = "c"
+        first.tabOrder = ["c", "a", "b"]
+        let second = registry(["a", "b", "c"], defaults)
+        XCTAssertEqual(second.compactLeftID, "b")
+        XCTAssertEqual(second.compactRightID, "c")
+        XCTAssertEqual(second.tabOrder, ["c", "a", "b"])
+    }
+
+    func testAnEmptySlotIsRestoredEmpty() {
+        let defaults = makeDefaults()
+        let first = registry(["a", "b"], defaults)
+        first.compactLeftID = nil
+        XCTAssertEqual(defaults.string(forKey: "layout.compactLeft"), "")
+        let second = registry(["a", "b"], defaults)
+        XCTAssertNil(second.compactLeftID)
+        XCTAssertEqual(second.compactRightID, "a", "the unsaved slot keeps its default")
+    }
+
+    func testASavedSlotForAModuleThatIsGoneIsEmpty() {
+        let defaults = makeDefaults()
+        defaults.set("gone", forKey: "layout.compactLeft")
+        defaults.set("gone", forKey: "layout.compactRight")
+        let registry = registry(["a"], defaults)
+        XCTAssertNil(registry.compactLeftID)
+        XCTAssertNil(registry.compactRightID)
+    }
+
+    func testSavedTabOrderDropsUnknownIDsAndAppendsNewModules() {
+        let defaults = makeDefaults()
+        defaults.set(["c", "gone", "a", "c"], forKey: "layout.tabOrder")
+        XCTAssertEqual(registry(["a", "b", "c", "d"], defaults).tabOrder, ["c", "a", "b", "d"])
+    }
+
+    func testMoveTabSwapsWithItsNeighbourAndSaves() {
+        let defaults = makeDefaults()
+        let first = registry(["a", "b", "c"], defaults)
+        first.moveTab("b", by: -1)
+        XCTAssertEqual(first.tabOrder, ["b", "a", "c"])
+        first.moveTab("a", by: 1)
+        XCTAssertEqual(first.tabOrder, ["b", "c", "a"])
+        XCTAssertEqual(registry(["a", "b", "c"], defaults).tabOrder, ["b", "c", "a"])
+    }
+
+    func testMoveTabDoesNothingAtTheEndsOrForAnUnknownID() {
+        let registry = registry(["a", "b", "c"], makeDefaults())
+        registry.moveTab("a", by: -1)
+        registry.moveTab("c", by: 1)
+        registry.moveTab("nope", by: 1)
+        XCTAssertEqual(registry.tabOrder, ["a", "b", "c"])
+    }
+
+    func testSavedSlotWithoutCompactViewIsEmpty() {
+        let defaults = makeDefaults()
+        defaults.set("b", forKey: "layout.compactLeft")
+        let b = FakeModule("b")
+        b.hasCompactView = false
+        let registry = ModuleRegistry(modules: [FakeModule("a"), b], defaults: defaults)
+        XCTAssertNil(registry.compactLeftID, "Settings doesn't offer a module without a compact view (code-reviewer S5)")
     }
 }

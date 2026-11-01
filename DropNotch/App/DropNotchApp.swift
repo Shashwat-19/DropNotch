@@ -12,7 +12,7 @@ struct DropNotchApp: App {
             MenuBarMenu()
         }
         Settings {
-            SettingsView()
+            SettingsView(registry: appDelegate.registry, notchState: appDelegate.notchState)
         }
     }
 }

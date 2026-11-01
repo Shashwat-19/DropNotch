@@ -67,6 +67,8 @@ private final class FakePasteboard: DropNotch.Pasteboard {
 @MainActor
 final class ClipboardModuleTests: XCTestCase {
     private var suiteName: String!
+    /// A throwaway file, so tests never touch the real saved history (security-auditor M1).
+    private var storeURL: URL!
     private var defaults: UserDefaults!
     private var pasteboard: FakePasteboard!
     private var module: ClipboardModule!
@@ -75,15 +77,17 @@ final class ClipboardModuleTests: XCTestCase {
     override func setUp() {
         super.setUp()
         suiteName = "ClipboardModuleTests-\(UUID())"
+        storeURL = FileManager.default.temporaryDirectory.appending(path: "ClipboardModuleTests-\(UUID()).json")
         defaults = UserDefaults(suiteName: suiteName)
         pasteboard = FakePasteboard()
-        module = ClipboardModule(pasteboard: pasteboard, defaults: defaults)
+        module = ClipboardModule(pasteboard: pasteboard, defaults: defaults, storeURL: storeURL)
     }
 
     /// Always stop, so no timer or NSWorkspace observer from `start()` outlives the test.
     override func tearDown() {
         module.stop()
         defaults.removePersistentDomain(forName: suiteName)
+        try? FileManager.default.removeItem(at: storeURL)
         super.tearDown()
     }
 
@@ -124,7 +128,7 @@ final class ClipboardModuleTests: XCTestCase {
 
         module.turnOn()
         XCTAssertEqual(module.items.map(\.text), ["before"])
-        XCTAssertTrue(ClipboardModule(pasteboard: FakePasteboard(), defaults: defaults).isOn)
+        XCTAssertTrue(ClipboardModule(pasteboard: FakePasteboard(), defaults: defaults, storeURL: storeURL).isOn)
     }
 
     // 2. Always Allow.
@@ -189,7 +193,7 @@ final class ClipboardModuleTests: XCTestCase {
     /// Always Allow chosen while running may apply only after a relaunch, so it stays Ask: no background read (W1, D7c).
     func testAllowChosenAfterLaunchIsTreatedAsAskUntilRelaunch() {
         pasteboard.access = .ask
-        let module = ClipboardModule(pasteboard: pasteboard, defaults: defaults)
+        let module = ClipboardModule(pasteboard: pasteboard, defaults: defaults, storeURL: storeURL)
         module.turnOn()
         pasteboard.access = .allowed
         pasteboard.copy("secret")
@@ -199,7 +203,7 @@ final class ClipboardModuleTests: XCTestCase {
         XCTAssertTrue(module.needsRelaunch)
         XCTAssertTrue(module.hasUnreadChange)
 
-        let relaunched = ClipboardModule(pasteboard: pasteboard, defaults: defaults)
+        let relaunched = ClipboardModule(pasteboard: pasteboard, defaults: defaults, storeURL: storeURL)
         relaunched.tick()
         XCTAssertEqual(relaunched.items.map(\.text), ["secret"])
         XCTAssertFalse(relaunched.needsRelaunch)
@@ -415,5 +419,195 @@ final class ClipboardModuleTests: XCTestCase {
         pasteboard.copy("two")
         module.tick()
         XCTAssertEqual(module.items.map(\.text), ["two"])
+    }
+
+    // MARK: Saved history (D34). Always `storeURL`, never the default path.
+
+    /// History on, running and saving to disk: the state in which `add` writes the file.
+    private func savingModule() -> ClipboardModule {
+        module.turnOn()
+        module.start()
+        module.setSavesToDisk(true)
+        return module
+    }
+
+    /// The module a relaunch would make: same defaults and file, an empty clipboard. The caller stops it.
+    private func relaunched() -> ClipboardModule {
+        let module = ClipboardModule(pasteboard: FakePasteboard(), defaults: defaults, storeURL: storeURL)
+        module.start()
+        return module
+    }
+
+    private func savedTexts() throws -> [String] {
+        try JSONDecoder().decode([String].self, from: Data(contentsOf: storeURL))
+    }
+
+    private var fileExists: Bool { FileManager.default.fileExists(atPath: storeURL.path) }
+
+    /// History and saving on, `data` already at `storeURL`, then `start()`: a launch reading an earlier file.
+    private func moduleLoading(_ data: Data) throws -> ClipboardModule {
+        module.turnOn()
+        module.setSavesToDisk(true)
+        try data.write(to: storeURL)
+        module.start()
+        return module
+    }
+
+    func testSavedTextAndLinksAreRestoredNewestFirst() throws {
+        let module = savingModule()
+        pasteboard.copy("hello")
+        module.tick()
+        pasteboard.copy("https://example.com/page")
+        module.tick()
+        XCTAssertEqual(try savedTexts(), ["https://example.com/page", "hello"])
+
+        let restored = relaunched()
+        defer { restored.stop() }
+        XCTAssertEqual(restored.items.map(\.content), [.link("https://example.com/page"), .text("hello")])
+    }
+
+    func testImagesAreNeverWritten() throws {
+        let module = savingModule()
+        pasteboard.copy("caption")
+        module.tick()
+        pasteboard.copy(data: [.png: image(1, count: 8)])
+        module.tick()
+        XCTAssertEqual(module.items.count, 2)
+        XCTAssertEqual(try savedTexts(), ["caption"])
+
+        let restored = relaunched()
+        defer { restored.stop() }
+        XCTAssertEqual(restored.items.map(\.content), [.text("caption")])
+    }
+
+    func testSavedFileIsOwnerOnlyAndExcludedFromBackup() throws {
+        let module = savingModule()
+        pasteboard.copy("private")
+        module.tick()
+        let permissions = try FileManager.default.attributesOfItem(atPath: storeURL.path)[.posixPermissions] as? Int
+        XCTAssertEqual(permissions, 0o600)
+        XCTAssertEqual(try storeURL.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup, true)
+    }
+
+    func testTurningSavingOnWritesTheCurrentHistory() throws {
+        module.turnOn()
+        module.start()
+        pasteboard.copy("before")
+        module.tick()
+        XCTAssertFalse(fileExists)
+        module.setSavesToDisk(true)
+        XCTAssertEqual(try savedTexts(), ["before"])
+    }
+
+    func testSetSavesToDiskFalseDeletesTheFile() {
+        let module = savingModule()
+        pasteboard.copy("x")
+        module.tick()
+        XCTAssertTrue(fileExists)
+        module.setSavesToDisk(false)
+        XCTAssertFalse(fileExists)
+        XCTAssertFalse(ClipboardModule(pasteboard: FakePasteboard(), defaults: defaults, storeURL: storeURL).savesToDisk)
+    }
+
+    func testTurnOffDeletesTheFileAndTurnsSavingOff() {
+        let module = savingModule()
+        pasteboard.copy("x")
+        module.tick()
+        module.turnOff()
+        XCTAssertFalse(fileExists)
+        XCTAssertFalse(module.savesToDisk)
+        XCTAssertFalse(module.isOn)
+        XCTAssertTrue(module.items.isEmpty)
+        // Turning history back on doesn't resume writing (security-auditor L3).
+        module.turnOn()
+        pasteboard.copy("y")
+        module.tick()
+        // Turn On reads what is on the clipboard now ("x"), as on the first turn-on.
+        XCTAssertEqual(module.items.map(\.text), ["y", "x"])
+        XCTAssertFalse(fileExists)
+        let fresh = ClipboardModule(pasteboard: FakePasteboard(), defaults: defaults, storeURL: storeURL)
+        XCTAssertFalse(fresh.savesToDisk)
+    }
+
+    func testClearDeletesTheFile() {
+        let module = savingModule()
+        pasteboard.copy("x")
+        module.tick()
+        module.clear()
+        XCTAssertFalse(fileExists)
+        XCTAssertTrue(module.savesToDisk, "clear keeps the setting")
+    }
+
+    func testClearDeletesAFileLeftFromAnEarlierRunWithoutStarting() throws {
+        try JSONEncoder().encode(["left over"]).write(to: storeURL)
+        module.clear()
+        XCTAssertFalse(fileExists)
+        XCTAssertEqual(pasteboard.reads, [])
+    }
+
+    func testStopKeepsTheFile() throws {
+        let module = savingModule()
+        pasteboard.copy("keep")
+        module.tick()
+        module.stop()
+        XCTAssertTrue(module.items.isEmpty)
+        XCTAssertEqual(try savedTexts(), ["keep"])
+    }
+
+    func testNothingIsWrittenWhileSavingIsOff() {
+        module.turnOn()
+        module.start()
+        pasteboard.copy("x")
+        module.tick()
+        XCTAssertEqual(module.items.map(\.text), ["x"])
+        XCTAssertFalse(fileExists)
+    }
+
+    func testNothingIsWrittenWhileNotRunning() {
+        let module = turnedOn()
+        module.setSavesToDisk(true)
+        pasteboard.copy("x")
+        module.tick()
+        XCTAssertEqual(module.items.map(\.text), ["x"])
+        XCTAssertFalse(fileExists)
+    }
+
+    func testNothingIsLoadedWhileSavingIsOff() throws {
+        module.turnOn()
+        try JSONEncoder().encode(["old"]).write(to: storeURL)
+        module.start()
+        XCTAssertTrue(module.items.isEmpty)
+    }
+
+    func testLoadIgnoresASymlink() throws {
+        let target = FileManager.default.temporaryDirectory.appending(path: "ClipboardModuleTests-target-\(UUID()).json")
+        defer { try? FileManager.default.removeItem(at: target) }
+        try JSONEncoder().encode(["via link"]).write(to: target)
+        module.turnOn()
+        module.setSavesToDisk(true)
+        try FileManager.default.createSymbolicLink(at: storeURL, withDestinationURL: target)
+        module.start()
+        XCTAssertTrue(module.items.isEmpty)
+    }
+
+    func testLoadIgnoresInvalidJSON() throws {
+        XCTAssertTrue(try moduleLoading(Data("not json".utf8)).items.isEmpty)
+    }
+
+    func testLoadIgnoresAWrongJSONShape() throws {
+        XCTAssertTrue(try moduleLoading(Data(#"{"a": 1}"#.utf8)).items.isEmpty)
+    }
+
+    func testLoadDropsBlankAndOverlongStrings() throws {
+        let atCap = String(repeating: "a", count: ClipboardModule.maxTextLength)
+        let texts = ["", " \n\t", "ok", atCap + "a", atCap]
+        let module = try moduleLoading(JSONEncoder().encode(texts))
+        XCTAssertEqual(module.items.map(\.text), ["ok", atCap])
+    }
+
+    func testLoadKeepsAtMostLimitItems() throws {
+        let texts = (1...(ClipboardModule.limit + 5)).map { "item \($0)" }
+        let module = try moduleLoading(JSONEncoder().encode(texts))
+        XCTAssertEqual(module.items.map(\.text), Array(texts.prefix(ClipboardModule.limit)))
     }
 }

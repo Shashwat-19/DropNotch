@@ -4,8 +4,9 @@ import KeyboardShortcuts
 /// Owns the AppKit side of the app: the notch panel and its screen observer (D16).
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let notchState = NotchState()
-    private let registry = ModuleRegistry(modules: [NowPlayingModule(source: ScriptablePlayersSource()), NotesModule(), FileTrayModule(), ClipboardModule()])
+    /// Internal so the Settings scene can reach them.
+    let notchState = NotchState()
+    let registry = ModuleRegistry(modules: [NowPlayingModule(source: ScriptablePlayersSource()), NotesModule(), FileTrayModule(), ClipboardModule()])
     private var screenObserver: ScreenObserver?
 
     /// Unit tests run inside the app, so it launches for them too. Xcode sets this variable for the

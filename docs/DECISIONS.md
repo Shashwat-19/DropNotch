@@ -823,6 +823,8 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Date:** 2026-10-31 · **Status:** Accepted (Shash chose tabs over side-by-side, 2026-10-31)
 
+**Revised by D35** (2026-11-01): the tabs sit right of the camera housing, with a Settings button after them.
+
 **Decision:**
 - `NotesModule` keeps one note in `~/Library/Application Support/DropNotch/Notes/note.txt` (UTF-8). It loads in `start()`, saves 1 s after the last edit (one-shot task, restarted per edit), and flushes in `stop()`, which the registry calls at quit. Writes are atomic. A missing file is an empty note; a file that exists but can't be read turns saving off and shows "Couldn't open the note file", so it is never overwritten. A failed save shows "Couldn't save the note" under the editor until a save succeeds. A note deleted while the module is off starts empty and isn't written back. Logs carry error domains and codes only, never the text or the path. No network.
 - Reads and writes run on the main thread: a note is a few KB [I: not measured]. Marked `shortcut:` in the code.
@@ -893,3 +895,41 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 **Alternatives:** start at launch under Always Allow (rejected: no consent step until Settings exists); the turn-on click as the only manual read under Ask (rejected: history would never fill); no image cap (rejected: 25 large screenshots could hold several hundred MB); keep the detection call (rejected: an async hop that saves no read).
 
 **Not done:** the history shows to anyone watching a shared screen or a recording when the notch opens on the Clipboard tab (security-auditor L3; for polish). Thumbnails are made on the main thread (`shortcut:`). An image over 10 MB is read in full on the main thread before it is skipped, since AppKit gives no size first (S2). "Add Clipboard" disappears even when the read returns nothing, as after a refused alert; a change made during the alert brings it back on the next poll (S1, kept). Persistence (a Settings toggle later), clear or delete items, pinning, rich text and file items. The turn-on and Add buttons are reached with Tab only when keyboard navigation is on (as other buttons, D30).
+
+---
+
+## D34. Settings window: General, Modules, Privacy, About; clipboard text kept on disk only if asked
+
+**Date:** 2026-11-01 · **Status:** Accepted (Shash chose text and links only, and a plain 0600 file kept out of backups, 2026-11-01; the rest follows D7, D8, D9, D25, D30, D33)
+
+**Decision:**
+- One SwiftUI `Settings` scene with four tabs, opened from the menu-bar item (D14). `SettingsView` gets the registry and `NotchState` from `AppDelegate`.
+- **General.** Launch at login is `SMAppService.mainApp` (macOS 13+): register and unregister from the toggle; the status is read from the system each time the tab appears, never saved by DropNotch, so a change in System Settings › Login Items shows. `.requiresApproval` shows a button to Login Items; a failed call shows a line and logs the error domain and code. Default off. The hotkey recorder is `KeyboardShortcuts.Recorder` for `.toggleNotch` (D30). "Show the notch on": Built-in display (today's rule: the first screen with a notch, else the main display) or Main display (`NSScreen.screens.first`), saved as `notch.display`; a change re-runs `screensChanged()`.
+- **Modules.** One row per module in tab order: a toggle (`ModuleRegistry.setEnabled`) and up/down buttons (not drag, so the keyboard and VoiceOver can reorder). Two pickers fill the compact slots with Nothing or a module whose `hasCompactView` is true (only Now Playing). Slots and order are saved as `layout.compactLeft`, `layout.compactRight` ("" for Nothing) and `layout.tabOrder`; saved ids are checked against the modules at launch, and new modules join at the end.
+- **Privacy.** "Download Spotify artwork" (`artwork.downloadsOn`, default on) is read by `ArtworkDownloader` before every request; off, Spotify shows its icon and nothing leaves the Mac (D25). Clipboard history on/off (off deletes the history and the saved file; on is the tab's Turn On, D33). "Keep history after quitting" (`clipboard.savesToDisk`, default off, D7): text and link items only, as a JSON array of strings in `~/Library/Application Support/DropNotch/clipboard.json`, written atomically on each change, then set to 0600 and excluded from backups; images stay in memory. Turning it off, turning history off, or Clear deletes the file. The file is loaded at start only while history is on, as untrusted input: at most 100 MB, the copy text rules, at most 25 items. Clear Tray calls the tray's Clear All, and is disabled while the tray module is off (it hasn't loaded its list then, so clearing would overwrite tray.json unseen).
+- **About.** Version and build from Info.plist, licence MIT, the bundled THIRD_PARTY_NOTICES.md in a sheet, and a link to the GitHub repo.
+- Package search: skipped. `SMAppService` and the already pinned KeyboardShortcuts (its `Recorder`) cover everything; a launch-at-login package would wrap about five lines.
+
+**Alternatives:** images saved too, one file each (rejected by Shash: screenshots are often sensitive, and up to 50 MB of writes); an encrypted file with a Keychain key (rejected: protects against little that FileVault and 0600 don't, since a same-user process can ask the Keychain too); a file included in backups (rejected: copied text would live in Time Machine). Drag to reorder tabs (rejected: not reachable by keyboard). Offering every module for a compact slot (rejected: only Now Playing draws one).
+
+**Review:** security-auditor, 2026-11-01: Pass with changes. M1 tests used the real clipboard.json (now a temporary file per test). L1 load requires a regular file (a symlink reports its own size; a FIFO would hang launch). L2 the folder is created 0700, and the 0600 and backup steps fail separately. L3 turning history off also turns keeping off, so Turn On never resumes writing unasked. L4 a login item waiting for approval shows as on, so the toggle can withdraw it. Not run: launch at login in a Release build (device check). code-reviewer, 2026-11-01: Approve with changes. W1 comment moved back to `hasCompactContent`. Applied: S1 ⌘ help counts modules that are on, S5 a saved slot must have a compact view, S6 distinct log lines, S7, S8 wording, S9 ARCHITECTURE §3 and the storage table. Recorded, not changed: S2 up/down also steps past modules that are off (the Settings row moves; the notch's tabs may not), S3 the closed shape stays symmetric, so Nothing on one side leaves an empty wing (D28; footer says so), S4 every module can be turned off, which opens an empty notch (Shash to decide).
+
+**Not done:** module-specific settings views (`settingsView()` stays empty); confirmation before Clear; a saved file written by a crashed or older run is deleted only by Clear or by turning an option off.
+
+---
+
+## D35. Top row right of the camera housing, with a Settings button (revises D31's tab placement)
+
+**Date:** 2026-11-01 · **Status:** Accepted (Shash, 2026-11-01: on a crowded MacBook Air menu bar the DropNotch menu-bar item hides behind the notch, and the Clipboard tab overlapped the 208 pt housing)
+
+**Decision:**
+- The open notch's top row sits right of the camera housing: the module tabs (D31), then a gear button at the far right. Nothing in the row may sit under the housing. The housing is `NotchGeometry.closedFrame`, which comes from the screen's `auxiliaryTopLeftArea` and `auxiliaryTopRightArea` (D16), so `openTopRowLeading` is computed per screen, never from a fixed offset. Without a notch the row starts at the middle of the shape.
+- Buttons are 28 × 24 pt with 2 pt between them and 8 pt clear at each end of the row: 164 pt for four tabs and the gear (`topRowWidth`, `topRowMaxItems = 5`). The open shape is at least the housing width plus 164 pt each side, centred on the notch: 536 pt on a 208 pt housing, up from 480. A pill is not widened for this.
+- The gear runs `NSApp.activate()` then `openSettings()`, as the menu-bar item does (D14). A throwaway probe test, 2026-11-01, showed `openSettings()` from an `NSHostingView` in a borderless non-activating panel opens the Settings window [V: probe]. ⌘, works while the panel is key (`.keyboardShortcut`, like ⌘1…). Like the tabs it isn't a Tab stop, so the focus order of the module's controls doesn't change. VoiceOver: "Settings", with the hint "Opens the DropNotch Settings window". Activating the app takes key focus from the panel, which closes a keyboard-opened notch (D30).
+- The menu-bar item stays.
+
+**Alternatives:** smaller buttons to keep 480 pt (rejected: 24 pt buttons with no gaps fit 136 pt only just, with no room for a fifth item, and would fall below comfortable targets, L7); tabs left of the housing with the gear on the right (rejected by Shash: one group on the right); reaching Settings through the hidden main menu's "Settings…" item (not needed: `openSettings()` works from the panel).
+
+**Review:** code-reviewer, 2026-11-01: Approve with changes. W1 the top row now shows with every module off, so the gear and ⌘, still reach Settings. W2 ARCHITECTURE §3 and §7, and D31's status. S1 one hint: `.help("Open Settings (⌘,)")`, which macOS also gives VoiceOver as the hint. S2 the registry asserts that its modules and the gear fit `topRowMaxItems`. S4 comments. S3 kept (the wide-notch test still checks containment).
+
+**Not done:** a fifth module needs `topRowMaxItems` raised, which widens the open shape again. The open frame isn't clamped to the screen: a notch within 164 pt of a screen edge would push it off-screen. Real notches are centred, and the 480 pt minimum had the same limit (code-reviewer S5).

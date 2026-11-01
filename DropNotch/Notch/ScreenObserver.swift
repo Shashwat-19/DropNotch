@@ -32,10 +32,12 @@ final class ScreenObserver: NSObject {
         }
     }
 
-    /// The display for the single notch panel (D9): the first screen with a notch,
+    /// The display for the single notch panel (D9): for `.builtIn`, the first screen with a notch,
     /// otherwise the first screen, which `NSScreen.screens` documents as the one
-    /// with the menu bar. `candidates` must be in `NSScreen.screens` order.
-    nonisolated static func chooseDisplay(_ candidates: [(id: CGDirectDisplayID, hasNotch: Bool)]) -> CGDirectDisplayID? {
-        (candidates.first { $0.hasNotch } ?? candidates.first)?.id
+    /// with the menu bar; for `.main`, always that one (D34). `candidates` must be in `NSScreen.screens` order.
+    nonisolated static func chooseDisplay(_ candidates: [(id: CGDirectDisplayID, hasNotch: Bool)],
+                                          on display: NotchDisplay = .builtIn) -> CGDirectDisplayID? {
+        let notched = display == .builtIn ? candidates.first { $0.hasNotch } : nil
+        return (notched ?? candidates.first)?.id
     }
 }

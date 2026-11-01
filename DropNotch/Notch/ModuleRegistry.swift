@@ -9,11 +9,11 @@ import os
 final class ModuleRegistry {
     let modules: [any NotchModule]
     private(set) var enabledIDs: Set<String>
-    /// Layout slots (D8). Defaults only.
-    /// shortcut: not persisted or editable, upgrade when Phase 3 Settings adds the pickers.
-    var compactLeftID: String?
-    var compactRightID: String?
-    var tabOrder: [String]
+    /// Layout slots (D8), set in Settings › Modules and saved. Nil is an empty slot.
+    var compactLeftID: String? { didSet { defaults.set(compactLeftID ?? "", forKey: Self.compactLeftKey) } }
+    var compactRightID: String? { didSet { defaults.set(compactRightID ?? "", forKey: Self.compactRightKey) } }
+    /// Every module id, in tab order.
+    var tabOrder: [String] { didSet { defaults.set(tabOrder, forKey: Self.tabOrderKey) } }
     /// The open notch's tab (D31). Nil, or a module that is off, shows the first.
     /// shortcut: kept for the session only, upgrade if the last tab should survive a relaunch.
     var selectedTabID: String?
@@ -25,14 +25,25 @@ final class ModuleRegistry {
 
     init(modules: [any NotchModule], defaults: UserDefaults = .standard) {
         precondition(Set(modules.map(\.id)).count == modules.count, "Module ids must be unique")
+        // Every tab plus the Settings button must fit right of the camera housing (D35), or the row would spill under it.
+        assert(modules.count + 1 <= NotchGeometry.topRowMaxItems, "Raise NotchGeometry.topRowMaxItems for another module")
         self.modules = modules
         self.defaults = defaults
         // A module with no saved flag is on.
         enabledIDs = Set(modules.map(\.id).filter { defaults.object(forKey: Self.key($0)) as? Bool ?? true })
-        // Now Playing fills both sides: artwork left, bars right (D28).
-        compactLeftID = modules.first?.id
-        compactRightID = modules.first?.id
-        tabOrder = modules.map(\.id)
+        let ids = modules.map(\.id)
+        // Saved values are checked against today's modules: one may have been removed or added since.
+        // Unsaved, Now Playing fills both sides: artwork left, bars right (D28). Saved as "", the slot is empty.
+        // Only a module with a compact view, as Settings offers: any other id would leave its picker blank.
+        func slot(_ key: String) -> String? {
+            guard let saved = defaults.string(forKey: key) else { return ids.first }
+            return modules.contains { $0.id == saved && $0.hasCompactView } ? saved : nil
+        }
+        compactLeftID = slot(Self.compactLeftKey)
+        compactRightID = slot(Self.compactRightKey)
+        let saved = (defaults.stringArray(forKey: Self.tabOrderKey) ?? []).filter(ids.contains)
+        var seen = Set<String>()
+        tabOrder = (saved + ids).filter { seen.insert($0).inserted }
     }
 
     /// Modules shown as tabs in the open notch, in `tabOrder`.
@@ -85,5 +96,14 @@ final class ModuleRegistry {
         if enabled { module.start() } else { module.stop() }
     }
 
+    /// Moves a module's tab one place earlier (-1) or later (+1); nothing at the ends.
+    func moveTab(_ id: String, by offset: Int) {
+        guard let index = tabOrder.firstIndex(of: id), tabOrder.indices.contains(index + offset) else { return }
+        tabOrder.swapAt(index, index + offset)
+    }
+
     private static func key(_ id: String) -> String { "module.\(id).enabled" }
+    private static let compactLeftKey = "layout.compactLeft"
+    private static let compactRightKey = "layout.compactRight"
+    private static let tabOrderKey = "layout.tabOrder"
 }

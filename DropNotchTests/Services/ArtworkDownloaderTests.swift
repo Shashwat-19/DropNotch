@@ -22,7 +22,8 @@ final class ArtworkDownloaderTests: XCTestCase {
         override func stopLoading() {}
     }
 
-    private let downloader = ArtworkDownloader(protocolClasses: [Stub.self])
+    // Allowed explicitly, so the Settings switch on this Mac can't fail these tests.
+    private let downloader = ArtworkDownloader(protocolClasses: [Stub.self], isAllowed: { true })
     private let good = URL(string: "https://i.scdn.co/image/ab67616d0000b273")!
 
     override func setUp() {
@@ -44,6 +45,14 @@ final class ArtworkDownloaderTests: XCTestCase {
 
     func testADisallowedURLIsNeverRequested() async {
         let data = await downloader.data(from: URL(string: "https://example.com/image")!)
+        XCTAssertNil(data)
+        XCTAssertEqual(Stub.requests, 0)
+    }
+
+    /// Settings › Privacy › artwork downloads off (D34): not even an allowed URL is requested.
+    func testDownloadsSwitchedOffMakeNoRequest() async {
+        let off = ArtworkDownloader(protocolClasses: [Stub.self], isAllowed: { false })
+        let data = await off.data(from: good)
         XCTAssertNil(data)
         XCTAssertEqual(Stub.requests, 0)
     }
