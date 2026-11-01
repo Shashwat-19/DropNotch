@@ -226,6 +226,113 @@ final class NotchGeometryTests: XCTestCase {
         }
     }
 
+    // MARK: One-sided wings and shoulders (D36)
+
+    private let oneSided: [Set<CompactSlot>] = [[.left], [.right]]
+
+    private func assertPixelAligned(_ rect: CGRect, scale: CGFloat, _ label: String,
+                                    file: StaticString = #filePath, line: UInt = #line) {
+        for edge in [rect.minX, rect.maxX, rect.minY, rect.maxY] {
+            let pixels = edge * scale
+            XCTAssertEqual(pixels, pixels.rounded(), "edge \(edge) at \(scale)x: \(label)", file: file, line: line)
+        }
+    }
+
+    func testLeftWingKeepsTheRightEdgeAndExtendsLeftByOneWing() {
+        for geometry in [notched(screen), notched(screen, inset: 33.5, scale: 2), plain(screen)] {
+            let closed = geometry.frame(for: .closed, wings: [.left])
+            XCTAssertEqual(closed, CGRect(x: geometry.closedFrame.minX - geometry.wingWidth, y: geometry.closedFrame.minY,
+                                          width: geometry.closedFrame.width + geometry.wingWidth,
+                                          height: geometry.closedFrame.height))
+            let peek = geometry.frame(for: .peek, wings: [.left])
+            XCTAssertEqual(peek.minX, geometry.compactPeekFrame.minX)
+            XCTAssertEqual(peek.maxX, geometry.compactPeekFrame.maxX - geometry.wingWidth)
+            XCTAssertEqual(peek.maxX, geometry.peekFrame.maxX, "the right side peeks as if it had no wing")
+            XCTAssertEqual(peek.minY, geometry.compactPeekFrame.minY)
+            XCTAssertEqual(peek.height, geometry.compactPeekFrame.height)
+        }
+    }
+
+    func testRightWingMirrorsTheLeftWing() {
+        for geometry in [notched(screen), notched(screen, inset: 33.5, scale: 2), plain(screen)] {
+            let closed = geometry.frame(for: .closed, wings: [.right])
+            XCTAssertEqual(closed, CGRect(x: geometry.closedFrame.minX, y: geometry.closedFrame.minY,
+                                          width: geometry.closedFrame.width + geometry.wingWidth,
+                                          height: geometry.closedFrame.height))
+            let peek = geometry.frame(for: .peek, wings: [.right])
+            XCTAssertEqual(peek.minX, geometry.compactPeekFrame.minX + geometry.wingWidth)
+            XCTAssertEqual(peek.minX, geometry.peekFrame.minX, "the left side peeks as if it had no wing")
+            XCTAssertEqual(peek.maxX, geometry.compactPeekFrame.maxX)
+            XCTAssertEqual(peek.height, geometry.compactPeekFrame.height)
+        }
+    }
+
+    // At 1x the 33.5 pt wing is not a whole number of pixels, which is the case this guards.
+    func testOneSidedFramesStayPixelAlignedForAFractionalInset() {
+        for scale: CGFloat in [1, 2] {
+            for frame in [screen, CGRect(x: 0.25, y: -0.75, width: 1501, height: 999)] {
+                let geometry = notched(frame, inset: 33.5, scale: scale)
+                for phase in [NotchHoverStateMachine.Phase.closed, .peek] {
+                    for wings in oneSided {
+                        let label = "\(frame) \(phase) wings \(wings)"
+                        assertPixelAligned(geometry.frame(for: phase, wings: wings), scale: scale, label)
+                        assertPixelAligned(geometry.panelFrame(for: phase, wings: wings), scale: scale, "panel \(label)")
+                    }
+                }
+                // The side without a wing lines up with the notch itself.
+                XCTAssertEqual(geometry.frame(for: .closed, wings: [.left]).maxX, geometry.closedFrame.maxX,
+                               "\(frame) at \(scale)x")
+                XCTAssertEqual(geometry.frame(for: .closed, wings: [.right]).minX, geometry.closedFrame.minX,
+                               "\(frame) at \(scale)x")
+            }
+        }
+    }
+
+    // The open panel is the canvas (D19); every shape, shoulders included, must fit in it.
+    func testEveryOneSidedFrameAndPanelFitsTheCanvas() {
+        for geometry in [notched(screen), notched(screen, inset: 33.5, scale: 1), notched(screen, inset: 33.5, scale: 2),
+                         plain(screen), notched(screen, left: 100, right: 100)] {
+            let canvas = geometry.panelFrame(for: .open)
+            for phase in [NotchHoverStateMachine.Phase.closed, .peek] {
+                for wings in oneSided {
+                    XCTAssertTrue(canvas.contains(geometry.frame(for: phase, wings: wings)), "\(phase) \(wings)")
+                    XCTAssertTrue(canvas.contains(geometry.panelFrame(for: phase, wings: wings)), "panel \(phase) \(wings)")
+                }
+            }
+        }
+    }
+
+    func testShoulderIsNoneOnlyForThePlainClosedShape() {
+        XCTAssertEqual(NotchGeometry.shoulder(for: .closed), 0)
+        for wings in [[.left], [.right], [.left, .right]] as [Set<CompactSlot>] {
+            XCTAssertEqual(NotchGeometry.shoulder(for: .closed, wings: wings), NotchGeometry.compactShoulder, "\(wings)")
+        }
+        for wings in [[], [.left], [.right], [.left, .right]] as [Set<CompactSlot>] {
+            XCTAssertEqual(NotchGeometry.shoulder(for: .peek, wings: wings), NotchGeometry.compactShoulder, "\(wings)")
+            XCTAssertEqual(NotchGeometry.shoulder(for: .open, wings: wings), NotchGeometry.openShoulder, "\(wings)")
+        }
+        XCTAssertEqual([NotchGeometry.compactShoulder, NotchGeometry.openShoulder], [6, 10])
+    }
+
+    // Shoulders are whole points, so the panel's side edges keep the body's fraction: whole points when the body is
+    // on whole points, whole pixels for a fractional notch on a Retina display.
+    func testOneSidedPanelFrameWidensByTheShoulderAndKeepsTheBodysFraction() {
+        for geometry in [notched(screen), notched(screen, inset: 33.5, scale: 2)] {
+            for phase in [NotchHoverStateMachine.Phase.closed, .peek, .open] {
+                for wings in oneSided {
+                    let body = geometry.frame(for: phase, wings: wings), panel = geometry.panelFrame(for: phase, wings: wings)
+                    let shoulder = NotchGeometry.shoulder(for: phase, wings: wings)
+                    let label = "\(phase) \(wings)"
+                    XCTAssertEqual(panel, CGRect(x: body.minX - shoulder, y: body.minY, width: body.width + 2 * shoulder,
+                                                 height: body.height + NotchGeometry.topOverhang), label)
+                    for (edge, bodyEdge) in [(panel.minX, body.minX), (panel.maxX, body.maxX)] {
+                        XCTAssertEqual(edge - edge.rounded(.down), bodyEdge - bodyEdge.rounded(.down), label)
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: Top row right of the camera housing (D35)
 
     /// A MacBook Air-like screen: 1470 × 956 pt with a 208 pt housing. Approximate, not a measured value.

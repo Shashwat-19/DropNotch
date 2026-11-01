@@ -100,6 +100,17 @@ final class NotchPanelTests: XCTestCase {
         }
     }
 
+    // Shoulders are whole points (D36), so on a whole-point notch they add nothing for AppKit to round.
+    func testShouldersAddNoRoundingToAWholePointPanel() {
+        let geometry = notched(inset: 32, scale: 2)
+        for phase in [NotchHoverStateMachine.Phase.closed, .peek, .open] {
+            for wings in [[], [.left], [.right], [.left, .right]] as [Set<CompactSlot>] {
+                let asked = geometry.panelFrame(for: phase, wings: wings)
+                XCTAssertEqual(NotchPanel.windowFrame(asked), asked, "\(phase) wings \(wings)")
+            }
+        }
+    }
+
     // Hover never makes the panel key; only the hotkey does (D30).
     func testPanelBecomesKeyOnlyWhenAcceptingKeyboardAndEscapeDismisses() {
         let panel = NotchPanel(contentView: NSView())

@@ -298,6 +298,62 @@ final class ModuleRegistryTests: XCTestCase {
         XCTAssertEqual(registry.tabOrder, ["a", "b", "c"])
     }
 
+    // MARK: Modules that are off sit last (D36)
+
+    func testInitSortsASavedOrderSoModulesThatAreOnComeFirst() {
+        let defaults = makeDefaults()
+        defaults.set(["c", "a", "d", "b"], forKey: "layout.tabOrder")
+        defaults.set(false, forKey: "module.a.enabled")
+        defaults.set(false, forKey: "module.b.enabled")
+        XCTAssertEqual(registry(["a", "b", "c", "d"], defaults).tabOrder, ["c", "d", "a", "b"],
+                       "each group keeps its saved order")
+    }
+
+    func testTurningOffMovesTheModuleToTheFirstSlotOfThoseThatAreOff() {
+        let registry = registry(["a", "b", "c", "d"], makeDefaults())
+        registry.setEnabled("d", false)
+        XCTAssertEqual(registry.tabOrder, ["a", "b", "c", "d"])
+        registry.setEnabled("a", false)
+        XCTAssertEqual(registry.tabOrder, ["b", "c", "a", "d"])
+        registry.setEnabled("a", false)
+        XCTAssertEqual(registry.tabOrder, ["b", "c", "a", "d"], "turning off again changes nothing")
+    }
+
+    func testTurningOnMakesTheModuleTheLastOfThoseThatAreOn() {
+        let registry = registry(["a", "b", "c", "d"], makeDefaults())
+        registry.setEnabled("a", false)
+        registry.setEnabled("b", false)
+        XCTAssertEqual(registry.tabOrder, ["c", "d", "b", "a"])
+        registry.setEnabled("a", true)
+        XCTAssertEqual(registry.tabOrder, ["c", "d", "a", "b"])
+        XCTAssertEqual(registry.expandedModules.map(\.id), ["c", "d", "a"])
+    }
+
+    func testMoveTabRefusesModulesThatAreOffAndTheBoundary() {
+        let registry = registry(["a", "b", "c", "d"], makeDefaults())
+        registry.setEnabled("c", false)
+        registry.setEnabled("d", false)
+        XCTAssertEqual(registry.tabOrder, ["a", "b", "d", "c"])
+        registry.moveTab("d", by: -1)
+        registry.moveTab("d", by: 1)
+        registry.moveTab("c", by: -1)
+        registry.moveTab("b", by: 1)
+        XCTAssertEqual(registry.tabOrder, ["a", "b", "d", "c"], "nothing crosses between on and off")
+        registry.moveTab("b", by: -1)
+        XCTAssertEqual(registry.tabOrder, ["b", "a", "d", "c"])
+    }
+
+    func testOrderAfterTogglingSurvivesANewRegistry() {
+        let defaults = makeDefaults()
+        let first = registry(["a", "b", "c"], defaults)
+        first.setEnabled("a", false)
+        first.moveTab("c", by: -1)
+        XCTAssertEqual(first.tabOrder, ["c", "b", "a"])
+        let second = registry(["a", "b", "c"], defaults)
+        XCTAssertEqual(second.tabOrder, ["c", "b", "a"])
+        XCTAssertEqual(second.enabledIDs, ["b", "c"])
+    }
+
     func testSavedSlotWithoutCompactViewIsEmpty() {
         let defaults = makeDefaults()
         defaults.set("b", forKey: "layout.compactLeft")
