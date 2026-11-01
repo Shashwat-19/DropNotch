@@ -1015,6 +1015,7 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 **Decision:**
 - `scripts/make-dmg.sh` makes a clean Release build and packs `DropNotch.app`, an Applications shortcut, LICENSE and THIRD_PARTY_NOTICES.md into `build/DropNotch-<version>.dmg`. The notices also ship inside the app (project.yml).
 - The app is ad-hoc signed with the hardened runtime and only the apple-events entitlement (D11, D13); no Developer ID, no notarisation. Gatekeeper refuses it on first open (`spctl` says rejected), so README › Install gives the macOS 15+ path (Done, then System Settings › Privacy & Security › Open Anyway) and the macOS 14 Control-click › Open path.
+- The script writes `DropNotch-<version>.dmg.sha256`; the checksum goes in the release notes and as an asset, and README tells users how to compare it (security-auditor L2: an ad-hoc DMG can't otherwise be told from a swapped one).
 - create-dmg 1.3.0 (github.com/create-dmg/create-dmg, MIT) is a build tool on the maintainer's Mac, not linked into or shipped with the app, so it has no effect on DropNotch's licence.
 
 **Alternatives:** `hdiutil` with a hand-made symlink (no window layout; kept as the fallback if create-dmg breaks). The npm `create-dmg` (it signs and needs Node; rejected, no Node in this project).

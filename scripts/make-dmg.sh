@@ -23,4 +23,5 @@ create-dmg --volname "DropNotch $version" --window-size 540 400 --icon-size 96 \
     --icon DropNotch.app 140 150 --app-drop-link 400 150 \
     --icon LICENSE 140 300 --icon THIRD_PARTY_NOTICES.md 400 300 \
     "$dmg" "$staging"
-echo "$dmg"
+# Published with the release, so a download can be checked: the DMG has no Developer ID signature (README › Install).
+(cd build && shasum -a 256 "$(basename "$dmg")" | tee "$(basename "$dmg").sha256")

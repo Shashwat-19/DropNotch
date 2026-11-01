@@ -26,8 +26,9 @@ Pre-alpha. Some checks on a real Mac are still outstanding, including how the Au
 
 Download `DropNotch-0.1.0.dmg` from [GitHub Releases](https://github.com/Shashwat-19/DropNotch/releases). DropNotch needs macOS 14 or later on an Apple silicon Mac.
 
-1. Open the DMG and drag **DropNotch** onto **Applications**.
-2. Open DropNotch from Applications.
+1. Optional, but worth it while releases are unsigned: check the download against the SHA-256 on the release page. In Terminal, `shasum -a 256 ~/Downloads/DropNotch-0.1.0.dmg` must print the same value.
+2. Open the DMG and drag **DropNotch** onto **Applications**.
+3. Open DropNotch from Applications.
 
 DropNotch isn't signed with an Apple Developer ID yet, so the first time you open it, macOS blocks it. On macOS 15 or later:
 

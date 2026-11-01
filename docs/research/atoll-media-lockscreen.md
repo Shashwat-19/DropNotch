@@ -443,4 +443,4 @@ A shared filtering base type is defined in `DynamicIsland/MediaControllers/Amazo
 
 ## 18. Files written
 
-- `/Users/shashwat./Developer/DropNotch/docs/research/atoll-media-lockscreen.md` (this file)
+- `docs/research/atoll-media-lockscreen.md` (this file)
