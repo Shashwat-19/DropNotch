@@ -1004,6 +1004,8 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - Clipboard: Turn On, Add Clipboard and Clear are focus stops; the hotkey focuses Turn On while history is off, Search otherwise (as before). Tab from Search reaches the buttons. ← and → stay with the text in Search, and ↑/↓/Return keep moving and copying the highlighted row. Clearing moves focus back to Search.
 - The focus ring is the system's own on these controls (the round Now Playing controls hide it because their style draws a circle).
 
+**Known:** Clear All is the last arrow stop and runs on Space with no confirmation or undo, so holding → then Space empties the tray (accessibility-auditor, 2026-11-01; not a regression: a click does the same). Confirmation before Clear was already out of D34; for Shash to decide after v0.1.0. The originals are never touched.
+
 **Alternatives:** Keeping `ShareLink` and leaving Share mouse-only (rejected: the finding is exactly that buttons can't be reached). Arrows between the clipboard buttons (rejected: ← and → belong to the text in Search, and the rows already use ↑/↓). Deleting a focused tile with ⌫ (not asked; Remove covers it).
 
 ## D41. v0.1.0 ships as an ad-hoc-signed DMG built by create-dmg
