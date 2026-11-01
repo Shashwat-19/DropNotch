@@ -823,6 +823,8 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Date:** 2026-10-31 · **Status:** Accepted (Shash chose tabs over side-by-side, 2026-10-31)
 
+**Revised by D35** (2026-11-01): the tabs sit right of the camera housing, with a Settings button after them.
+
 **Decision:**
 - `NotesModule` keeps one note in `~/Library/Application Support/DropNotch/Notes/note.txt` (UTF-8). It loads in `start()`, saves 1 s after the last edit (one-shot task, restarted per edit), and flushes in `stop()`, which the registry calls at quit. Writes are atomic. A missing file is an empty note; a file that exists but can't be read turns saving off and shows "Couldn't open the note file", so it is never overwritten. A failed save shows "Couldn't save the note" under the editor until a save succeeds. A note deleted while the module is off starts empty and isn't written back. Logs carry error domains and codes only, never the text or the path. No network.
 - Reads and writes run on the main thread: a note is a few KB [I: not measured]. Marked `shortcut:` in the code.
@@ -928,4 +930,6 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Alternatives:** smaller buttons to keep 480 pt (rejected: 24 pt buttons with no gaps fit 136 pt only just, with no room for a fifth item, and would fall below comfortable targets, L7); tabs left of the housing with the gear on the right (rejected by Shash: one group on the right); reaching Settings through the hidden main menu's "Settings…" item (not needed: `openSettings()` works from the panel).
 
-**Not done:** a fifth module needs `topRowMaxItems` raised, which widens the open shape again.
+**Review:** code-reviewer, 2026-11-01: Approve with changes. W1 the top row now shows with every module off, so the gear and ⌘, still reach Settings. W2 ARCHITECTURE §3 and §7, and D31's status. S1 one hint: `.help("Open Settings (⌘,)")`, which macOS also gives VoiceOver as the hint. S2 the registry asserts that its modules and the gear fit `topRowMaxItems`. S4 comments. S3 kept (the wide-notch test still checks containment).
+
+**Not done:** a fifth module needs `topRowMaxItems` raised, which widens the open shape again. The open frame isn't clamped to the screen: a notch within 164 pt of a screen edge would push it off-screen. Real notches are centred, and the 480 pt minimum had the same limit (code-reviewer S5).

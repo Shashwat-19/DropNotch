@@ -29,12 +29,15 @@ struct NotchRootView: View {
             // The selected tab's module (D31). Fades in on open and vanishes at once on close, so the text
             // never pokes out of the shrinking shape (D19).
             .overlay {
-                if state.displayedPhase == .open, let module = registry.selectedModule {
+                if state.displayedPhase == .open {
                     VStack(spacing: 0) {
-                        // The tabs sit in the strip right of the camera housing; the module starts below it.
+                        // The tabs sit in the strip right of the camera housing; the module starts below it. The row
+                        // shows with every module off too, so Settings stays reachable (code-reviewer W1, D35).
                         topRow.frame(height: state.geometry?.closedFrame.height ?? 0)
-                        module.expandedView().frame(maxHeight: .infinity)
+                        registry.selectedModule?.expandedView().frame(maxHeight: .infinity)
                     }
+                    // Keeps the row at the top when no module fills the space below it.
+                    .frame(maxHeight: .infinity, alignment: .top)
                     .padding(.top, NotchGeometry.topOverhang)
                     // The shape is always black, so its content uses dark colours in light mode too (L5).
                     .environment(\.colorScheme, .dark)
@@ -88,8 +91,8 @@ struct NotchRootView: View {
         // ⌘, while the panel is key, like the tabs' ⌘1… Not a Tab stop either.
         .keyboardShortcut(",")
         .focusable(false)
-        .help("Settings")
-        .accessibilityHint("Opens the DropNotch Settings window")
+        // On macOS this is the tooltip and also VoiceOver's hint: "Settings, button, Open Settings".
+        .help("Open Settings (⌘,)")
     }
 
     private func tab(_ module: any NotchModule, index: Int) -> some View {

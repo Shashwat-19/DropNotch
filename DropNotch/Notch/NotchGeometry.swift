@@ -18,6 +18,7 @@ struct NotchGeometry: Equatable {
     static let topOverhang: CGFloat = 1
     /// The open notch's top row sits right of the camera housing (D35): module tabs, then the Settings button.
     static let topRowItemSize = CGSize(width: 28, height: 24)
+    /// Space between neighbouring buttons in the row.
     static let topRowSpacing: CGFloat = 2
     /// Clear space between the camera housing and the first button, and after the last.
     static let topRowInset: CGFloat = 8
@@ -79,7 +80,7 @@ struct NotchGeometry: Equatable {
 
     /// Where the free strip right of the camera housing starts, from the open shape's leading edge (D35). The housing
     /// is the closed frame, which comes from the screen's `auxiliaryTopLeftArea` and `auxiliaryTopRightArea`. Without
-    /// a notch, the middle of the shape.
+    /// a notch, the middle of the shape. Both edges are pixel-aligned, so the row's padding lands on whole pixels.
     var openTopRowLeading: CGFloat {
         (hasNotch ? closedFrame.maxX : openFrame.midX) - openFrame.minX
     }
