@@ -44,6 +44,7 @@ DropNotchTests/   mirrors the folders above
 scripts/
   app-icon/       main.swift draws the icon with NotchShape; make-icons.sh renders and scales it into
                   Assets.xcassets (D38). Not part of the app target; run by hand from the repo root
+  dmg-background/ main.swift draws the DMG window's background and first-launch steps (D41); run by make-dmg.sh
   make-dmg.sh     Release build packed into build/DropNotch-<version>.dmg with an Applications shortcut, LICENSE and
                   THIRD_PARTY_NOTICES (create-dmg, a Homebrew build tool, MIT), plus its .sha256 (D41). Run by hand from anywhere
 ```

@@ -27,15 +27,16 @@ Version 0.1.0 is the first release: an early build, not signed with a Developer 
 
 Download `DropNotch-0.1.0.dmg` from [GitHub Releases](https://github.com/Shashwat-19/DropNotch/releases). DropNotch needs macOS 14 or later on an Apple silicon Mac.
 
-1. Optional, but worth it while releases are unsigned: check the download against the SHA-256 on the release page. In Terminal, `shasum -a 256 ~/Downloads/DropNotch-0.1.0.dmg` must print the same value.
-2. Open the DMG and drag **DropNotch** onto **Applications**.
-3. Open DropNotch from Applications.
+Optional, but worth it while releases are unsigned: check the download against the SHA-256 on the release page. In Terminal, `shasum -a 256 ~/Downloads/DropNotch-0.1.0.dmg` must print the same value.
 
-DropNotch isn't signed with an Apple Developer ID yet, so the first time you open it, macOS blocks it. On macOS 15 or later:
+DropNotch isn't signed with an Apple Developer ID yet, so macOS blocks it the first time you open it. On macOS 15 or later (the same three steps are in the DMG window):
 
-1. macOS says "DropNotch" Not Opened. Click **Done** (not Move to Trash).
-2. Open **System Settings › Privacy & Security** and scroll down to **Security**. Next to "DropNotch" was blocked to protect your Mac, click **Open Anyway**. The button shows for about an hour after you try to open the app.
-3. Click **Open Anyway** again in the dialog, then enter your password or use Touch ID.
+1. **Drag to Applications.** Open the DMG and drag **DropNotch** onto **Applications**.
+   <!-- screenshot: docs/images/install-1-dmg-window.png (the DMG window with the arrow) -->
+2. **Open DropNotch.** Open it from Applications. If macOS says "DropNotch" Not Opened, click **Done**, not Move to Bin/Trash.
+   <!-- screenshot: docs/images/install-2-not-opened.png (the "Not Opened" dialog, Done highlighted) -->
+3. **Open Anyway.** Open **System Settings › Privacy & Security** and scroll down to **Security**. Next to "DropNotch" was blocked to protect your Mac, click **Open Anyway**, then **Open Anyway** again in the dialog, and enter your password or use Touch ID. The button shows for about an hour after you try to open the app.
+   <!-- screenshot: docs/images/install-3-open-anyway.png (Privacy & Security with the Open Anyway button) -->
 
 On macOS 14, Control-click DropNotch in Applications, choose **Open**, then click **Open** again.
 
