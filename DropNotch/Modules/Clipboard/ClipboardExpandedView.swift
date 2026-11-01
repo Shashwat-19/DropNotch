@@ -37,8 +37,8 @@ struct ClipboardExpandedView: View {
                     searchField
                     // Tab from Search reaches these; ← and → stay with the text in Search.
                     if module.access == .ask, module.hasUnreadChange {
-                        Button("Add Clipboard") { module.addCurrent() }
-                            .keyboardControl(Focus.addClipboard, focus: $focus) { module.addCurrent() }
+                        Button("Add Clipboard") { addCurrent() }
+                            .keyboardControl(Focus.addClipboard, focus: $focus) { addCurrent() }
                     }
                     if !module.items.isEmpty {
                         Button("Clear") { clear() }
@@ -157,7 +157,12 @@ struct ClipboardExpandedView: View {
         dismissNotch()
     }
 
-    /// Clear is gone once the history is empty, which would leave focus nowhere.
+    /// Add Clipboard is gone once it has read, and Clear once the history is empty; either would leave focus nowhere.
+    private func addCurrent() {
+        module.addCurrent()
+        if focus == .addClipboard { focus = .search }
+    }
+
     private func clear() {
         module.clear()
         if focus == .clear { focus = .search }

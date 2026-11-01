@@ -127,9 +127,10 @@ struct FileTrayExpandedView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .disabled(!enabled.contains(.airDrop))
             .help("AirDrop")
             .keyboardControl(Focus.airDrop, focus: $focus, action: sendViaAirDrop)
+            // Outermost, so it also takes the focus stop and the key press away (code-reviewer W1).
+            .disabled(!enabled.contains(.airDrop))
             action("Share", systemImage: "square.and.arrow.up", .share, enabled: enabled) { shareMenu.show(urls) }
                 .background(TrayShareMenu.Anchor(menu: shareMenu))
             action("Remove", systemImage: "minus.circle", .remove, enabled: enabled) {
@@ -152,9 +153,10 @@ struct FileTrayExpandedView: View {
                         perform: @escaping () -> Void) -> some View {
         Button(action: perform) { icon(label, systemImage: systemImage) }
             .buttonStyle(.plain)
-            .disabled(!enabled.contains(id))
             .help(Text(label))
             .keyboardControl(id, focus: $focus, action: perform)
+            // Outermost, so it also takes the focus stop and the key press away (code-reviewer W1).
+            .disabled(!enabled.contains(id))
     }
 
     /// Icon-only on screen; VoiceOver reads the label. About a 24 pt target (L7).
