@@ -40,24 +40,33 @@ struct FileTrayExpandedView: View {
     /// The tiles, then the actions that are enabled, in reading order (D40).
     private var focusOrder: [Focus] {
         let urls = module.shareURLs
-        var order = module.items.map { Focus.tile($0.id) }
-        if !urls.isEmpty, module.airDrop?.canPerform(withItems: urls) == true { order.append(.airDrop) }
-        if !urls.isEmpty { order.append(.share) }
-        if !module.selection.isEmpty { order.append(.remove) }
+        return Self.focusOrder(tiles: module.items.map(\.id), canShare: !urls.isEmpty,
+                               canAirDrop: module.airDrop?.canPerform(withItems: urls) == true,
+                               hasSelection: !module.selection.isEmpty)
+    }
+
+    /// Pure so it can be tested. `canAirDrop` is only asked when there is something to share.
+    static func focusOrder(tiles: [UUID], canShare: Bool, canAirDrop: @autoclosure () -> Bool,
+                           hasSelection: Bool) -> [Focus] {
+        var order = tiles.map { Focus.tile($0) }
+        if canShare, canAirDrop() { order.append(.airDrop) }
+        if canShare { order.append(.share) }
+        if hasSelection { order.append(.remove) }
         return order + [.clearAll]
     }
 
     /// Arrows step through the tiles and actions and stop at either end, as in Now Playing (D30).
     private func moveFocus(_ direction: MoveCommandDirection) {
-        let order = focusOrder
-        guard let current = focus, let index = order.firstIndex(of: current) else {
-            focus = order.first
-            return
-        }
+        focus = Self.focus(after: focus, in: focusOrder, moving: direction)
+    }
+
+    /// Pure so it can be tested: nil or a stop that's gone goes to the first stop.
+    static func focus(after current: Focus?, in order: [Focus], moving direction: MoveCommandDirection) -> Focus? {
+        guard let current, let index = order.firstIndex(of: current) else { return order.first }
         switch direction {
-        case .left, .up: focus = order[max(index - 1, 0)]
-        case .right, .down: focus = order[min(index + 1, order.count - 1)]
-        @unknown default: break
+        case .left, .up: return order[max(index - 1, 0)]
+        case .right, .down: return order[min(index + 1, order.count - 1)]
+        @unknown default: return current
         }
     }
 
@@ -156,7 +165,7 @@ struct FileTrayExpandedView: View {
             .contentShape(Rectangle())
     }
 
-    private enum Focus: Hashable {
+    enum Focus: Hashable {
         case tile(UUID), airDrop, share, remove, clearAll
     }
 }
