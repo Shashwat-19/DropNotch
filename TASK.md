@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, 4, `feat/hotkey`, 5, `feat/notes`, 6, `feat/file-tray`, and 7, `feat/clipboard`, are merged to main and pushed to `origin`. Branches 8, `feat/settings`, and 9, `feat/polish`, are merged to main (2026-11-01). Next: release. See "Phase 3" below.
+**Status (2026-11-01):** release/v0.1.0 in progress: the keyboard fix (D40), reviews and DMG (D41) are done; the one device session below is next, then Shash approves the public steps. Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, 4, `feat/hotkey`, 5, `feat/notes`, 6, `feat/file-tray`, and 7, `feat/clipboard`, are merged to main and pushed to `origin`. Branches 8, `feat/settings`, and 9, `feat/polish`, are merged to main (2026-11-01). Next: release. See "Phase 3" below.
 
 ## Goal
 Run a reverse-engineering analysis (REA) of Canopy and Atoll, turn it into a feature matrix and architecture plan for DropNotch, then scaffold the foundation. DropNotch must be original code that Shash owns.
@@ -335,6 +335,25 @@ Device checks (Debug build is enough: project.yml gains only the icon setting, n
 71. VoiceOver on: ⌃⌥N on each tab reads the module name as a group (also on the Now Playing empty state); in Clipboard, Return on a row says "Copied"; hovering a tab or a tray action shows a tooltip.
 72. **Passed (Shash, 2026-11-01).** (D39) The selected tab icon is white with a small dot below it and the others grey; the dot doesn't touch the module content or the camera housing. Select tray tiles (click, ⌘-click): each selected tile shows a dot inside its bottom edge, the others' names dim; nothing is clipped. ⌃⌥N on Clipboard: the highlighted row has a dot at its left edge and the other rows dim; hover-opened, all rows are white. On an external display without a notch, the dot sits under the tab and clear of the module. Increase Contrast on: the grey is visibly brighter and the dot remains.
 
+
+### Branch 10: `release/v0.1.0` (Shash, 2026-11-01)
+
+1. Keyboard access to File Tray and Clipboard buttons (D40). Done: test-writer (9 tests), code-reviewer (Approve with changes; W1 disabled actions out of the Tab order, S1 Add Clipboard focus, S2 script documented: applied), accessibility-auditor (finding closed in code; Clear All on Space recorded in D40).
+2. Reviews: security-auditor Pass with changes (L1 home path in a research note fixed, still in commit d386354's history; L2 SHA-256 added). dependency-manager Pass. performance-optimizer: no findings (static; measurements below). docs-writer: README, ARCHITECTURE, FEATURE_MATRIX, RISKS. 426 tests, 0 failures.
+3. DMG (D41): `scripts/make-dmg.sh` → build/DropNotch-0.1.0.dmg + .sha256; app, Applications link, LICENSE, THIRD_PARTY_NOTICES. Checked by the lead: adhoc + runtime flags, only apple-events, no get-task-allow, `codesign --verify --deep --strict` passes, `spctl` rejects (expected). CHANGELOG.md via changelog-agent.
+4. Public steps prepared, not run: they wait for Shash.
+
+Measured by the lead during the session, once the Debug build is quit (performance-optimizer's commands): idle CPU and wake-ups closed (history off, then on: about 2 a second from the poll, so item 23's "0" applies with history off only), open and playing, footprint over 50 Spotify track changes, `nettop` while idle and per track (only i.scdn.co), `codesign` on the installed app (26).
+
+Device session (Shash, one sitting; Release build from the DMG on a notched Mac; quit the Debug build first). Each item groups the checklist entries in brackets.
+R1. Install. Quarantine a copy (`xattr -w com.apple.quarantine "0081;$(printf %x $(date +%s));Safari;" build/DropNotch-0.1.0.dmg`), open it: the window shows the app, Applications, LICENSE, notices. Drag to Applications, open: follow README › Install word for word and note any wording that differs. No Dock icon. Launch at login on, log out and in (57).
+R2. Automation, Music and Spotify (1–4, 7, 8): `tccutil reset AppleEvents com.shashwat.DropNotch` first. No prompt at launch; one prompt per player on the first click; Deny shows the System Settings link and turning it on works without relaunch; quit a player, click: no relaunch; first click works and typing in the front app continues. Re-signing: reinstall a fresh DMG build and note whether the grant survives.
+R3. Spotify (17–20, 14, 11) and Music flicker (10): time and bar, seek in Spotify and in the notch (click, drag), artwork, an ad on the free account, Previous mid-track (record restart or previous); Music: no play/pause flicker on skip.
+R4. Keyboard (D40): ⌃⌥N, ⌘3 Tray with 3 files: first tile has a visible focus ring, not clipped; Tab and ←/→ go through tiles and enabled actions only; Space toggles a tile's dot; Return on Share opens the menu below it and AirDrop or Mail works; Remove moves focus to the first tile. ⌘4 Clipboard: off → Return turns on; Tab from Search reaches Add Clipboard and Clear, Return presses; Clear returns focus to Search. Repeat with Keyboard navigation on: one stop each, Space fires once. Hover mode: one click on Share, Remove, Clear All and Clipboard Clear still works; with a hover-opened notch the Share menu opens.
+R5. VoiceOver (16, 25, 71, Release checklist): ⌃⌥N on each tab reads the module group; tiles read "name, button"; VO-Space on Share opens a readable menu and Escape returns to Share; the bar is adjustable in the Accessibility Inspector; note what the closed notch announces (known: nothing).
+R6. Contrast and motion (69, Release checklist): Increase Contrast and Graphite accent: focus rings and the dot visible; Reduce Motion: ⌘1/⌘2 only cross-fade, Settings rows don't slide.
+R7. Settings (58–65): external display Built-in ↔ Main; module order and off; compact-slot pickers persist; clipboard Keep on/off with `ls -l` and `tmutil isexcluded`; Spotify artwork off; recorder takes a new shortcut; About › notices sheet; ⌘, and the gear open Settings in front; on the Air no tab or gear under the housing; VoiceOver reads the gear once.
+R8. Edge cases (9, 13, 40): `kill -STOP` a player, click (gives up in about 2 s), `kill -CONT`; a radio stream with no title shows the player name; Japanese or Chinese input mid-composition in Notes: Escape cancels it and the notch stays open.
 
 ## Release checklist
 
