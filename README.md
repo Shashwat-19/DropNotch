@@ -12,7 +12,7 @@ What works today:
 
 Each module has its own tab in the open notch, next to a Settings button.
 
-Planned, not built yet: a downloadable release, signed releases, automatic updates and per-module settings.
+Planned, not built yet: signed releases, automatic updates and per-module settings.
 
 ## Status
 
@@ -24,9 +24,24 @@ Pre-alpha. Some checks on a real Mac are still outstanding, including how the Au
 
 ## Install
 
-There is no release yet: build from source (below).
+Download `DropNotch-0.1.0.dmg` from [GitHub Releases](https://github.com/Shashwat-19/DropNotch/releases). DropNotch needs macOS 14 or later on an Apple silicon Mac.
 
-Planned: a DMG on GitHub Releases. Until DropNotch has a Developer ID, those builds will be unsigned, and macOS will refuse to open them the first time. To open one anyway: open DropNotch once and close the warning, then go to System Settings › Privacy & Security, scroll to Security, click Open Anyway next to DropNotch and confirm. These steps will be checked against the first release.
+1. Open the DMG and drag **DropNotch** onto **Applications**.
+2. Open DropNotch from Applications.
+
+DropNotch isn't signed with an Apple Developer ID yet, so the first time you open it, macOS blocks it. On macOS 15 or later:
+
+1. macOS says "DropNotch" Not Opened. Click **Done** (not Move to Trash).
+2. Open **System Settings › Privacy & Security** and scroll down to **Security**. Next to "DropNotch" was blocked to protect your Mac, click **Open Anyway**. The button shows for about an hour after you try to open the app.
+3. Click **Open Anyway** again in the dialog, then enter your password or use Touch ID.
+
+On macOS 14, Control-click DropNotch in Applications, choose **Open**, then click **Open** again.
+
+macOS remembers the choice, so later launches open normally. Downloading a new version means doing this once more.
+
+DropNotch has no Dock icon: look for it in the menu bar, and hover over the notch or press ⌃⌥N.
+
+To uninstall, quit DropNotch from its menu-bar item and move it from Applications to the Trash. Its tray, note and saved clipboard live in `~/Library/Application Support/DropNotch`, and its settings in `~/Library/Preferences/com.shashwat.DropNotch.plist`.
 
 ## Settings
 

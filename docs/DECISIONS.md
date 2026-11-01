@@ -1005,3 +1005,14 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - The focus ring is the system's own on these controls (the round Now Playing controls hide it because their style draws a circle).
 
 **Alternatives:** Keeping `ShareLink` and leaving Share mouse-only (rejected: the finding is exactly that buttons can't be reached). Arrows between the clipboard buttons (rejected: ← and → belong to the text in Search, and the rows already use ↑/↓). Deleting a focused tile with ⌫ (not asked; Remove covers it).
+
+## D41. v0.1.0 ships as an ad-hoc-signed DMG built by create-dmg
+
+**Date:** 2026-11-01 · **Status:** Accepted (Shash, 2026-11-01: unsigned DMG via create-dmg from Homebrew; install approved)
+
+**Decision:**
+- `scripts/make-dmg.sh` makes a clean Release build and packs `DropNotch.app`, an Applications shortcut, LICENSE and THIRD_PARTY_NOTICES.md into `build/DropNotch-<version>.dmg`. The notices also ship inside the app (project.yml).
+- The app is ad-hoc signed with the hardened runtime and only the apple-events entitlement (D11, D13); no Developer ID, no notarisation. Gatekeeper refuses it on first open (`spctl` says rejected), so README › Install gives the macOS 15+ path (Done, then System Settings › Privacy & Security › Open Anyway) and the macOS 14 Control-click › Open path.
+- create-dmg 1.3.0 (github.com/create-dmg/create-dmg, MIT) is a build tool on the maintainer's Mac, not linked into or shipped with the app, so it has no effect on DropNotch's licence.
+
+**Alternatives:** `hdiutil` with a hand-made symlink (no window layout; kept as the fallback if create-dmg breaks). The npm `create-dmg` (it signs and needs Node; rejected, no Node in this project).
