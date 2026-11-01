@@ -119,10 +119,11 @@ struct NotchGeometry: Equatable {
                       height: frame.height + Self.topOverhang)
     }
 
-    /// Takes the wing off each side not in `wings`. The wing is a whole number of pixels, so edges stay aligned.
+    /// Takes the wing off each side not in `wings`. Each side by its own snapped width, not `wingWidth`: at 1x a
+    /// 33.5 pt wing snaps to 33 on one side and 34 on the other, and the average would land on a half point.
     private func trimmed(_ frame: CGRect, to wings: Set<CompactSlot>) -> CGRect {
-        let minX = frame.minX + (wings.contains(.left) ? 0 : wingWidth)
-        let maxX = frame.maxX - (wings.contains(.right) ? 0 : wingWidth)
+        let minX = frame.minX + (wings.contains(.left) ? 0 : closedFrame.minX - compactFrame.minX)
+        let maxX = frame.maxX - (wings.contains(.right) ? 0 : compactFrame.maxX - closedFrame.maxX)
         return CGRect(x: minX, y: frame.minY, width: maxX - minX, height: frame.height)
     }
 
