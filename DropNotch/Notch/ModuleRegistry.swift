@@ -96,8 +96,9 @@ final class ModuleRegistry {
         defaults.set(enabled, forKey: Self.key(id))
         // Keeps the modules that are off below those that are on (D36): turned on, it becomes the last that is on;
         // turned off, the first that is off. Either way its row in Settings stays at the boundary.
-        tabOrder.removeAll { $0 == id }
-        tabOrder.insert(id, at: tabOrder.filter(enabledIDs.contains).count)
+        var order = tabOrder.filter { $0 != id }
+        order.insert(id, at: order.filter(enabledIDs.contains).count)
+        tabOrder = order
         Logger.notch.debug("Module \(id, privacy: .public) enabled: \(enabled)")
         guard isRunning else { return }
         if enabled { module.start() } else { module.stop() }

@@ -13,8 +13,9 @@ struct NotchRootView: View {
         // edge is off-screen in every state and during every animation (D29).
         let phase = state.displayedPhase, wings = state.displayedWings
         let frame = state.geometry?.panelFrame(for: phase, wings: wings) ?? .zero
-        // The canvas is centred on the notch; a shape with one wing isn't, so it moves by the difference (D36).
-        let offset = frame.midX - (state.geometry?.panelFrame(for: .open).midX ?? frame.midX)
+        // Placed from the canvas's leading edge rather than centred: a shape with one wing isn't centred (D36), and
+        // whole-point edges keep it on whole pixels, which centring an odd width difference wouldn't (code-reviewer S1).
+        let offset = frame.minX - (state.geometry?.panelFrame(for: .open).minX ?? frame.minX)
         let shape = NotchShape(shoulder: NotchGeometry.shoulder(for: phase, wings: wings),
                                bottomRadius: phase == .open ? 18 : 10)
         shape
@@ -67,7 +68,7 @@ struct NotchRootView: View {
                 }
             }
             .offset(x: offset)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             // The panel overlaps the camera housing; without this SwiftUI would push
             // the content below the screen's safe area.
             .ignoresSafeArea()

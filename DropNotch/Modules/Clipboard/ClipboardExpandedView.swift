@@ -17,7 +17,7 @@ struct ClipboardExpandedView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: NotchStyle.tightSpacing) {
             if !module.isOn {
-                NotchEmptyState(text: "Keep the last 25 things you copy, on this Mac only. macOS may ask whether DropNotch can paste from other apps.",
+                NotchEmptyState("Keep the last 25 things you copy, on this Mac only. macOS may ask whether DropNotch can paste from other apps.",
                                 systemImage: "doc.on.clipboard") {
                     Button("Turn On Clipboard History") { module.turnOn() }
                 }

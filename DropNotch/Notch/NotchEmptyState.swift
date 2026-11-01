@@ -5,7 +5,13 @@ import SwiftUI
 struct NotchEmptyState<Action: View>: View {
     let text: LocalizedStringKey
     let systemImage: String
-    @ViewBuilder let action: Action
+    let action: Action
+
+    init(_ text: LocalizedStringKey, systemImage: String, @ViewBuilder action: () -> Action) {
+        self.text = text
+        self.systemImage = systemImage
+        self.action = action()
+    }
 
     var body: some View {
         VStack(spacing: NotchStyle.spacing) {
@@ -28,6 +34,6 @@ struct NotchEmptyState<Action: View>: View {
 
 extension NotchEmptyState where Action == EmptyView {
     init(_ text: LocalizedStringKey, systemImage: String) {
-        self.init(text: text, systemImage: systemImage) { EmptyView() }
+        self.init(text, systemImage: systemImage) { EmptyView() }
     }
 }

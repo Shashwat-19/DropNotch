@@ -952,7 +952,7 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Alternatives:** shoulders inside the existing frames (rejected: they would eat into the 32 pt wings, leaving the artwork 0.4 pt from the edge); shoulders on the plain closed shape too (rejected: it would cover more of the menu bar for no visible gain); keeping the order of modules that are off in place (D34 S2: arrows stepped past hidden tabs).
 
-**Not done:** the transparent corners beside each shoulder (at most 10 × 10 pt) take clicks meant for the menu bar while the shape is wider than closed.
+**Not done:** the panel includes a transparent strip beside the body on each side, as wide as the shoulder and as tall as the shape (up to 10 × 150 pt open). It is inside the hover area; whether clicks there reach the menu bar depends on AppKit's hit-testing of transparent pixels, which isn't verified (device check).
 
 ---
 
