@@ -9,6 +9,7 @@ What works today:
 - **File tray:** drop files on the notch to keep them at hand, then drag them out again, send them with AirDrop or share them. Dropped files stay where they are; the tray keeps a link to them.
 - **Clipboard history:** off until you turn it on in its tab. Keeps the last 25 text, link and image items; click one to copy it back.
 - **Hotkey:** ⌃⌥N opens and closes the notch with keyboard focus. ⌘1, ⌘2… switch tabs and ⌘, opens Settings while the notch has focus.
+- **Keyboard access:** in Now Playing, Tray and Clipboard, Tab moves between the controls and Space or Return presses them. In the tray, the arrow keys also step through the files and buttons, and Space or Return selects a file. In Clipboard, ↑/↓ pick an item and Return copies it.
 
 Each module has its own tab in the open notch, next to a Settings button.
 
@@ -16,7 +17,7 @@ Planned, not built yet: signed releases, automatic updates and per-module settin
 
 ## Status
 
-Pre-alpha. Some checks on a real Mac are still outstanding, including how the Automation permission behaves (see [Permissions](#permissions)). The plans are in:
+Version 0.1.0 is the first release: an early build, not signed with a Developer ID (see [Install](#install)). Some checks on a real Mac are still outstanding, including how the Automation permission behaves (see [Permissions](#permissions)). The plans are in:
 
 - [docs/FEATURE_MATRIX.md](docs/FEATURE_MATRIX.md)
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
@@ -84,6 +85,8 @@ brew install xcodegen
 The first build fetches the KeyboardShortcuts Swift package, which Xcode resolves automatically.
 
 Builds are ad-hoc signed for local use. There are no signed or notarised releases yet.
+
+To make the release DMG yourself, install create-dmg (`brew install create-dmg`) and run `scripts/make-dmg.sh`. It makes a clean Release build and writes `build/DropNotch-<version>.dmg` and its SHA-256 checksum file next to it.
 
 ## Permissions
 

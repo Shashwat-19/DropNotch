@@ -13,6 +13,15 @@ Tags:
 
 Priority rule: a feature earns MVP by making a frequent action faster. MVP = music controls, file tray + AirDrop, clipboard history, quick notes and a customisable notch layout, plus the shell they need.
 
+## What v0.1.0 ships
+
+The "DropNotch priority" column below is the Phase 1 plan. As of release/v0.1.0 (2026-11-01):
+
+- **Ships in v0.1.0:** notch panel, geometry and hover; the pill on screens without a notch; the ⌃⌥N hotkey with keyboard focus (D30, D40); menu-bar item; launch at login; Settings with module order and compact-slot choice (D34); Now Playing for Music and Spotify with artwork, progress bar and seek (D22–D26); the decorative compact waveform (D28); notes (D31); file tray with drag in and out, AirDrop and Share (D32, D40); clipboard history (D33); no analytics or telemetry. Distributed as an ad-hoc-signed DMG (D41).
+- **Not in v0.1.0, planned for v0.2:** several displays at once, hiding from screen capture, the diagnostics panel, Now Playing for any app (MediaRemote), the real waveform, shuffle and repeat, calendar, timer, battery and Bluetooth, Sparkle updates, Developer ID signing and notarisation.
+- **Not in v0.1.0, from MVP rows:** Quick Look, thumbnails and open/reveal in the tray (D32); favourite in Now Playing (D26); click-to-open and a VoiceOver element for the closed notch.
+- Device checks still open for the release are listed in TASK.md, "Release checklist".
+
 ## Shell and layout
 
 | Feature | Canopy | Atoll | macOS API / approach for DropNotch | Public or private | Permissions | Breakage risk on macOS updates | DropNotch priority | Notes |
@@ -49,9 +58,9 @@ Priority rule: a feature earns MVP by making a frequent action faster. MVP = mus
 
 | Feature | Canopy | Atoll | macOS API / approach for DropNotch | Public or private | Permissions | Breakage risk on macOS updates | DropNotch priority | Notes |
 |---|---|---|---|---|---|---|---|---|
-| File tray: drop in, drag out, Quick Look, open/reveal | Named on the homepage, no detail [V] | AppKit drag and drop, bookmarks, temp copies, JSON persistence, QuickLook thumbnails [V]; unsandboxed, plain bookmarks [V] | Same public APIs; storage model per D6 | Public [V] | Desktop, Documents and Downloads prompt on first access [V: https://developer.apple.com/documentation/bundleresources/information-property-list/nsdesktopfolderusagedescription] | Medium: Atoll records a bookmark-option regression [V] | MVP | Atoll has no tray tests [V]. We need them. |
+| File tray: drop in, drag out, Quick Look, open/reveal | Named on the homepage, no detail [V] | AppKit drag and drop, bookmarks, temp copies, JSON persistence, QuickLook thumbnails [V]; unsandboxed, plain bookmarks [V] | Same public APIs; storage model per D6 | Public [V] | Desktop, Documents and Downloads prompt on first access [V: https://developer.apple.com/documentation/bundleresources/information-property-list/nsdesktopfolderusagedescription] | Medium: Atoll records a bookmark-option regression [V] | MVP | Atoll has no tray tests [V]. We need them. v0.1.0 ships drop in and drag out with tests (D32); Quick Look and open/reveal are not built. |
 | AirDrop from tray | Not mentioned [I] | `NSSharingService(named: .sendViaAirDrop)` [V]; also a picker-harvesting trick [V] | `.sendViaAirDrop` directly; no picker trick | Public [V] | None beyond user action [I] | Low [V] | MVP | |
-| Share to other services | Not mentioned | Sharing-service enumeration + picker [V] | `NSSharingServicePicker` | Public [V] | None | Low | v0.2 | |
+| Share to other services | Not mentioned | Sharing-service enumeration + picker [V] | `NSSharingServicePicker` | Public [V] | None | Low | v0.2 (planned); shipped in v0.1.0 | Built with the tray (D32), then moved from `ShareLink` to the picker for keyboard access (D40). |
 | Clipboard history | Not mentioned [I] | Polls `changeCount` every 0.5 s [V]; no concealed/transient skipping [V]; persistence on by default, text in UserDefaults [V] | Poll `changeCount` (no public change notification exists [I]); skip concealed/transient types; local only; never logged | Public [V] | Paste-access prompt on programmatic reads from macOS 15.4 [V: https://developer.apple.com/documentation/appkit/nspasteboard/accessbehavior-swift.enum/ask] | Low (polling); medium (read prompts) [V/I] | MVP | The only always-on poll in the MVP. Defaults are D7. |
 | Quick notes | Not mentioned | Defaults-backed list, 1.5 s autosave debounce [V] | Plain files in Application Support, debounced save | Public | None | Low | MVP | |
 | Apple Notes sync | Not mentioned | AppleScript, opt-in [V] | — | Public scripting [V] | Automation [V] | Medium [V] | Skip | |
