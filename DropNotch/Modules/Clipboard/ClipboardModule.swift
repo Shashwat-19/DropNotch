@@ -2,7 +2,7 @@ import SwiftUI
 import os
 
 /// Clipboard history (ARCHITECTURE §8, D7, D7a–D7c): the last `limit` text, link and image items, newest first, in
-/// memory only and never logged. Nothing is read until the user turns history on in the tab. Contents are read in the
+/// memory, never logged. Text and links are saved to disk only if the user turns that on in Settings (D34). Nothing is read until the user turns history on in the tab. Contents are read in the
 /// background only under Always Allow; under Ask a read waits for the user's "Add Clipboard" click (D7c).
 @MainActor
 @Observable
@@ -32,6 +32,8 @@ final class ClipboardModule: NotchModule {
 
     /// The user turned history on in the tab. Saved, so it is asked once.
     private(set) var isOn: Bool
+    /// Settings › Privacy: keep text and links in `storeURL` across relaunches (D34). Off by default (D7).
+    private(set) var savesToDisk: Bool
     private(set) var access = PasteboardAccess.ask
     /// Newest first.
     private(set) var items: [ClipboardItem] = []
@@ -43,6 +45,7 @@ final class ClipboardModule: NotchModule {
 
     @ObservationIgnored private let pasteboard: any Pasteboard
     @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored private let storeURL: URL
     @ObservationIgnored private var isRunning = false
     @ObservationIgnored private var timer: Timer?
     @ObservationIgnored private var lastChangeCount: Int?
@@ -51,12 +54,16 @@ final class ClipboardModule: NotchModule {
     @ObservationIgnored private let allowedAtLaunch: Bool
 
     private static let isOnKey = "clipboard.historyOn"
+    private static let savesToDiskKey = "clipboard.savesToDisk"
 
-    /// `pasteboard` and `defaults` are internal for tests.
-    init(pasteboard: any Pasteboard = NSPasteboard.general, defaults: UserDefaults = .standard) {
+    /// `pasteboard`, `defaults` and `storeURL` are internal for tests.
+    init(pasteboard: any Pasteboard = NSPasteboard.general, defaults: UserDefaults = .standard,
+         storeURL: URL = .applicationSupportDirectory.appending(path: "DropNotch/clipboard.json")) {
         self.pasteboard = pasteboard
         self.defaults = defaults
+        self.storeURL = storeURL
         isOn = defaults.bool(forKey: Self.isOnKey)
+        savesToDisk = defaults.bool(forKey: Self.savesToDiskKey)
         allowedAtLaunch = pasteboard.access == .allowed
     }
 
@@ -79,10 +86,11 @@ final class ClipboardModule: NotchModule {
                 MainActor.assumeIsolated { self?.watch() }
             },
         ]
+        if isOn, savesToDisk { load() }
         watch()
     }
 
-    /// Stops the poll and forgets the history (module turned off, app quit).
+    /// Stops the poll and forgets the history in memory (module turned off, app quit). A saved file stays.
     func stop() {
         isRunning = false
         stopTimer()
@@ -98,6 +106,24 @@ final class ClipboardModule: NotchModule {
         isOn = true
         defaults.set(true, forKey: Self.isOnKey)
         watch()
+    }
+
+    /// Settings › Privacy: stops the poll, forgets the history and deletes the saved file. The tab offers Turn On again.
+    func turnOff() {
+        isOn = false
+        defaults.set(false, forKey: Self.isOnKey)
+        stopTimer()
+        items = []
+        hasUnreadChange = false
+        lastChangeCount = nil
+        deleteStore()
+    }
+
+    /// Settings › Privacy: turning it on saves the current history; turning it off deletes the file (D34).
+    func setSavesToDisk(_ on: Bool) {
+        savesToDisk = on
+        defaults.set(on, forKey: Self.savesToDiskKey)
+        if on { save() } else { deleteStore() }
     }
 
     /// The tab appeared: picks up a change in System Settings, and restarts a poll stopped by Always Deny.
@@ -184,9 +210,11 @@ final class ClipboardModule: NotchModule {
         return items.filter { $0.text?.localizedStandardContains(query) == true }
     }
 
-    /// The tab's "Clear" button: forgets the history now, without turning it off.
+    /// The tab's and Settings' "Clear" button: forgets the history and deletes the saved file, without turning it off.
+    /// Works while the module is off too, so Settings can delete a file left from an earlier run.
     func clear() {
         items = []
+        deleteStore()
     }
 
     private func capture() {
@@ -224,6 +252,53 @@ final class ClipboardModule: NotchModule {
             guard case .image(let data, _) = $0.content else { return true }
             imageBytes += data.count
             return imageBytes <= Self.maxTotalImageBytes
+        }
+        save()
+    }
+
+    // MARK: Saved history (D34)
+
+    /// The file is a JSON array of the text and link items' text, newest first. Images stay in memory only. Only while
+    /// running: a stopped module holds no items, and saving then would wipe the file it loads on the next start.
+    // shortcut: rewritten on the main thread on every copy; fine for 25 typical items, move off the main thread if
+    // multi-megabyte text copies stall the notch.
+    private func save() {
+        guard savesToDisk, isOn, isRunning else { return }
+        do {
+            try FileManager.default.createDirectory(at: storeURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try JSONEncoder().encode(items.compactMap(\.text)).write(to: storeURL, options: .atomic)
+            // An atomic write replaces the file, so its permissions and backup flag are set again each time.
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: storeURL.path)
+            var store = storeURL
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            try store.setResourceValues(values)
+        } catch {
+            Logger.clipboard.error("Clipboard save failed: \((error as NSError).domain, privacy: .public) \((error as NSError).code)")
+        }
+    }
+
+    /// The file is untrusted input (any same-user process can edit it): the same text rules as a copy apply.
+    private func load() {
+        // 25 texts at the length cap, as UTF-8 JSON: well under 100 MB. A bigger file isn't ours to read in full.
+        guard let size = try? storeURL.resourceValues(forKeys: [.fileSizeKey]).fileSize, size <= 100_000_000,
+              let data = try? Data(contentsOf: storeURL) else { return }
+        guard let texts = try? JSONDecoder().decode([String].self, from: data) else {
+            Logger.clipboard.error("Clipboard file unreadable")
+            return
+        }
+        items = texts
+            .filter { $0.utf16.count <= Self.maxTextLength && $0.contains(where: { !$0.isWhitespace }) }
+            .prefix(Self.limit)
+            .map { ClipboardItem(ClipboardItem.isLink($0) ? .link($0) : .text($0)) }
+    }
+
+    private func deleteStore() {
+        do {
+            try FileManager.default.removeItem(at: storeURL)
+        } catch CocoaError.fileNoSuchFile {
+        } catch {
+            Logger.clipboard.error("Clipboard file delete failed: \((error as NSError).domain, privacy: .public) \((error as NSError).code)")
         }
     }
 }

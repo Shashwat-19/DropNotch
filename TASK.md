@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, 4, `feat/hotkey`, 5, `feat/notes`, 6, `feat/file-tray`, and 7, `feat/clipboard`, are merged to main and pushed to `origin`. Next: settings, polish, release. See "Phase 3" below.
+**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, 4, `feat/hotkey`, 5, `feat/notes`, 6, `feat/file-tray`, and 7, `feat/clipboard`, are merged to main and pushed to `origin`. Branch 8, `feat/settings`, is in progress. Next: polish, release. See "Phase 3" below.
 
 ## Goal
 Run a reverse-engineering analysis (REA) of Canopy and Atoll, turn it into a feature matrix and architecture plan for DropNotch, then scaffold the foundation. DropNotch must be original code that Shash owns.
@@ -294,6 +294,14 @@ Device checks (Debug build is enough: no entitlement, Info.plist or signing chan
 54. Ask: `defaults write com.shashwat.DropNotch EnablePasteboardPrivacyDeveloperPreview -bool yes`, relaunch. The tab shows the Ask explanation. Copy in another app: no alert, "Add Clipboard" appears, and the notch keeps opening and closing on hover. Click Add Clipboard: the macOS alert appears; Allow: the item appears.
 55. In System Settings › Privacy & Security › Paste from Other Apps, set DropNotch to Always Allow while it runs. Reopen the tab: the "quit and reopen" line. Copy something: no alert, no freeze. Quit and relaunch: copies appear by themselves. Then Always Deny and relaunch: "blocked in System Settings". Afterwards `defaults delete com.shashwat.DropNotch EnablePasteboardPrivacyDeveloperPreview` and set the setting back as you like.
 56. During 51–55, `log stream --predicate 'subsystem == "com.shashwat.DropNotch" AND category == "Clipboard"' --level debug` shows only "Clipboard poll started" and access changes, never content.
+
+### Branch 8: `feat/settings` (D34; storage chosen by Shash, 2026-11-01)
+
+A native Settings window from the menu-bar item. General: launch at login (`SMAppService`), the hotkey recorder, built-in or main display. Modules: on/off and tab order, compact-slot pickers. Privacy: Spotify artwork downloads, clipboard history on/off, keep history after quitting (text and links, off by default), Clear Clipboard History, Clear Tray. About: version, licence, third-party notices, GitHub link. Package search: skipped (D34).
+
+**Status (2026-11-01):** built; Debug build and 362 tests, 0 failures, before the reviews.
+
+Out of this branch: module-specific settings, confirmation before Clear, saving clipboard images.
 
 ## Release checklist
 

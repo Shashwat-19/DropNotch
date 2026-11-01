@@ -8,11 +8,18 @@ struct ArtworkDownloader: ArtworkLoading {
     static let maxBytes = 2 * 1024 * 1024
     static let imageTypes: Set<String> = ["image/jpeg", "image/png"]
 
+    /// Settings › Privacy › artwork downloads (D25, D34). On unless the user turned it off.
+    static let downloadsOnKey = "artwork.downloadsOn"
+
     /// Internal so a test can check the configuration.
     let session: URLSession
+    /// Read on every request, so the Settings switch applies from the next track.
+    private let isAllowed: @Sendable () -> Bool
 
-    /// `protocolClasses` lets tests answer requests offline.
-    init(protocolClasses: [AnyClass]? = nil) {
+    /// `protocolClasses` lets tests answer requests offline; `isAllowed` stands in for the Settings switch.
+    init(protocolClasses: [AnyClass]? = nil,
+         isAllowed: @escaping @Sendable () -> Bool = { UserDefaults.standard.object(forKey: downloadsOnKey) as? Bool ?? true }) {
+        self.isAllowed = isAllowed
         let configuration = URLSessionConfiguration.ephemeral
         configuration.httpCookieStorage = nil
         configuration.httpShouldSetCookies = false
@@ -35,7 +42,7 @@ struct ArtworkDownloader: ArtworkLoading {
     }
 
     func data(from url: URL) async -> Data? {
-        guard Self.allows(url) else { return nil }
+        guard isAllowed(), Self.allows(url) else { return nil }
         do {
             let (bytes, response) = try await session.bytes(from: url)
             guard let http = response as? HTTPURLResponse, http.statusCode == 200,

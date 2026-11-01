@@ -20,6 +20,8 @@ protocol NotchModule: AnyObject {
     var title: LocalizedStringResource { get }
     /// SF Symbol for the module's tab in the open notch (D31).
     var systemImage: String { get }
+    /// Whether the module has a compact view at all, so Settings offers it for a compact slot (D8).
+    var hasCompactView: Bool { get }
     /// Whether the compact view has anything to show right now (for example, music is playing).
     var hasCompactContent: Bool { get }
 
@@ -31,4 +33,8 @@ protocol NotchModule: AnyObject {
     func start()
     /// Stop every observer and task. Must be safe to call twice.
     func stop()
+}
+
+extension NotchModule {
+    var hasCompactView: Bool { false }
 }

@@ -1,12 +1,21 @@
 import SwiftUI
 
-/// Placeholder until Phase 3 adds module and launch-at-login settings.
+/// The Settings window, opened from the menu-bar item (D14, D34): one tab per area.
 struct SettingsView: View {
+    let registry: ModuleRegistry
+    let notchState: NotchState
+
     var body: some View {
-        Form {
-            Text("There are no settings yet.")
+        TabView {
+            GeneralSettingsView(notchState: notchState)
+                .tabItem { Label("General", systemImage: "gearshape") }
+            ModulesSettingsView(registry: registry)
+                .tabItem { Label("Modules", systemImage: "square.grid.2x2") }
+            PrivacySettingsView(registry: registry)
+                .tabItem { Label("Privacy", systemImage: "hand.raised") }
+            AboutSettingsView()
+                .tabItem { Label("About", systemImage: "info.circle") }
         }
-        .formStyle(.grouped)
-        .frame(width: 360)
+        .frame(width: 460)
     }
 }

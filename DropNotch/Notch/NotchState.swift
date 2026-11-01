@@ -46,7 +46,7 @@ final class NotchState {
         let screens = NSScreen.screens.compactMap { screen in
             screen.displayID.map { (id: $0, screen: screen, geometry: NotchGeometry(screen: screen)) }
         }
-        guard let id = ScreenObserver.chooseDisplay(screens.map { ($0.id, $0.geometry.hasNotch) }),
+        guard let id = ScreenObserver.chooseDisplay(screens.map { ($0.id, $0.geometry.hasNotch) }, on: .saved),
               let chosen = screens.first(where: { $0.id == id }) else {
             Logger.notch.debug("No display for the notch panel")
             geometry = nil
