@@ -128,8 +128,9 @@ struct ClipboardExpandedView: View {
             }
             .frame(height: 24)
             .padding(.horizontal, 6)
-            // A filled background as well as the keyboard position, so the highlight doesn't rest on colour (L6).
-            .background(NotchSelection(shape: RoundedRectangle(cornerRadius: NotchStyle.cornerRadius), isSelected: isHighlighted))
+            // A dot in the leading padding (D39). Only a keyboard-opened notch highlights a row, so only then do the
+            // others dim; a hover-opened list stays white.
+            .notchSelection(isHighlighted, groupHasSelection: hasKeyboardFocus, dot: .leading)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

@@ -13,10 +13,6 @@ enum NotchStyle {
     static let spacing: CGFloat = 8
     /// Within one block: a title and its subtitle, tiles in a row.
     static let tightSpacing: CGFloat = 4
-    /// Tiles, rows and their highlight.
-    static let cornerRadius: CGFloat = 8
-    /// Behind a selected tab, tile or row. A fill as well as brighter text, so state never rests on colour (L6).
-    static let selectionFill = Color.white.opacity(0.2)
     /// Open, close, the compact wings and tab switches all use this one spring (D37). No bounce: an overshoot past
     /// the open size would be cut flat by the panel's edges.
     static let spring = Animation.spring(duration: 0.25, bounce: 0)

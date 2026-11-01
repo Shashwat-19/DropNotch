@@ -961,7 +961,7 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 **Date:** 2026-11-01 · **Status:** Accepted (polish task, Shash, 2026-11-01)
 
 **Decision:**
-- `NotchStyle` holds the shared values: a 4 pt grid (8 between blocks, 4 within one), 24 pt sides and 12 pt bottom margins, 8 pt corner radius, a 20 % white selection fill, and the spring. `NotchRootView` applies the margins once around every module, so modules no longer pad themselves.
+- `NotchStyle` holds the shared values: a 4 pt grid (8 between blocks, 4 within one), 24 pt sides and 12 pt bottom margins, and the spring. (The 20 % white selection fill and its edge were replaced by D39.) `NotchRootView` applies the margins once around every module, so modules no longer pad themselves.
 - Type: `.subheadline` for text, `.subheadline.weight(.semibold)` for a title, `.body` in the note's editor; icons take their font's size (`.body` for the top row and actions, `.title3` for Now Playing's controls, `.title2` for an empty state).
 - `NotchEmptyState`: a symbol over one centred line, with an optional button: Now Playing ("Nothing playing in Music or Spotify"), Tray (empty, failed load), Clipboard (off, blocked, nothing copied, no matches), Notes (failed load; the empty note keeps its "Type a note" placeholder). Not `ContentUnavailableView`: its fixed large title and symbol don't fit the ~100 pt under the top row.
 - Motion: one spring, `spring(duration: 0.25, bounce: 0)`, for open, close, the wings, tab switches (a cross-fade, so it stays on under Reduce Motion, L8) and the play/pause morph. Hover and press feedback keep their 0.12–0.15 s ease-outs, and the track text its 0.12 s fades.
@@ -979,3 +979,16 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 **Alternatives:** a hand-drawn vector in a design tool (no source in the repo); per-size hand tuning (not needed: the shapes are large and simple enough to scale down).
 
 **Not done:** the macOS 26 layered icon format (Icon Composer); the flat icon is used as is.
+
+---
+
+## D39. Dock-style selection: white with a dot, the rest grey (replaces D37's selection fill)
+
+**Date:** 2026-11-01 · **Status:** Accepted (Shash, 2026-11-01: disliked the filled capsule with an edge on device; chose A from rendered previews of A, B (faint fill) and C (brightness only))
+
+**Decision:**
+- `NotchSelection` (a view modifier, `.notchSelection(_:groupHasSelection:dot:)`) styles the selected tab, the selected tray tiles and the clipboard row highlighted by the keyboard: full white with a 4 pt white dot; while the group has a selection, the other items are 50 % white, 75 % under Increase Contrast. The dot carries the state without brightness or colour (L6). 50 % rather than the asked ~45 %: 45 % white on black is 4.4:1, just under the 4.5:1 text needs; 50 % is 5.3:1.
+- Dot placement: 3 pt below a tab's 24 pt button, inside the top row; inside the bottom of a tray tile (the tile gains 4 pt, as the horizontal scroll view would clip a dot below it); in the leading padding of a clipboard row. The Settings gear uses the unselected grey.
+- Clipboard rows dim only while the notch has keyboard focus (only then is a row highlighted); a hover-opened list stays white. Tray tiles dim only while one is selected.
+
+**Alternatives:** B, a faint fill with no outline (kept a shape cue, but read as the same capsule Shash disliked); C, brightness only (rejected: state would rest on brightness alone, failing L6).

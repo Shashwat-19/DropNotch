@@ -48,8 +48,12 @@ struct FileTrayExpandedView: View {
                 .truncationMode(.middle)
         }
         .frame(width: 72)
-        .padding(NotchStyle.tightSpacing)
-        .background(NotchSelection(shape: RoundedRectangle(cornerRadius: NotchStyle.cornerRadius), isSelected: selected))
+        .padding([.horizontal, .top], NotchStyle.tightSpacing)
+        // Room for the dot inside the tile: the horizontal scroll view would clip it below.
+        .padding(.bottom, NotchStyle.spacing)
+        // Several tiles can be selected; each gets a dot (D39).
+        .notchSelection(selected, groupHasSelection: !module.selection.isEmpty, dot: .bottom,
+                        offset: CGSize(width: 0, height: -2))
         .overlay {
             TrayItemDragSource(urls: { module.dragURLs(from: item.id) },
                                onClick: { module.select(item.id, extending: $0) })

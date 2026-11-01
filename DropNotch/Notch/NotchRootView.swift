@@ -103,7 +103,8 @@ struct NotchRootView: View {
             Label("Settings", systemImage: "gearshape")
                 .labelStyle(.iconOnly)
                 .frame(width: NotchGeometry.topRowItemSize.width, height: NotchGeometry.topRowItemSize.height)
-                .foregroundStyle(.secondary)
+                // The same grey as the tabs that aren't selected (D39).
+                .notchSelection(false, groupHasSelection: true, dot: .bottom)
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -121,9 +122,8 @@ struct NotchRootView: View {
             Label { Text(module.title) } icon: { Image(systemName: module.systemImage) }
                 .labelStyle(.iconOnly)
                 .frame(width: NotchGeometry.topRowItemSize.width, height: NotchGeometry.topRowItemSize.height)
-                // A filled capsule as well as brighter, so the selection doesn't rest on colour alone (L6).
-                .background(NotchSelection(shape: Capsule(), isSelected: selected))
-                .foregroundStyle(selected ? .primary : .secondary)
+                // White with a dot below; the others grey (D39). The dot sits in the row's space under the button.
+                .notchSelection(selected, groupHasSelection: true, dot: .bottom, offset: CGSize(width: 0, height: 3))
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
