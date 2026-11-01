@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, 4, `feat/hotkey`, 5, `feat/notes`, 6, `feat/file-tray`, and 7, `feat/clipboard`, are merged to main and pushed to `origin`. Branch 8, `feat/settings`, is in progress (device checks 57–65 open). Branch 9, `feat/polish`, is built on top of it. Next: release. See "Phase 3" below.
+**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, 4, `feat/hotkey`, 5, `feat/notes`, 6, `feat/file-tray`, and 7, `feat/clipboard`, are merged to main and pushed to `origin`. Branches 8, `feat/settings`, and 9, `feat/polish`, are merged to main (2026-11-01). Next: release. See "Phase 3" below.
 
 ## Goal
 Run a reverse-engineering analysis (REA) of Canopy and Atoll, turn it into a feature matrix and architecture plan for DropNotch, then scaffold the foundation. DropNotch must be original code that Shash owns.
@@ -316,7 +316,7 @@ Device checks (notched Mac; Debug build except 57).
 64. (D35) On the Air (208 pt housing), open the notch with all four modules on, with one on, and with none on: no tab or gear sits under the housing, and the gear is always at the far right. With none on, the gear still opens Settings. Send Shash's screenshot with this one.
 65. (D35) VoiceOver on the gear: "Settings, button" and one hint ("Open Settings"), not "Settings" twice; the tabs still read their module names. Tab and ←/→ in Now Playing move through the same controls as before.
 
-### Branch 9: `feat/polish` (D36–D38; branched from `feat/settings`, which isn't merged yet)
+### Branch 9: `feat/polish` (D36–D39; branched from `feat/settings`; both merged to main 2026-11-01)
 
 The visual and feel pass before release: shoulders where the shape meets the menu bar; the closed notch widens only on sides with content; modules that are off sit greyed at the bottom of Settings › Modules; one spacing grid, type scale, empty states and spring across the tabs; an original app icon. Shape radii (6 / 10 pt) and icon (draft A) chosen by Shash from rendered previews, 2026-11-01. Package search: skipped (SwiftUI shapes and an asset catalogue).
 
@@ -333,7 +333,7 @@ Device checks (Debug build is enough: project.yml gains only the icon setting, n
 69. All four tabs: the same side margins and bottom spacing; empty states for Now Playing (quit Music and Spotify), Tray (Clear All), Clipboard (off, then on with nothing copied, then a search with no matches). The selected tab, tray tile and highlighted clipboard row have a thin edge; with Increase Contrast it is brighter. ⌘1–⌘4 cross-fade.
 70. App icon: Finder › Get Info on the built DropNotch.app, the Settings window's About tab, and System Settings › Login Items show the drop-into-notch icon (if Finder shows a generic icon, `touch` the app and relaunch Finder). No Dock icon at launch.
 71. VoiceOver on: ⌃⌥N on each tab reads the module name as a group (also on the Now Playing empty state); in Clipboard, Return on a row says "Copied"; hovering a tab or a tray action shows a tooltip.
-72. (D39) The selected tab icon is white with a small dot below it and the others grey; the dot doesn't touch the module content or the camera housing. Select tray tiles (click, ⌘-click): each selected tile shows a dot inside its bottom edge, the others' names dim; nothing is clipped. ⌃⌥N on Clipboard: the highlighted row has a dot at its left edge and the other rows dim; hover-opened, all rows are white. On an external display without a notch, the dot sits under the tab and clear of the module. Increase Contrast on: the grey is visibly brighter and the dot remains.
+72. **Passed (Shash, 2026-11-01).** (D39) The selected tab icon is white with a small dot below it and the others grey; the dot doesn't touch the module content or the camera housing. Select tray tiles (click, ⌘-click): each selected tile shows a dot inside its bottom edge, the others' names dim; nothing is clipped. ⌃⌥N on Clipboard: the highlighted row has a dot at its left edge and the other rows dim; hover-opened, all rows are white. On an external display without a notch, the dot sits under the tab and clear of the module. Increase Contrast on: the grey is visibly brighter and the dot remains.
 
 
 ## Release checklist
