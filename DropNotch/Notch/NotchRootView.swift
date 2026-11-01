@@ -43,6 +43,10 @@ struct NotchRootView: View {
                                 .padding(.horizontal, NotchStyle.sidePadding)
                                 .padding(.bottom, NotchStyle.bottomPadding)
                                 .frame(maxHeight: .infinity)
+                                // One group named after the module, empty states included, so VoiceOver announces
+                                // where the content belongs (L4).
+                                .accessibilityElement(children: .contain)
+                                .accessibilityLabel(Text(module.title))
                                 .id(module.id)
                                 .transition(.opacity)
                         }
@@ -117,7 +121,7 @@ struct NotchRootView: View {
                 .labelStyle(.iconOnly)
                 .frame(width: NotchGeometry.topRowItemSize.width, height: NotchGeometry.topRowItemSize.height)
                 // A filled capsule as well as brighter, so the selection doesn't rest on colour alone (L6).
-                .background(Capsule().fill(selected ? NotchStyle.selectionFill : .clear))
+                .background(NotchSelection(shape: Capsule(), isSelected: selected))
                 .foregroundStyle(selected ? .primary : .secondary)
                 .contentShape(Capsule())
         }
@@ -126,6 +130,7 @@ struct NotchRootView: View {
         .keyboardShortcut(index < 9 ? KeyboardShortcut(KeyEquivalent(Character("\(index + 1)"))) : nil)
         .focusable(false)
         .accessibilityAddTraits(selected ? .isSelected : [])
+        .help(index < 9 ? Text("\(Text(module.title)) (⌘\(index + 1))") : Text(module.title))
     }
 
     /// The compact wings beside the notch (D8, D28), on the sides that have content (D36), at the closed height so

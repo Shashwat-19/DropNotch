@@ -58,9 +58,6 @@ struct NowPlayingExpandedView: View {
             .onChange(of: hasKeyboardFocus, initial: true) { if hasKeyboardFocus { focus = .playPause } }
             .onMoveCommand { moveFocus($0, denied: module.deniedPlayer == info.player) }
             .lineLimit(1)
-            // One group named after the module, so VoiceOver announces where the controls belong (L4).
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel(Text(module.title))
             // The open content is inserted each time the notch opens (D19), so this runs once per open.
             .onAppear {
                 displayedText = TrackText(info)

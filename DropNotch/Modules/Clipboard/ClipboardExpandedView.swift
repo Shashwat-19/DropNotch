@@ -45,8 +45,6 @@ struct ClipboardExpandedView: View {
         .font(.subheadline)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear { module.refresh() }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text(module.title))
     }
 
     private func message(_ text: LocalizedStringKey) -> some View {
@@ -131,7 +129,7 @@ struct ClipboardExpandedView: View {
             .frame(height: 24)
             .padding(.horizontal, 6)
             // A filled background as well as the keyboard position, so the highlight doesn't rest on colour (L6).
-            .background(RoundedRectangle(cornerRadius: NotchStyle.cornerRadius).fill(isHighlighted ? NotchStyle.selectionFill : .clear))
+            .background(NotchSelection(shape: RoundedRectangle(cornerRadius: NotchStyle.cornerRadius), isSelected: isHighlighted))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -139,12 +137,15 @@ struct ClipboardExpandedView: View {
         .focusable(false)
         .id(item.id)
         .accessibilityHint(Text("Copies to the clipboard"))
+        .accessibilityAddTraits(isHighlighted ? .isSelected : [])
     }
 
     /// Copies, then closes a notch that has keyboard focus (hotkey, or a click in the search field), so ⌘V goes to the
     /// app in front. A hover-opened notch stays open: `.dismissed` only closes a keyboard-opened one.
     private func copy(_ item: ClipboardItem) {
         module.copy(item)
+        // The notch may close at once, so say what happened (L4).
+        AccessibilityNotification.Announcement("Copied").post()
         query = ""
         dismissNotch()
     }

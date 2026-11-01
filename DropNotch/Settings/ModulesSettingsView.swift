@@ -3,6 +3,7 @@ import SwiftUI
 /// Turn modules on and off, order their tabs and fill the compact slots (D8, D21, D34).
 struct ModulesSettingsView: View {
     @Bindable var registry: ModuleRegistry
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Form {
@@ -34,7 +35,7 @@ struct ModulesSettingsView: View {
         let isOn = registry.enabledIDs.contains(module.id)
         let onCount = registry.tabOrder.filter(registry.enabledIDs.contains).count
         return HStack {
-            Toggle(isOn: Binding(get: { isOn }, set: { on in withAnimation { registry.setEnabled(module.id, on) } })) {
+            Toggle(isOn: Binding(get: { isOn }, set: { on in withAnimation(reduceMotion ? nil : .default) { registry.setEnabled(module.id, on) } })) {
                 Label { Text(module.title) } icon: { Image(systemName: module.systemImage) }
                     .foregroundStyle(isOn ? .primary : .secondary)
             }

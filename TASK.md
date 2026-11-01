@@ -320,11 +320,18 @@ Device checks (notched Mac; Debug build except 57).
 
 The visual and feel pass before release: shoulders where the shape meets the menu bar; the closed notch widens only on sides with content; modules that are off sit greyed at the bottom of Settings › Modules; one spacing grid, type scale, empty states and spring across the tabs; an original app icon. Shape radii (6 / 10 pt) and icon (draft A) chosen by Shash from rendered previews, 2026-11-01. Package search: skipped (SwiftUI shapes and an asset catalogue).
 
-Out of this branch: the macOS 26 layered icon, per-module settings views.
+Out of this branch: the macOS 26 layered icon, per-module settings views, keyboard access to Tray and Clipboard buttons, a VoiceOver element for the closed notch (Release checklist).
+
+Reviews: accessibility-auditor: applied the selection edge (3:1, stronger under Increase Contrast), one VoiceOver group per module around every tab incl. empty states, "Copied" announcement, missing tray file dims only its icon, tooltips on tabs and tray actions, highlighted clipboard row is Selected, Settings rows don't slide under Reduce Motion.
 
 ## Release checklist
 
 Device checks moved here from feature branches (speed mode, CLAUDE.md). Run them in the release branch on a Release build on a notched Mac.
+
+From branch 9, `feat/polish` (accessibility-auditor, 2026-11-01; not fixed on the branch, decide before release):
+- **Open (High).** File Tray has no keyboard path: tiles can't take focus, the actions are Tab stops only with Keyboard navigation on, and the hotkey sets no first focus. Same for Clipboard's Turn On, Add Clipboard and Clear (Medium).
+- **Open (Medium).** VoiceOver finds nothing in the closed or compact notch (no element or open action); also the start of click-to-open. No announcement on open or ⌘N tab switch (L4); copy-back now says "Copied".
+- **Pending.** VoiceOver with ⌃⌥N on each tab and the closed notch; Increase Contrast on the selected tab, tile and row; Reduce Motion: ⌘1/⌘2 only cross-fade, Settings rows don't slide.
 
 From branch 7, `feat/clipboard`:
 - **Pending.** Energy with history on: about 2 wakes a second from the poll and none while the screens sleep; CPU idle otherwise. Memory stays under about 60 MB of images after 25 large screenshots.
