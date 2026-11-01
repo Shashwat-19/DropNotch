@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [0.1.0] - 2026-11-01
 
-The first release: an early build for macOS 14 or later on Apple silicon.
+The first release: an early build for macOS 14 or later, tested on Apple silicon.
 
 macOS asks for each permission only when you first use the feature that needs it, never at launch:
 - **Automation (Music, Spotify):** the first time you use a playback control or the progress bar.
@@ -29,8 +29,8 @@ macOS asks for each permission only when you first use the feature that needs it
 - No analytics or telemetry; the only network request downloads Spotify artwork, and you can turn it off in Settings › Privacy.
 
 ### Known issues
-- This build isn't signed with an Apple Developer ID or notarised, so macOS blocks it the first time you open it; follow the Open Anyway steps in [README › Install](README.md#install), once for each new version.
-- DropNotch runs only on macOS 14 or later on Apple silicon Macs.
+- This build isn't signed with an Apple Developer ID or notarised, so macOS blocks it the first time you open it; follow the Open Anyway steps in [README › Install](README.md#install).
+- DropNotch needs macOS 14 or later. It has only been tested on Apple silicon Macs; the build also contains an Intel slice that hasn't been tested.
 - Clear All empties the tray straight away, with no confirmation or undo, including Space once Tab has reached it; your original files are never touched.
 - VoiceOver finds nothing in the closed notch; press ⌃⌥N to open it instead.
 - Not every check on a real Mac has been run yet, so expect some rough edges.

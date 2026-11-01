@@ -19,6 +19,7 @@ The "DropNotch priority" column below is the Phase 1 plan. As of release/v0.1.0 
 
 - **Ships in v0.1.0:** notch panel, geometry and hover; the pill on screens without a notch; the ⌃⌥N hotkey with keyboard focus (D30, D40); menu-bar item; launch at login; Settings with module order and compact-slot choice (D34); Now Playing for Music and Spotify with artwork, progress bar and seek (D22–D26); the decorative compact waveform (D28); notes (D31); file tray with drag in and out, AirDrop and Share (D32, D40); clipboard history (D33); no analytics or telemetry. Distributed as an ad-hoc-signed DMG (D41).
 - **Not in v0.1.0, planned for v0.2:** several displays at once, hiding from screen capture, the diagnostics panel, Now Playing for any app (MediaRemote), the real waveform, shuffle and repeat, calendar, timer, battery and Bluetooth, Sparkle updates, Developer ID signing and notarisation.
+- **Home dashboard (Shash, 2026-11-01):** the README roadmap names a v0.2 Home dashboard with a music card, calendar, battery and terminal. Calendar and battery are v0.2 rows below; the terminal row still says Later (it needs a dependency and a security review for subprocesses), so its date isn't settled.
 - **Not in v0.1.0, from MVP rows:** Quick Look, thumbnails and open/reveal in the tray (D32); favourite in Now Playing (D26); click-to-open and a VoiceOver element for the closed notch.
 - Device checks still open for the release are listed in TASK.md, "Release checklist".
 

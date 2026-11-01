@@ -1,131 +1,88 @@
 # DropNotch
 
-DropNotch is an open-source macOS utility that turns the MacBook notch into a productivity surface. The notch opens when you hover over it and stays minimal otherwise.
+Turns the MacBook notch into a productivity surface.
 
-What works today:
-- **Now Playing** for Apple Music and Spotify: the current title and artist, with artwork, a progress bar you can seek, and play/pause, next and previous controls.
-- **Compact view:** while music plays, the closed notch widens a little on each side that has something to show. By default that is the artwork on the left and small animated bars on the right; either side can be set to Nothing in Settings.
-- **Notes:** one plain-text note, saved as you type.
-- **File tray:** drop files on the notch to keep them at hand, then drag them out again, send them with AirDrop or share them. Dropped files stay where they are; the tray keeps a link to them.
-- **Clipboard history:** off until you turn it on in its tab. Keeps the last 25 text, link and image items; click one to copy it back.
-- **Hotkey:** ⌃⌥N opens and closes the notch with keyboard focus. ⌘1, ⌘2… switch tabs and ⌘, opens Settings while the notch has focus.
-- **Keyboard access:** in Now Playing, Tray and Clipboard, Tab moves between the controls and Space or Return presses them. In the tray, the arrow keys also step through the files and buttons, and Space or Return selects a file. In Clipboard, ↑/↓ pick an item and Return copies it.
+[![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue)](LICENSE)
+[![Platform: macOS 14+](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey)](#requirements)
+[![Release: v0.1.0 pre-release](https://img.shields.io/badge/release-v0.1.0%20pre--release-orange)](https://github.com/Shashwat-19/DropNotch/releases/tag/v0.1.0)
+[![Swift 5](https://img.shields.io/badge/swift-5-F05138)](project.yml)
 
-Each module has its own tab in the open notch, next to a Settings button.
+[![Download DropNotch 0.1.0](https://img.shields.io/badge/Download-DropNotch%200.1.0-2ea44f)](https://github.com/Shashwat-19/DropNotch/releases/tag/v0.1.0)
 
-Planned, not built yet: signed releases, automatic updates and per-module settings.
+Pre-release: not yet notarised. Follow the first-launch steps under [Install](#install).
 
-## Status
+<!-- TODO(screenshots): no images exist in docs/ or assets/ yet. Add a screenshot or GIF of the open notch here
+     (suggested: docs/images/notch-open.png), and one of the DMG window, once they are captured. -->
 
-Version 0.1.0 is the first release: an early build, not signed with a Developer ID (see [Install](#install)). Some checks on a real Mac are still outstanding, including how the Automation permission behaves (see [Permissions](#permissions)). The plans are in:
+DropNotch is an open-source macOS utility. The notch opens when you hover over it, or when you press ⌃⌥N, and stays minimal otherwise.
 
-- [docs/FEATURE_MATRIX.md](docs/FEATURE_MATRIX.md)
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- [docs/DECISIONS.md](docs/DECISIONS.md)
+## Features
+
+- **Now Playing** for Apple Music and Spotify: title, artist, artwork, a progress bar you can seek, and play/pause, next and previous. While music plays, the closed notch widens to show the artwork and small animated bars (decorative).
+- **Notes:** one plain-text note, saved automatically about a second after you stop typing.
+- **File tray:** drop files on the notch, drag them out again, or send them with AirDrop or Share. Most dropped files stay where they are and the tray keeps a link to them; items with no file behind them, such as an image dragged from Photos or Mail, are copied into the tray.
+- **Clipboard history:** off until you turn it on. Keeps the last 25 text, link and image items, with search; click an item or press Return to copy it back.
+- **Hotkey:** ⌃⌥N opens and closes the notch with keyboard focus, and can be changed in Settings. While the notch has keyboard focus, ⌘1, ⌘2… switch tabs and ⌘, opens Settings. In Now Playing, Tray and Clipboard, Tab moves between controls and Space or Return presses them. The arrow keys also step through Now Playing's controls and the tray's files and buttons (only Tab reaches Clear All), and ↑/↓ choose a clipboard item.
+- **Customisable modules:** in Settings, turn modules on or off, reorder the tabs, choose what fills each side of the closed notch, set launch at login, and choose the built-in or main display.
 
 ## Install
 
-Download `DropNotch-0.1.0.dmg` from [GitHub Releases](https://github.com/Shashwat-19/DropNotch/releases). DropNotch needs macOS 14 or later on an Apple silicon Mac.
+1. Download `DropNotch-0.1.0.dmg` and `DropNotch-0.1.0.dmg.sha256` from the [release page](https://github.com/Shashwat-19/DropNotch/releases/tag/v0.1.0).
+2. Open the DMG and drag **DropNotch** onto **Applications**.
+3. Open DropNotch. It is not notarised, so macOS blocks the first launch. On macOS 27.0.1 the dialog is titled "“DropNotch.app” Not Opened" and says "Apple could not verify “DropNotch.app” is free of malware that may harm your Mac or compromise your privacy." Its buttons are **Done** and **Move to Bin** (**Move to Trash** in US English). Click **Done**. Then, as [Apple documents](https://support.apple.com/en-us/102445): open System Settings, click Privacy & Security, scroll down and click **Open Anyway**. When the warning reappears, click **Open**. macOS saves this as an exception. Wording may differ on other macOS versions.
+4. Click a playback control. macOS asks whether DropNotch may control Music or Spotify; allow it. Without that, the title and artist show but the controls, artwork and seeking don't. To change your answer later, use System Settings › Privacy & Security › Automation.
 
-Optional, but worth it while releases are unsigned: check the download against the SHA-256 on the release page. In Terminal, `shasum -a 256 ~/Downloads/DropNotch-0.1.0.dmg` must print the same value.
+DropNotch has no Dock icon. Look for it in the menu bar, hover over the notch, or press ⌃⌥N. To uninstall, quit it from the menu-bar item and move it from Applications to the Trash. Its data is in `~/Library/Application Support/DropNotch` and its settings in `~/Library/Preferences/com.shashwat.DropNotch.plist`; remove those too if you want no trace.
 
-DropNotch isn't signed with an Apple Developer ID yet, so macOS blocks it the first time you open it. On macOS 15 or later (the same three steps are in the DMG window):
+### Verify the download
 
-1. **Drag to Applications.** Open the DMG and drag **DropNotch** onto **Applications**.
-   <!-- screenshot: docs/images/install-1-dmg-window.png (the DMG window with the arrow) -->
-2. **Open DropNotch.** Open it from Applications. macOS shows "DropNotch.app" Not Opened: Apple could not verify "DropNotch.app" is free of malware that may harm your Mac or compromise your privacy. Click **Done**, not **Move to Bin** (**Move to Trash** in US English).
-   <!-- screenshot: docs/images/install-2-not-opened.png (the "Not Opened" dialog, Done highlighted) -->
-3. **Open Anyway.** Open **System Settings › Privacy & Security** and scroll down to **Security**. Next to "DropNotch" was blocked to protect your Mac, click **Open Anyway**, then **Open Anyway** again in the dialog, and enter your password or use Touch ID. The button shows for about an hour after you try to open the app.
-   <!-- screenshot: docs/images/install-3-open-anyway.png (Privacy & Security with the Open Anyway button) -->
+Keep both downloaded files in one folder and run:
 
-On macOS 14, Control-click DropNotch in Applications, choose **Open**, then click **Open** again.
+```sh
+cd ~/Downloads && shasum -a 256 -c DropNotch-0.1.0.dmg.sha256
+```
 
-macOS remembers the choice, so later launches open normally. Downloading a new version means doing this once more.
-
-DropNotch has no Dock icon: look for it in the menu bar, and hover over the notch or press ⌃⌥N.
-
-To uninstall, quit DropNotch from its menu-bar item and move it from Applications to the Trash. Its tray, note and saved clipboard live in `~/Library/Application Support/DropNotch`, and its settings in `~/Library/Preferences/com.shashwat.DropNotch.plist`.
-
-## Settings
-
-Open Settings from the DropNotch menu-bar item, or with the gear button in the open notch.
-
-- **General:** launch at login, the hotkey, and which display shows the notch (the built-in display, or the main display).
-- **Modules:** turn each module on or off, change the tab order, and choose what fills each side of the closed notch (Now Playing or Nothing). Modules that are off are greyed and move to the bottom of the list.
-- **Privacy:** Spotify artwork downloads, clipboard history on or off, keep clipboard history after quitting, clear the clipboard history, clear the tray.
-- **About:** version, licence and third-party notices.
+It must print `DropNotch-0.1.0.dmg: OK`. While releases are unsigned, this is the only check that the file is the one published.
 
 ## Requirements
 
-- To run: macOS 14.0 or later.
-- To build: Xcode 27 or later, and XcodeGen.
+- macOS 14.0 or later.
+- A MacBook with a notch is recommended. On a display without one, DropNotch draws a pill at the top of the screen instead.
+- Tested only on Apple silicon. The build also contains an Intel (x86_64) slice, which has not been tested.
+- Measured on one Mac with the Release build, notch closed and clipboard history on, over 60 seconds: 0.0 % CPU, a 21 MB memory footprint and no network traffic. Other states, such as the notch open while music plays, have not been measured yet.
 
-Install XcodeGen with Homebrew:
+## Privacy and permissions
 
-```sh
-brew install xcodegen
-```
+- No analytics or telemetry. The only network request is Spotify's cover image over HTTPS from `i.scdn.co`, made when a new Spotify track starts. Turn it off in Settings › Privacy. Music's artwork needs no network. (The GitHub link in Settings › About opens your browser.)
+- Clipboard history is off until you turn it on in its tab. It skips items that password managers and other apps mark as concealed or transient. It stays in memory, unless you turn on Keep history after quitting in Settings › Privacy, which saves text and links (not images) to `~/Library/Application Support/DropNotch/clipboard.json`. Logs never contain clipboard contents, file names or track details. The open Clipboard tab shows your history to anyone who can see your screen.
+- The tray keeps a link to each file it doesn't copy, and the link includes the path. Removing an item or Clear All deletes only the tray's own copies, never your originals.
+- DropNotch is **not sandboxed** ([D4](docs/DECISIONS.md)). It runs with the hardened runtime and one entitlement, `com.apple.security.automation.apple-events`, which lets it send commands to Music and Spotify.
+- macOS asks for a permission only when you first use the feature that needs it: Automation (Music, Spotify); Desktop, Documents or Downloads, when the tray first accesses a file in one of them; Paste from Other Apps, if you turn on clipboard history (under Always Allow it reads automatically, otherwise the tab offers Add Clipboard and macOS asks when you click it); Login Items, if you turn on Launch at login. Not every prompt has been checked on a device yet.
 
 ## Build from source
 
-1. Clone this repository.
-2. Generate the Xcode project from `project.yml`:
+You need Xcode 27 or later and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`). `DropNotch.xcodeproj` is generated from `project.yml` and is not committed.
 
-   ```sh
-   xcodegen generate
-   ```
+```sh
+xcodegen generate
+xcodebuild -scheme DropNotch -destination 'platform=macOS' build test
+```
 
-   `DropNotch.xcodeproj` is generated and is not committed. Run this step before you open the project or build it, and again after adding or removing files.
+Run `xcodegen generate` again after adding or removing files. The first build fetches the KeyboardShortcuts package. Local builds are ad-hoc signed. To make the release DMG, run `brew install create-dmg` once, then `scripts/make-dmg.sh`; it writes `build/DropNotch-<version>.dmg` and its `.sha256` file.
 
-3. Open `DropNotch.xcodeproj` in Xcode, or build and test from the command line:
+## Roadmap
 
-   ```sh
-   xcodebuild -scheme DropNotch -destination 'platform=macOS' build test
-   ```
-
-The first build fetches the KeyboardShortcuts Swift package, which Xcode resolves automatically.
-
-Builds are ad-hoc signed for local use. There are no signed or notarised releases yet.
-
-To make the release DMG yourself, install create-dmg (`brew install create-dmg`) and run `scripts/make-dmg.sh`. It makes a clean Release build and writes `build/DropNotch-<version>.dmg` and its SHA-256 checksum file next to it.
-
-## Permissions
-
-DropNotch asks for a permission only when you first use the feature that needs it, never at launch.
-
-**Automation (Music, Spotify).** Needed for the play/pause, next, previous and seek controls. macOS asks the first time you click one of these controls for Music or Spotify. The title and artist appear without this permission. The controls, the artwork, Music's progress bar and seeking need it. (Without it, a track that is already playing when DropNotch starts shows only the player's name until the next track change.)
-
-If you choose Don't Allow, the notch shows "Allow control of Music (or Spotify) in System Settings". To allow it later, open System Settings › Privacy & Security › Automation, find DropNotch and turn on Music or Spotify.
-
-**Files and folders (Desktop, Documents, Downloads).** The file tray keeps a link to each file you drop. macOS may ask once per folder when the tray first opens a file from one of these folders: when you drop it, or when you open the Tray tab.
-
-**Paste from Other Apps (macOS 15.4 and later).** Clipboard history reads what you copy only if System Settings › Privacy & Security › Paste from Other Apps is set to Always Allow for DropNotch. Otherwise the Clipboard tab shows an Add Clipboard button after each copy, and macOS asks when you click it. If it is set to Always Deny, the tab says so and reads nothing. A change to this setting may need DropNotch to be relaunched.
-
-**Login Items.** Only if you turn on Launch at login. macOS may ask you to approve it in System Settings › General › Login Items; Settings › General shows a button that opens it.
-
-The prompts and denied states above are not all checked on a device yet; this section describes the intended behaviour.
-
-## Privacy
-
-DropNotch does not include analytics or telemetry.
-
-Its one network request is for Spotify artwork: when a new Spotify track starts, it downloads that track's cover image over HTTPS from Spotify's image server (`i.scdn.co`), using the image address Spotify itself provides. The request carries the standard headers macOS adds (a User-Agent naming DropNotch and the macOS networking versions, your preferred languages), and Spotify's server sees your IP address; nothing else is sent, no cookies are kept, and the image is held in memory only. Music artwork comes from the Music app, with no network. To stop it, turn off Download Spotify artwork in Settings › Privacy; Spotify tracks then show Spotify's icon and nothing leaves the Mac.
-
-Files leave the Mac only when you send them yourself with AirDrop or Share from the tray.
-
-Now Playing reads track details from the notifications Music and Spotify broadcast on your Mac, and sends its commands straight to the player. Titles and artists are held in memory while shown, and are never saved to disk or logged.
-
-What DropNotch stores on your Mac, all in `~/Library/Application Support/DropNotch/`:
-- `Notes/note.txt`: your note, as plain text.
-- `tray.json`: the tray's list, with a link (bookmark) to each file, which includes its path. `Tray/` holds copies of drops with no file behind them (for example an image dragged from Photos or Mail) and of files that couldn't be linked. Removing an item or Clear Tray deletes only these copies, never your originals.
-- `clipboard.json`: only if you turn on Keep history after quitting. Text and link items only (images stay in memory), readable only by your user account and excluded from Time Machine backups. Turning the option off, turning history off, or Clear deletes it. Otherwise clipboard history is held in memory only and is cleared when DropNotch quits.
-
-Clipboard history skips items that password managers and other apps mark as concealed or transient. Logs never contain clipboard contents, file names or track details. The open Clipboard tab shows your history to anyone who can see your screen, including in screen sharing and recordings.
+Planned for v0.2, not started: a Home dashboard with a music card, calendar, battery and terminal (the terminal needs a dependency and a security review first), Developer ID signing and notarisation, and automatic updates. The full plan is in [docs/FEATURE_MATRIX.md](docs/FEATURE_MATRIX.md).
 
 ## Contributing
 
-Commit messages follow Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`). Each feature is developed on its own branch, named `feat/<name>`. Significant decisions are recorded in [docs/DECISIONS.md](docs/DECISIONS.md).
+Commit messages follow Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`), one feature per branch named `feat/<name>`. Decisions are recorded in [docs/DECISIONS.md](docs/DECISIONS.md), and the structure is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Do not copy code, assets or UI text from GPL-licensed apps (see the clean-room statement below). Maintainers: [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Licence
 
-DropNotch is released under the MIT licence. See [LICENSE](LICENSE). Third-party notices are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+DropNotch is released under the MIT licence. See [LICENSE](LICENSE).
+
+## Acknowledgements
+
+- [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) 3.1.0 by Sindre Sorhus (MIT) powers the hotkey recorder. Its licence is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+- Clean-room statement: DropNotch's code is original. The GPL-3.0 apps Atoll and Boring Notch were read only to learn which APIs and techniques notch apps use, and no code, assets or UI text was copied from them. Canopy is closed source; only its public web pages were used. Technique notes written in our own words are in [docs/research/](docs/research/).
