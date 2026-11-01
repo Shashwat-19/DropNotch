@@ -759,6 +759,8 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Date:** 2026-10-31 · **Status:** Accepted (Shash approved the width, the animation and the 5 s grace)
 
+**Revised by D36** (2026-11-01): the closed shape widens only on the sides whose slot has content, and gains 6 pt shoulders.
+
 **Decision:**
 - While a module fills a compact slot (D8), the closed shape is the notch plus one square wing on each side, as wide as the notch is tall: about 32 pt, so about 250 pt in all on a 14" MacBook Pro. The pill on a screen without a notch widens the same way. Peek grows from that wider shape; the open size is unchanged.
 - Now Playing fills both slots by default: artwork on the left (the open notch's `NowPlayingArtworkView`, smaller), 4 decorative bars on the right (D2).
@@ -846,7 +848,7 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 **Decision:**
 - `FileTrayModule` keeps the list in `~/Library/Application Support/DropNotch/tray.json` (atomic JSON, saved on every change) and fallback copies in `…/DropNotch/Tray/<UUID>/<name>`. An unreadable tray.json turns saving off and shows "Couldn't open the tray file", as for notes (D31). Logs carry error domains and codes only, never names or paths.
 - `NotchHostingView` is the drag destination for file URLs and file promises in every state (closed, compact, open). Mouse tracking pauses during a drag, so drag enter and exit stand in for the pointer (`.pointerEntered` / `.pointerExited`): the notch peeks, opens after the usual delay, and switches to the Tray tab. Per dragged item a file URL is taken before a promise, so a file is bookmarked (D6). The drop operation is `.copy`, else `.link`, never `.move` or `.generic`: Finder treats those as a move, and the original would leave its folder.
-- Bookmarks are plain (unsandboxed, D4), resolved with `.withoutUI, .withoutMounting`, when the tray is shown or a drop arrives, not at launch, so a Desktop/Documents/Downloads prompt appears in context. Usage strings for those three folders are in project.yml. A stale bookmark is rewritten. A file that is gone, or that the bookmark followed into the Trash, is missing: greyed, badged with a question mark, named "missing" for VoiceOver, not draggable.
+- Bookmarks are plain (unsandboxed, D4), resolved with `.withoutUI, .withoutMounting`, when the tray is shown or a drop arrives, not at launch, so a Desktop/Documents/Downloads prompt appears in context. Usage strings for those three folders are in project.yml. A stale bookmark is rewritten. A file that is gone, or that the bookmark followed into the Trash, is missing: its icon greyed (the name stays readable, D37 accessibility pass), badged with a question mark, named "missing" for VoiceOver, not draggable.
 - A dropped symlink is followed: the tray holds the file the user meant. A file already in the tray isn't added twice. If `bookmarkData()` fails the file is copied (off the main thread). Promised files are written by the source app into a fresh folder; a file it reports outside that folder is ignored.
 - Removing an item, or Clear All, never touches an original; only the tray's own copy and its folder are deleted. A copy's path is built from a UUID folder and a single-component name, checked again when tray.json is loaded, so an edited file can't point a delete elsewhere; `removeItem` deletes a symlink, not its target. Before a delete, the storage folder and the item's folder must be real folders, not symlinks, so a planted `Tray/<UUID>` link can't turn Remove into a delete elsewhere (security-auditor M1; check-then-delete by path, marked `shortcut:`). A promised file that is a symlink is refused (L1), and a copy that later turns into a symlink counts as missing. Symlinks inside a promised folder are not checked.
 - Drag out is an AppKit `NSDraggingSource` per tile (SwiftUI's `onDrag` can't set the operation): `.copy` outside the app, nothing inside, so Finder copies and the Trash refuses. Dragging a selected tile drags every selected file. Drags from the tray are never dropped back in (`draggingSource` is set only inside the app).
@@ -901,6 +903,8 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 ## D34. Settings window: General, Modules, Privacy, About; clipboard text kept on disk only if asked
 
 **Date:** 2026-11-01 · **Status:** Accepted (Shash chose text and links only, and a plain 0600 file kept out of backups, 2026-11-01; the rest follows D7, D8, D9, D25, D30, D33)
+
+**Revised by D36** (2026-11-01): modules that are off sit last in the tab order, greyed, with their arrows disabled (closes S2); a slot set to Nothing leaves no wing (closes S3).
 
 **Decision:**
 - One SwiftUI `Settings` scene with four tabs, opened from the menu-bar item (D14). `SettingsView` gets the registry and `NotchState` from `AppDelegate`.
