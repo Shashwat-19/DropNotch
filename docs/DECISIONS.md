@@ -933,3 +933,45 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 **Review:** code-reviewer, 2026-11-01: Approve with changes. W1 the top row now shows with every module off, so the gear and ⌘, still reach Settings. W2 ARCHITECTURE §3 and §7, and D31's status. S1 one hint: `.help("Open Settings (⌘,)")`, which macOS also gives VoiceOver as the hint. S2 the registry asserts that its modules and the gear fit `topRowMaxItems`. S4 comments. S3 kept (the wide-notch test still checks containment).
 
 **Not done:** a fifth module needs `topRowMaxItems` raised, which widens the open shape again. The open frame isn't clamped to the screen: a notch within 164 pt of a screen edge would push it off-screen. Real notches are centred, and the 480 pt minimum had the same limit (code-reviewer S5).
+
+---
+
+## D36. Notch shoulders and one-sided compact wings; modules that are off sit last
+
+**Date:** 2026-11-01 · **Status:** Accepted (Shash, 2026-11-01: 6 / 10 pt shoulders from the rendered previews; one-sided wings and the Settings order were asked for in the polish task, closing D34 S2 and S3)
+
+**Decision:**
+- `NotchShape` draws the notch: a flat top, an inverse quarter-circle "shoulder" each side where it meets the menu bar, and rounded bottom corners. Both radii are animatable, so the shoulders grow and shrink with the spring. Shoulders: none on the plain closed shape (it sits inside the hardware notch), 6 pt on the compact and peek shapes, 10 pt open (`NotchGeometry.shoulder(for:wings:)`).
+- `NotchGeometry.frame(for:)` stays the body; `panelFrame(for:)` adds the shoulders either side, so the panel, and with it the hover and click area, is 12–20 pt wider whenever the shape reaches over the menu bar. Whole points, so the panel stays on whole points.
+- The closed notch widens only on the sides whose slot has content (`ModuleRegistry.compactWings`, a `Set<CompactSlot>`). A shape with one wing isn't centred on the canvas, so `NotchRootView` offsets it by the difference of the midpoints; the offset animates with the width.
+- In `tabOrder`, modules that are on come first. Turning one off moves it to the top of those that are off; turning it on makes it the last of those that are on. `moveTab` moves only between modules that are on. An order saved before this is sorted at launch. Settings greys the rows of modules that are off and disables their arrows.
+
+**Alternatives:** shoulders inside the existing frames (rejected: they would eat into the 32 pt wings, leaving the artwork 0.4 pt from the edge); shoulders on the plain closed shape too (rejected: it would cover more of the menu bar for no visible gain); keeping the order of modules that are off in place (D34 S2: arrows stepped past hidden tabs).
+
+**Not done:** the transparent corners beside each shoulder (at most 10 × 10 pt) take clicks meant for the menu bar while the shape is wider than closed.
+
+---
+
+## D37. One style for the open content: spacing, type, empty states, one spring
+
+**Date:** 2026-11-01 · **Status:** Accepted (polish task, Shash, 2026-11-01)
+
+**Decision:**
+- `NotchStyle` holds the shared values: a 4 pt grid (8 between blocks, 4 within one), 24 pt sides and 12 pt bottom margins, 8 pt corner radius, a 20 % white selection fill, and the spring. `NotchRootView` applies the margins once around every module, so modules no longer pad themselves.
+- Type: `.subheadline` for text, `.subheadline.weight(.semibold)` for a title, `.body` in the note's editor; icons take their font's size (`.body` for the top row and actions, `.title3` for Now Playing's controls, `.title2` for an empty state).
+- `NotchEmptyState`: a symbol over one centred line, with an optional button: Now Playing ("Nothing playing in Music or Spotify"), Tray (empty, failed load), Clipboard (off, blocked, nothing copied, no matches), Notes (failed load; the empty note keeps its "Type a note" placeholder). Not `ContentUnavailableView`: its fixed large title and symbol don't fit the ~100 pt under the top row.
+- Motion: one spring, `spring(duration: 0.25, bounce: 0)`, for open, close, the wings, tab switches (a cross-fade, so it stays on under Reduce Motion, L8) and the play/pause morph. Hover and press feedback keep their 0.12–0.15 s ease-outs, and the track text its 0.12 s fades.
+
+**Alternatives:** a spring with a little bounce (rejected: an overshoot is cut flat by the panel's edge); a longer spring (0.25 s already matched the D18 retune on device).
+
+---
+
+## D38. App icon: a drop falling into a notch
+
+**Date:** 2026-11-01 · **Status:** Accepted (Shash chose draft A over a drop held inside the notch, 2026-11-01: it reads at 16–32 px)
+
+**Decision:** An original icon: a blue-to-violet macOS rounded square (824 px body on a 1024 px canvas), a black notch drawn with `NotchShape` hanging from its top edge, and a white drop below it. `scripts/app-icon/main.swift` draws it with SwiftUI's `ImageRenderer`; `scripts/app-icon/make-icons.sh` renders the 1024 px master and scales it with `sips` into `DropNotch/Assets.xcassets/AppIcon.appiconset` (16–512 pt at 1x and 2x). project.yml sets `ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon`. No dependency.
+
+**Alternatives:** a hand-drawn vector in a design tool (no source in the repo); per-size hand tuning (not needed: the shapes are large and simple enough to scale down).
+
+**Not done:** the macOS 26 layered icon format (Icon Composer); the flat icon is used as is.

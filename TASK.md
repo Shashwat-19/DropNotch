@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, 4, `feat/hotkey`, 5, `feat/notes`, 6, `feat/file-tray`, and 7, `feat/clipboard`, are merged to main and pushed to `origin`. Branch 8, `feat/settings`, is in progress. Next: polish, release. See "Phase 3" below.
+**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, 4, `feat/hotkey`, 5, `feat/notes`, 6, `feat/file-tray`, and 7, `feat/clipboard`, are merged to main and pushed to `origin`. Branch 8, `feat/settings`, is in progress (device checks 57–65 open). Branch 9, `feat/polish`, is built on top of it. Next: release. See "Phase 3" below.
 
 ## Goal
 Run a reverse-engineering analysis (REA) of Canopy and Atoll, turn it into a feature matrix and architecture plan for DropNotch, then scaffold the foundation. DropNotch must be original code that Shash owns.
@@ -315,6 +315,12 @@ Device checks (notched Mac; Debug build except 57).
 63. (D35) ⌃⌥N, then ⌘,: Settings comes to the front with keyboard focus and the notch closes. Hover-open, click the gear: Settings is in front of the app that was in front.
 64. (D35) On the Air (208 pt housing), open the notch with all four modules on, with one on, and with none on: no tab or gear sits under the housing, and the gear is always at the far right. With none on, the gear still opens Settings. Send Shash's screenshot with this one.
 65. (D35) VoiceOver on the gear: "Settings, button" and one hint ("Open Settings"), not "Settings" twice; the tabs still read their module names. Tab and ←/→ in Now Playing move through the same controls as before.
+
+### Branch 9: `feat/polish` (D36–D38; branched from `feat/settings`, which isn't merged yet)
+
+The visual and feel pass before release: shoulders where the shape meets the menu bar; the closed notch widens only on sides with content; modules that are off sit greyed at the bottom of Settings › Modules; one spacing grid, type scale, empty states and spring across the tabs; an original app icon. Shape radii (6 / 10 pt) and icon (draft A) chosen by Shash from rendered previews, 2026-11-01. Package search: skipped (SwiftUI shapes and an asset catalogue).
+
+Out of this branch: the macOS 26 layered icon, per-module settings views.
 
 ## Release checklist
 
