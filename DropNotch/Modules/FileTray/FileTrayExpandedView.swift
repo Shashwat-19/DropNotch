@@ -38,7 +38,8 @@ struct FileTrayExpandedView: View {
                 .frame(width: 40, height: 40)
                 // Only the icon is dimmed, so the name stays readable.
                 .opacity(url == nil ? 0.4 : 1)
-                // A missing file is greyed out and badged, so the state doesn't rest on dimming alone (L6).
+                // A missing file is greyed out and badged, so the state doesn't rest on dimming alone (L6). The badge
+                // stays white on a dimmed tile: it shows the file's state, not the selection.
                 .overlay(alignment: .bottomTrailing) {
                     if url == nil { Image(systemName: "questionmark.circle.fill").foregroundStyle(.white) }
                 }

@@ -7,6 +7,7 @@ struct NotchRootView: View {
     let registry: ModuleRegistry
 
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         // The panel's frame, not the shape's: the shape fills the 1 pt strip above the screen too, so its top
@@ -37,7 +38,10 @@ struct NotchRootView: View {
                     VStack(spacing: 0) {
                         // The tabs sit in the strip right of the camera housing; the module starts below it. The row
                         // shows with every module off too, so Settings stays reachable (code-reviewer W1, D35).
-                        topRow.frame(height: state.geometry?.closedFrame.height ?? 0)
+                        // At least 4 pt under the buttons for the selected tab's dot (D39): without a notch the row is
+                        // only the menu bar's height, and the dot would hang into the module (code-reviewer W1).
+                        topRow.frame(height: max(state.geometry?.closedFrame.height ?? 0,
+                                                 NotchGeometry.topRowItemSize.height + 4))
                         if let module = registry.selectedModule {
                             // Every module gets the same margins (D37). The id makes a tab switch cross-fade.
                             module.expandedView()
@@ -104,7 +108,8 @@ struct NotchRootView: View {
                 .labelStyle(.iconOnly)
                 .frame(width: NotchGeometry.topRowItemSize.width, height: NotchGeometry.topRowItemSize.height)
                 // The same grey as the tabs that aren't selected (D39).
-                .notchSelection(false, groupHasSelection: true, dot: .bottom)
+                .foregroundStyle(.white.opacity(NotchSelection.opacity(isSelected: false, groupHasSelection: true,
+                                                                       increasedContrast: contrast == .increased)))
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
