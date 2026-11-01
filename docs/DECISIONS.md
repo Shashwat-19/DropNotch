@@ -992,3 +992,31 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - Clipboard rows dim only while the notch has keyboard focus (only then is a row highlighted); a hover-opened list stays white. Tray tiles dim only while one is selected.
 
 **Alternatives:** B, a faint fill with no outline (kept a shape cue, but read as the same capsule Shash disliked); C, brightness only (rejected: state would rest on brightness alone, failing L6).
+
+## D40. Keyboard access to the tray and clipboard buttons; Share opens the system picker directly
+
+**Date:** 2026-11-01 · **Status:** Accepted (Shash, 2026-11-01: release/v0.1.0 item 1, from the feat/polish accessibility-auditor finding)
+
+**Decision:**
+- Now Playing's `keyboardControl` modifier (D30) moves to `Notch/NotchKeyboardControl.swift` and is reused: a focusable view (`.edit` interactions, so it works with the system's keyboard navigation setting off) that Space or Return presses on key-down.
+- File Tray: each tile and each enabled action (AirDrop, Share, Remove, Clear All) is a focus stop. Tab and ←/→ (also ↑/↓) step through them in reading order and stop at either end, except that only Tab reaches Clear All (revision below); the hotkey focuses the first tile. Space or Return on a tile adds or removes it from the selection, as ⌘-click does. Removing the focused selection moves focus to the first remaining stop. A focused tile scrolls into view.
+- Share is a `Button` that opens `NSSharingServicePicker` below itself, anchored to an empty AppKit view (`TrayShareMenu`). `ShareLink` has no action SwiftUI code can call, so Return couldn't open it. The same picker serves clicks and keys.
+- Clipboard: Turn On, Add Clipboard and Clear are focus stops; the hotkey focuses Turn On while history is off, Search otherwise (as before). Tab from Search reaches the buttons. ← and → stay with the text in Search, and ↑/↓/Return keep moving and copying the highlighted row. Clearing moves focus back to Search.
+- The focus ring is the system's own on these controls (the round Now Playing controls hide it because their style draws a circle).
+
+**Revision (Shash, 2026-11-01):** Clear All is a Tab stop only. The arrows skip it, so holding → can't land on it before a Space; ← or ↑ from it go back to the last arrow stop. It still runs with no confirmation or undo once focused (accessibility-auditor; a click does the same, and confirmation before Clear stays out, D34). The originals are never touched.
+
+**Alternatives:** Keeping `ShareLink` and leaving Share mouse-only (rejected: the finding is exactly that buttons can't be reached). Arrows between the clipboard buttons (rejected: ← and → belong to the text in Search, and the rows already use ↑/↓). Deleting a focused tile with ⌫ (not asked; Remove covers it).
+
+## D41. v0.1.0 ships as an ad-hoc-signed DMG built by create-dmg
+
+**Date:** 2026-11-01 · **Status:** Accepted (Shash, 2026-11-01: unsigned DMG via create-dmg from Homebrew; install approved)
+
+**Decision:**
+- `scripts/make-dmg.sh` makes a clean Release build and packs `DropNotch.app`, an Applications shortcut, LICENSE and THIRD_PARTY_NOTICES.md into `build/DropNotch-<version>.dmg`. The notices also ship inside the app (project.yml).
+- The app is ad-hoc signed with the hardened runtime and only the apple-events entitlement (D11, D13); no Developer ID, no notarisation. Gatekeeper refuses it on first open (`spctl` says rejected), so README › Install gives the steps Apple documents (Done, then System Settings › Privacy & Security › Open Anyway, then Open). The macOS 14 Control-click › Open path was dropped from the README because Apple's page doesn't cover it and it wasn't checked on a macOS 14 Mac.
+- The DMG window (Shash, 2026-11-01): a background drawn by `scripts/dmg-background/main.swift` in the icon's blue-to-purple gradient with its notch, the app left and Applications right with an arrow between, and the three first-launch steps under them (drag; open, and on "Not Opened" click Done, not Move to Bin/Trash; Privacy & Security › Open Anyway), the same steps as README › Install. 1x and 2x in one TIFF. The icon rows sit on a mid-tone (luminance about 0.18) because Finder draws labels black or white depending on the Mac; about 4.5:1 either way. The window is 640 × 542 pt for Finder's defaults; a user's own tab bar or path bar covers the bottom row, where only the licence files sit. Step 2's wording is the dialog on macOS 27.0.1 (R1, Shash, 2026-11-01): "DropNotch.app" Not Opened, Done, Move to Bin (Move to Trash in US English). Step 3's wording is not yet confirmed.
+- The script writes `DropNotch-<version>.dmg.sha256`; the checksum goes in the release notes and as an asset, and README tells users how to compare it (security-auditor L2: an ad-hoc DMG can't otherwise be told from a swapped one).
+- create-dmg 1.3.0 (github.com/create-dmg/create-dmg, MIT) is a build tool on the maintainer's Mac, not linked into or shipped with the app, so it has no effect on DropNotch's licence.
+
+**Alternatives:** `hdiutil` with a hand-made symlink (no window layout; kept as the fallback if create-dmg breaks). The npm `create-dmg` (it signs and needs Node; rejected, no Node in this project).

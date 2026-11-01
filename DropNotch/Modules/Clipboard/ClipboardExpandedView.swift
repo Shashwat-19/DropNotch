@@ -7,7 +7,8 @@ struct ClipboardExpandedView: View {
     @State private var query = ""
     /// The row Return copies; ↑ and ↓ in the search field move it.
     @State private var highlighted = 0
-    @FocusState private var searchFocused: Bool
+    /// Keyboard focus: Search, or one of the buttons (D40). Only the hotkey or a click in Search makes the panel key.
+    @FocusState private var focus: Focus?
     @Environment(\.notchHasKeyboardFocus) private var hasKeyboardFocus
     @Environment(\.requestNotchKeyboardFocus) private var requestKeyboardFocus
     @Environment(\.dismissNotch) private var dismissNotch
@@ -20,6 +21,8 @@ struct ClipboardExpandedView: View {
                 NotchEmptyState("Keep the last 25 things you copy, on this Mac only. macOS may ask whether DropNotch can paste from other apps.",
                                 systemImage: "doc.on.clipboard") {
                     Button("Turn On Clipboard History") { module.turnOn() }
+                        .keyboardControl(Focus.turnOn, focus: $focus) { module.turnOn() }
+                        .onChange(of: hasKeyboardFocus, initial: true) { if hasKeyboardFocus { focus = .turnOn } }
                 }
             } else if module.access == .denied {
                 NotchEmptyState("Clipboard access is blocked in System Settings › Privacy & Security › Paste from Other Apps.",
@@ -32,11 +35,14 @@ struct ClipboardExpandedView: View {
                 }
                 HStack(spacing: NotchStyle.spacing) {
                     searchField
+                    // Tab from Search reaches these; ← and → stay with the text in Search.
                     if module.access == .ask, module.hasUnreadChange {
-                        Button("Add Clipboard") { module.addCurrent() }
+                        Button("Add Clipboard") { addCurrent() }
+                            .keyboardControl(Focus.addClipboard, focus: $focus) { addCurrent() }
                     }
                     if !module.items.isEmpty {
-                        Button("Clear") { module.clear() }
+                        Button("Clear") { clear() }
+                            .keyboardControl(Focus.clear, focus: $focus) { clear() }
                     }
                 }
                 list
@@ -56,7 +62,7 @@ struct ClipboardExpandedView: View {
     private var searchField: some View {
         TextField("Search", text: $query)
             .textFieldStyle(.roundedBorder)
-            .focused($searchFocused)
+            .focused($focus, equals: .search)
             .onKeyPress(.downArrow) {
                 highlighted = min(highlighted + 1, max(shown.count - 1, 0))
                 return .handled
@@ -77,7 +83,7 @@ struct ClipboardExpandedView: View {
                 }
             }
             // Set explicitly, as in Now Playing: the panel turns key before SwiftUI inserts this view (D30).
-            .onChange(of: hasKeyboardFocus, initial: true) { if hasKeyboardFocus { searchFocused = true } }
+            .onChange(of: hasKeyboardFocus, initial: true) { if hasKeyboardFocus { focus = .search } }
     }
 
     @ViewBuilder private var list: some View {
@@ -149,5 +155,20 @@ struct ClipboardExpandedView: View {
         AccessibilityNotification.Announcement("Copied").post()
         query = ""
         dismissNotch()
+    }
+
+    /// Add Clipboard is gone once it has read, and Clear once the history is empty; either would leave focus nowhere.
+    private func addCurrent() {
+        module.addCurrent()
+        if focus == .addClipboard { focus = .search }
+    }
+
+    private func clear() {
+        module.clear()
+        if focus == .clear { focus = .search }
+    }
+
+    private enum Focus: Hashable {
+        case turnOn, search, addClipboard, clear
     }
 }
