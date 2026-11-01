@@ -22,7 +22,8 @@ final class ArtworkDownloaderTests: XCTestCase {
         override func stopLoading() {}
     }
 
-    private let downloader = ArtworkDownloader(protocolClasses: [Stub.self])
+    // Allowed explicitly, so the Settings switch on this Mac can't fail these tests.
+    private let downloader = ArtworkDownloader(protocolClasses: [Stub.self], isAllowed: { true })
     private let good = URL(string: "https://i.scdn.co/image/ab67616d0000b273")!
 
     override func setUp() {
