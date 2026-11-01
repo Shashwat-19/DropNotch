@@ -131,13 +131,14 @@ final class NotchGeometryTests: XCTestCase {
     }
 
     // The panel reaches above the screen so the top pixel row counts as inside (D20).
-    func testPanelFrameAddsTheTopOverhangOnly() {
+    func testPanelFrameAddsTheShouldersAndTopOverhang() {
         let geometry = notched(screen)
         for phase in [NotchHoverStateMachine.Phase.closed, .peek, .open] {
             let shape = geometry.frame(for: phase), panel = geometry.panelFrame(for: phase)
-            XCTAssertEqual(panel.minX, shape.minX, "\(phase)")
+            let shoulder = NotchGeometry.shoulder(for: phase)
+            XCTAssertEqual(panel.minX, shape.minX - shoulder, "\(phase)")
             XCTAssertEqual(panel.minY, shape.minY, "\(phase)")
-            XCTAssertEqual(panel.width, shape.width, "\(phase)")
+            XCTAssertEqual(panel.width, shape.width + 2 * shoulder, "\(phase)")
             XCTAssertEqual(panel.maxY, screen.maxY + NotchGeometry.topOverhang, "\(phase)")
         }
         XCTAssertEqual(NotchGeometry.topOverhang, 1)
@@ -177,22 +178,24 @@ final class NotchGeometryTests: XCTestCase {
 
     func testFrameForPhasePicksTheCompactVariantsWhileClosedOrPeeking() {
         let geometry = notched(screen)
-        XCTAssertEqual(geometry.frame(for: .closed, compact: true), geometry.compactFrame)
-        XCTAssertEqual(geometry.frame(for: .peek, compact: true), geometry.compactPeekFrame)
-        XCTAssertEqual(geometry.frame(for: .open, compact: true), geometry.openFrame)
-        XCTAssertEqual(geometry.frame(for: .closed, compact: false), geometry.closedFrame)
-        XCTAssertEqual(geometry.frame(for: .peek, compact: false), geometry.peekFrame)
-        XCTAssertEqual(geometry.frame(for: .open, compact: false), geometry.openFrame)
+        XCTAssertEqual(geometry.frame(for: .closed, wings: [.left, .right]), geometry.compactFrame)
+        XCTAssertEqual(geometry.frame(for: .peek, wings: [.left, .right]), geometry.compactPeekFrame)
+        XCTAssertEqual(geometry.frame(for: .open, wings: [.left, .right]), geometry.openFrame)
+        XCTAssertEqual(geometry.frame(for: .closed), geometry.closedFrame)
+        XCTAssertEqual(geometry.frame(for: .peek), geometry.peekFrame)
+        XCTAssertEqual(geometry.frame(for: .open), geometry.openFrame)
     }
 
-    func testCompactPanelFrameAddsTheTopOverhangOnly() {
+    func testCompactPanelFrameAddsTheShouldersAndTopOverhang() {
         let geometry = notched(screen)
         for phase in [NotchHoverStateMachine.Phase.closed, .peek, .open] {
-            let shape = geometry.frame(for: phase, compact: true), panel = geometry.panelFrame(for: phase, compact: true)
-            XCTAssertEqual(panel, CGRect(x: shape.minX, y: shape.minY, width: shape.width,
+            let shape = geometry.frame(for: phase, wings: [.left, .right])
+            let panel = geometry.panelFrame(for: phase, wings: [.left, .right])
+            let shoulder = NotchGeometry.shoulder(for: phase, wings: [.left, .right])
+            XCTAssertEqual(panel, CGRect(x: shape.minX - shoulder, y: shape.minY, width: shape.width + 2 * shoulder,
                                          height: shape.height + NotchGeometry.topOverhang), "\(phase)")
         }
-        XCTAssertEqual(geometry.panelFrame(for: .open, compact: true), geometry.panelFrame(for: .open))
+        XCTAssertEqual(geometry.panelFrame(for: .open, wings: [.left, .right]), geometry.panelFrame(for: .open))
     }
 
     // The open frame is the canvas for every shape (D19), so it must hold the compact ones too.

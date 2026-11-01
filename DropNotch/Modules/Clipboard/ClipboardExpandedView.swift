@@ -15,19 +15,22 @@ struct ClipboardExpandedView: View {
     private var shown: [ClipboardItem] { module.items(matching: query) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: NotchStyle.tightSpacing) {
             if !module.isOn {
-                message("Keep the last 25 things you copy, on this Mac only. macOS may ask whether DropNotch can paste from other apps.")
-                Button("Turn On Clipboard History") { module.turnOn() }
+                NotchEmptyState(text: "Keep the last 25 things you copy, on this Mac only. macOS may ask whether DropNotch can paste from other apps.",
+                                systemImage: "doc.on.clipboard") {
+                    Button("Turn On Clipboard History") { module.turnOn() }
+                }
             } else if module.access == .denied {
-                message("Clipboard access is blocked in System Settings › Privacy & Security › Paste from Other Apps.")
+                NotchEmptyState("Clipboard access is blocked in System Settings › Privacy & Security › Paste from Other Apps.",
+                                systemImage: "hand.raised")
             } else {
                 if module.needsRelaunch {
                     message("Always Allow applies after you quit and reopen DropNotch. Until then, macOS asks before each read.")
                 } else if module.access == .ask {
                     message("macOS asks before each read. To keep history automatically, choose Always Allow in Privacy & Security › Paste from Other Apps.")
                 }
-                HStack {
+                HStack(spacing: NotchStyle.spacing) {
                     searchField
                     if module.access == .ask, module.hasUnreadChange {
                         Button("Add Clipboard") { module.addCurrent() }
@@ -41,8 +44,6 @@ struct ClipboardExpandedView: View {
         }
         .font(.subheadline)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(.horizontal, 24)
-        .padding(.bottom, 8)
         .onAppear { module.refresh() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(module.title))
@@ -83,8 +84,10 @@ struct ClipboardExpandedView: View {
 
     @ViewBuilder private var list: some View {
         let shown = shown
-        if shown.isEmpty {
-            message(module.items.isEmpty ? "Nothing copied yet" : "No matches")
+        if module.items.isEmpty {
+            NotchEmptyState("Nothing copied yet", systemImage: "doc.on.clipboard")
+        } else if shown.isEmpty {
+            NotchEmptyState("No matches", systemImage: "magnifyingglass")
         } else {
             ScrollViewReader { proxy in
                 ScrollView {
@@ -128,7 +131,7 @@ struct ClipboardExpandedView: View {
             .frame(height: 24)
             .padding(.horizontal, 6)
             // A filled background as well as the keyboard position, so the highlight doesn't rest on colour (L6).
-            .background(RoundedRectangle(cornerRadius: 6).fill(.white.opacity(isHighlighted ? 0.2 : 0)))
+            .background(RoundedRectangle(cornerRadius: NotchStyle.cornerRadius).fill(isHighlighted ? NotchStyle.selectionFill : .clear))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

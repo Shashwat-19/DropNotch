@@ -8,10 +8,9 @@ struct NotesExpandedView: View {
     @Environment(\.requestNotchKeyboardFocus) private var requestKeyboardFocus
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: NotchStyle.tightSpacing) {
             if module.loadFailed {
-                Text("Couldn't open the note file")
-                    .foregroundStyle(.secondary)
+                NotchEmptyState("Couldn't open the note file", systemImage: "exclamationmark.triangle")
             } else {
                 TextEditor(text: $module.text)
                     .scrollContentBackground(.hidden)
@@ -48,7 +47,5 @@ struct NotesExpandedView: View {
             }
         }
         .font(.body)
-        .padding(.horizontal, 24)
-        .padding(.bottom, 12)
     }
 }

@@ -7,14 +7,14 @@ struct FileTrayExpandedView: View {
     let module: FileTrayModule
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: NotchStyle.tightSpacing) {
             if module.loadFailed {
-                message("Couldn't open the tray file")
+                NotchEmptyState("Couldn't open the tray file", systemImage: "exclamationmark.triangle")
             } else if module.items.isEmpty {
-                message("Drag files onto the notch to keep them here")
+                NotchEmptyState("Drag files onto the notch to keep them here", systemImage: "tray.and.arrow.down")
             } else {
                 ScrollView(.horizontal) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: NotchStyle.tightSpacing) {
                         ForEach(module.items) { tile($0) }
                     }
                 }
@@ -22,20 +22,11 @@ struct FileTrayExpandedView: View {
                 actions
             }
         }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 8)
         // The open content is inserted each time the notch opens (D19), so files moved or deleted meanwhile
         // show up as moved or missing.
         .onAppear { module.refresh() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(module.title))
-    }
-
-    private func message(_ text: LocalizedStringKey) -> some View {
-        Text(text)
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func tile(_ item: TrayItem) -> some View {
@@ -57,9 +48,9 @@ struct FileTrayExpandedView: View {
                 .truncationMode(.middle)
         }
         .frame(width: 72)
-        .padding(4)
+        .padding(NotchStyle.tightSpacing)
         .opacity(url == nil ? 0.4 : 1)
-        .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(selected ? 0.2 : 0)))
+        .background(RoundedRectangle(cornerRadius: NotchStyle.cornerRadius).fill(selected ? NotchStyle.selectionFill : .clear))
         .overlay {
             TrayItemDragSource(urls: { module.dragURLs(from: item.id) },
                                onClick: { module.select(item.id, extending: $0) })
@@ -73,7 +64,7 @@ struct FileTrayExpandedView: View {
     private var actions: some View {
         let urls = module.shareURLs
         let airDrop = module.airDrop
-        return HStack(spacing: 4) {
+        return HStack(spacing: NotchStyle.tightSpacing) {
             Spacer(minLength: 0)
             Button { airDrop?.perform(withItems: urls) } label: {
                 // The system's own AirDrop image; there is no public SF Symbol for it.

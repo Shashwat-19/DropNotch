@@ -189,7 +189,8 @@ final class ModuleRegistryTests: XCTestCase {
         registry.setEnabled("a", true)
         XCTAssertEqual(registry.selectedModule?.id, "a", "the selection survives the module being off")
         registry.selectedTabID = "nope"
-        XCTAssertEqual(registry.selectedModule?.id, "a")
+        // Turned back on, "a" joined the end of the modules that are on (D36), so "b" is first now.
+        XCTAssertEqual(registry.selectedModule?.id, "b")
     }
 
     func testSelectedModuleIsNilWithNoEnabledModules() {
@@ -200,39 +201,40 @@ final class ModuleRegistryTests: XCTestCase {
         XCTAssertNil(ModuleRegistry(modules: [], defaults: makeDefaults()).selectedModule)
     }
 
-    // MARK: hasCompactContent (D28)
+    // MARK: compactWings (D28, D36)
 
-    func testHasCompactContentNeedsAnEnabledSlotModuleWithContent() {
+    func testCompactWingsNeedAnEnabledSlotModuleWithContent() {
         let a = FakeModule("a")
         let registry = ModuleRegistry(modules: [a, FakeModule("b")], defaults: makeDefaults())
         XCTAssertEqual(registry.compactRightID, "a", "the right slot defaults to the first module")
-        XCTAssertTrue(registry.hasCompactContent)
+        XCTAssertEqual(registry.compactWings, [.left, .right])
         a.hasCompactContent = false
-        XCTAssertFalse(registry.hasCompactContent)
+        XCTAssertEqual(registry.compactWings, [])
         a.hasCompactContent = true
         registry.setEnabled("a", false)
-        XCTAssertFalse(registry.hasCompactContent)
+        XCTAssertEqual(registry.compactWings, [])
     }
 
-    func testHasCompactContentWhenEitherSlotHasContent() {
+    func testCompactWingsAreOnlyTheSidesWithContent() {
         let a = FakeModule("a"), b = FakeModule("b")
         let registry = ModuleRegistry(modules: [a, b], defaults: makeDefaults())
         registry.compactRightID = "b"
         a.hasCompactContent = false
-        XCTAssertTrue(registry.hasCompactContent, "right slot only")
+        XCTAssertEqual(registry.compactWings, [.right], "right slot only")
         a.hasCompactContent = true
         b.hasCompactContent = false
-        XCTAssertTrue(registry.hasCompactContent, "left slot only")
-        a.hasCompactContent = false
-        XCTAssertFalse(registry.hasCompactContent)
+        XCTAssertEqual(registry.compactWings, [.left], "left slot only")
+        registry.compactLeftID = nil
+        b.hasCompactContent = true
+        XCTAssertEqual(registry.compactWings, [.right], "a slot set to Nothing has no wing")
     }
 
-    func testHasCompactContentIsFalseWithEmptySlotsOrNoModules() {
+    func testCompactWingsAreEmptyWithEmptySlotsOrNoModules() {
         let registry = ModuleRegistry(modules: [FakeModule("a")], defaults: makeDefaults())
         registry.compactLeftID = nil
         registry.compactRightID = nil
-        XCTAssertFalse(registry.hasCompactContent)
-        XCTAssertFalse(ModuleRegistry(modules: [], defaults: makeDefaults()).hasCompactContent)
+        XCTAssertEqual(registry.compactWings, [])
+        XCTAssertEqual(ModuleRegistry(modules: [], defaults: makeDefaults()).compactWings, [])
     }
 
     // MARK: Saved layout (D34)

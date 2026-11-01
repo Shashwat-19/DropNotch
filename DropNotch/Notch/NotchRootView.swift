@@ -11,15 +11,18 @@ struct NotchRootView: View {
     var body: some View {
         // The panel's frame, not the shape's: the shape fills the 1 pt strip above the screen too, so its top
         // edge is off-screen in every state and during every animation (D29).
-        let size = state.geometry?.panelFrame(for: state.displayedPhase, compact: state.displaysCompact).size ?? .zero
-        let radius: CGFloat = state.displayedPhase == .open ? 18 : 10
-        let shape = UnevenRoundedRectangle(bottomLeadingRadius: radius, bottomTrailingRadius: radius)
+        let phase = state.displayedPhase, wings = state.displayedWings
+        let frame = state.geometry?.panelFrame(for: phase, wings: wings) ?? .zero
+        // The canvas is centred on the notch; a shape with one wing isn't, so it moves by the difference (D36).
+        let offset = frame.midX - (state.geometry?.panelFrame(for: .open).midX ?? frame.midX)
+        let shape = NotchShape(shoulder: NotchGeometry.shoulder(for: phase, wings: wings),
+                               bottomRadius: phase == .open ? 18 : 10)
         shape
             .fill(.black)
-            .frame(width: size.width, height: size.height)
+            .frame(width: frame.width, height: frame.height)
             .overlay(alignment: .top) {
-                if state.displayedPhase != .open, state.displaysCompact, let geometry = state.geometry {
-                    compactSlots(geometry)
+                if phase != .open, !wings.isEmpty, let geometry = state.geometry {
+                    compactSlots(geometry, wings: wings)
                         .padding(.top, NotchGeometry.topOverhang)
                         .transition(.opacity)
                 }
@@ -34,11 +37,21 @@ struct NotchRootView: View {
                         // The tabs sit in the strip right of the camera housing; the module starts below it. The row
                         // shows with every module off too, so Settings stays reachable (code-reviewer W1, D35).
                         topRow.frame(height: state.geometry?.closedFrame.height ?? 0)
-                        registry.selectedModule?.expandedView().frame(maxHeight: .infinity)
+                        if let module = registry.selectedModule {
+                            // Every module gets the same margins (D37). The id makes a tab switch cross-fade.
+                            module.expandedView()
+                                .padding(.horizontal, NotchStyle.sidePadding)
+                                .padding(.bottom, NotchStyle.bottomPadding)
+                                .frame(maxHeight: .infinity)
+                                .id(module.id)
+                                .transition(.opacity)
+                        }
                     }
                     // Keeps the row at the top when no module fills the space below it.
                     .frame(maxHeight: .infinity, alignment: .top)
                     .padding(.top, NotchGeometry.topOverhang)
+                    // The content sits in the body, between the shoulders.
+                    .padding(.horizontal, NotchGeometry.openShoulder)
                     // The shape is always black, so its content uses dark colours in light mode too (L5).
                     .environment(\.colorScheme, .dark)
                     .environment(\.notchHasKeyboardFocus, state.hasKeyboardFocus)
@@ -49,6 +62,7 @@ struct NotchRootView: View {
                     .transition(.asymmetric(insertion: .opacity, removal: .identity))
                 }
             }
+            .offset(x: offset)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             // The panel overlaps the camera housing; without this SwiftUI would push
             // the content below the screen's safe area.
@@ -97,12 +111,13 @@ struct NotchRootView: View {
 
     private func tab(_ module: any NotchModule, index: Int) -> some View {
         let selected = module.id == registry.selectedModule?.id
-        return Button { registry.selectedTabID = module.id } label: {
+        // The shared spring, which here only cross-fades, so it stays on under Reduce Motion (L8).
+        return Button { withAnimation(NotchStyle.spring) { registry.selectedTabID = module.id } } label: {
             Label { Text(module.title) } icon: { Image(systemName: module.systemImage) }
                 .labelStyle(.iconOnly)
                 .frame(width: NotchGeometry.topRowItemSize.width, height: NotchGeometry.topRowItemSize.height)
                 // A filled capsule as well as brighter, so the selection doesn't rest on colour alone (L6).
-                .background(Capsule().fill(.white.opacity(selected ? 0.2 : 0)))
+                .background(Capsule().fill(selected ? NotchStyle.selectionFill : .clear))
                 .foregroundStyle(selected ? .primary : .secondary)
                 .contentShape(Capsule())
         }
@@ -113,14 +128,15 @@ struct NotchRootView: View {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
-    /// The compact wings either side of the notch (D8, D28), at the closed height so peek doesn't move them.
-    private func compactSlots(_ geometry: NotchGeometry) -> some View {
+    /// The compact wings beside the notch (D8, D28), on the sides that have content (D36), at the closed height so
+    /// peek doesn't move them.
+    private func compactSlots(_ geometry: NotchGeometry, wings: Set<CompactSlot>) -> some View {
         HStack(spacing: 0) {
-            compactSlot(.left, geometry)
+            if wings.contains(.left) { compactSlot(.left, geometry) }
             Spacer(minLength: 0)
-            compactSlot(.right, geometry)
+            if wings.contains(.right) { compactSlot(.right, geometry) }
         }
-        .frame(width: geometry.compactFrame.width, height: geometry.closedFrame.height)
+        .frame(width: geometry.frame(for: .closed, wings: wings).width, height: geometry.closedFrame.height)
         .environment(\.colorScheme, .dark)
     }
 

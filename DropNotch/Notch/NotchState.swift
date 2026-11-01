@@ -11,8 +11,8 @@ final class NotchState {
     /// `.closed` but the panel keeps its larger frame until the animation ends (D19).
     private(set) var displayedPhase = NotchHoverStateMachine.Phase.closed
     private(set) var geometry: NotchGeometry?
-    /// Whether the shape is drawn with the compact wings (D28). Changes together with `displayedPhase`.
-    private(set) var displaysCompact = false
+    /// The compact wings the shape is drawn with (D28, D36). Changes together with `displayedPhase`.
+    private(set) var displayedWings: Set<CompactSlot> = []
     /// The hotkey holds the notch open and the panel is key (D30). The open content moves focus to its controls.
     private(set) var hasKeyboardFocus = false
 
@@ -25,11 +25,8 @@ final class NotchState {
     /// Bumped on every phase, compact and screen change, so a close animation's completion
     /// can tell whether anything happened after it started (D19).
     @ObservationIgnored private var changeCount = 0
-    /// What the registry last reported; `displaysCompact` follows it through `show` (D28).
-    @ObservationIgnored private var wantsCompact = false
-
-    // No bounce: an overshoot past the open size would be cut flat by the panel's edges.
-    private static let spring = Animation.spring(duration: 0.25, bounce: 0)
+    /// What the registry last reported; `displayedWings` follows it through `show` (D28).
+    @ObservationIgnored private var wantedWings: Set<CompactSlot> = []
 
     /// Re-reads the screens and moves the panel. Called at launch and after each
     /// debounced screen change. Resets the hover state, because the old frames no longer
@@ -40,7 +37,7 @@ final class NotchState {
         changeCount += 1
         hover = NotchHoverStateMachine()
         displayedPhase = .closed
-        displaysCompact = wantsCompact
+        displayedWings = wantedWings
         syncKeyFocus()
 
         let screens = NSScreen.screens.compactMap { screen in
@@ -55,7 +52,7 @@ final class NotchState {
         }
         Logger.notch.debug("Notch panel on display \(id), notch: \(chosen.geometry.hasNotch)")
         geometry = chosen.geometry
-        setPanelFrame(chosen.geometry.panelFrame(for: .closed, compact: wantsCompact), reason: "screen change")
+        setPanelFrame(chosen.geometry.panelFrame(for: .closed, wings: wantedWings), reason: "screen change")
         // Shows the panel without activating DropNotch.
         panel.orderFrontRegardless()
     }
@@ -103,10 +100,10 @@ final class NotchState {
         }
     }
 
-    /// Widens or narrows the shape when a module starts or stops filling a compact slot (D28).
-    func setCompact(_ compact: Bool) {
-        guard compact != wantsCompact else { return }
-        wantsCompact = compact
+    /// Widens or narrows the shape when a module starts or stops filling a compact slot (D28), on that side only (D36).
+    func setWings(_ wings: Set<CompactSlot>) {
+        guard wings != wantedWings else { return }
+        wantedWings = wings
         show(hover.phase)
     }
 
@@ -132,17 +129,17 @@ final class NotchState {
     /// Shrink: animate the shape first, then shrink the panel once the animation ends (D19).
     /// The same holds for the compact wings (D28).
     private func show(_ phase: NotchHoverStateMachine.Phase) {
-        let compact = wantsCompact
-        guard phase != displayedPhase || compact != displaysCompact, let geometry, let panel else { return }
+        let wings = wantedWings
+        guard phase != displayedPhase || wings != displayedWings, let geometry, let panel else { return }
         changeCount += 1
-        let step = "\(displayedPhase) → \(phase), compact \(compact), change \(changeCount)"
+        let step = "\(displayedPhase) → \(phase), wings \(wings), change \(changeCount)"
         Logger.notch.debug("Show \(step, privacy: .public)")
-        let animation = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil : Self.spring
-        let target = geometry.panelFrame(for: phase, compact: compact)
+        let animation = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil : NotchStyle.spring
+        let target = geometry.panelFrame(for: phase, wings: wings)
         // After re-entering during a close the panel is still larger; keep it, so the
         // pointer stays inside and the shape isn't clipped mid-animation. With the wings the old and
-        // new shapes can each be larger in a different direction (wider, taller), so grow to both:
-        // every frame shares the top edge and centre, and the open canvas contains them all.
+        // new shapes can each be larger in a different direction (wider, taller, one side only), so grow
+        // to both: every frame shares the top edge, and the open canvas contains them all.
         if !panel.frame.contains(target) {
             setPanelFrame(panel.frame.union(target), reason: "grow")
         } else {
@@ -151,7 +148,7 @@ final class NotchState {
         let started = changeCount
         withAnimation(animation) {
             displayedPhase = phase
-            displaysCompact = compact
+            displayedWings = wings
         } completion: { [weak self] in
             // Only the closed shape shrinks the panel; peek and open keep the larger frame.
             guard phase == .closed else { return }
@@ -160,7 +157,7 @@ final class NotchState {
                 Logger.notch.debug("Close completion skipped (started at change \(started))")
                 return
             }
-            self.setPanelFrame(geometry.panelFrame(for: .closed, compact: compact), reason: "close completion")
+            self.setPanelFrame(geometry.panelFrame(for: .closed, wings: wings), reason: "close completion")
         }
     }
 

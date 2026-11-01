@@ -30,7 +30,8 @@ final class ModuleRegistry {
         self.modules = modules
         self.defaults = defaults
         // A module with no saved flag is on.
-        enabledIDs = Set(modules.map(\.id).filter { defaults.object(forKey: Self.key($0)) as? Bool ?? true })
+        let enabled = Set(modules.map(\.id).filter { defaults.object(forKey: Self.key($0)) as? Bool ?? true })
+        enabledIDs = enabled
         let ids = modules.map(\.id)
         // Saved values are checked against today's modules: one may have been removed or added since.
         // Unsaved, Now Playing fills both sides: artwork left, bars right (D28). Saved as "", the slot is empty.
@@ -43,7 +44,9 @@ final class ModuleRegistry {
         compactRightID = slot(Self.compactRightKey)
         let saved = (defaults.stringArray(forKey: Self.tabOrderKey) ?? []).filter(ids.contains)
         var seen = Set<String>()
-        tabOrder = (saved + ids).filter { seen.insert($0).inserted }
+        let order = (saved + ids).filter { seen.insert($0).inserted }
+        // Modules that are off sit below those that are on (D36); an order saved before that is sorted here.
+        tabOrder = order.filter(enabled.contains) + order.filter { !enabled.contains($0) }
     }
 
     /// Modules shown as tabs in the open notch, in `tabOrder`.
@@ -69,8 +72,8 @@ final class ModuleRegistry {
         return modules.first { $0.id == id && enabledIDs.contains($0.id) }
     }
 
-    /// Whether either compact slot has something to show, which widens the closed notch (D28).
-    var hasCompactContent: Bool { compactModule(for: .left) != nil || compactModule(for: .right) != nil }
+    /// The compact slots with something to show; the closed notch widens on those sides only (D28, D36).
+    var compactWings: Set<CompactSlot> { Set([CompactSlot.left, .right].filter { compactModule(for: $0) != nil }) }
 
     /// Starts every enabled module.
     func start() {
@@ -91,14 +94,20 @@ final class ModuleRegistry {
               enabledIDs.contains(id) != enabled else { return }
         if enabled { enabledIDs.insert(id) } else { enabledIDs.remove(id) }
         defaults.set(enabled, forKey: Self.key(id))
+        // Keeps the modules that are off below those that are on (D36): turned on, it becomes the last that is on;
+        // turned off, the first that is off. Either way its row in Settings stays at the boundary.
+        tabOrder.removeAll { $0 == id }
+        tabOrder.insert(id, at: tabOrder.filter(enabledIDs.contains).count)
         Logger.notch.debug("Module \(id, privacy: .public) enabled: \(enabled)")
         guard isRunning else { return }
         if enabled { module.start() } else { module.stop() }
     }
 
-    /// Moves a module's tab one place earlier (-1) or later (+1); nothing at the ends.
+    /// Moves a module's tab one place earlier (-1) or later (+1) among the modules that are on; nothing at the ends,
+    /// and nothing for a module that is off (D36).
     func moveTab(_ id: String, by offset: Int) {
-        guard let index = tabOrder.firstIndex(of: id), tabOrder.indices.contains(index + offset) else { return }
+        guard let index = tabOrder.firstIndex(of: id), tabOrder.indices.contains(index + offset),
+              enabledIDs.contains(id), enabledIDs.contains(tabOrder[index + offset]) else { return }
         tabOrder.swapAt(index, index + offset)
     }
 

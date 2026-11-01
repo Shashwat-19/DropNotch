@@ -15,7 +15,7 @@ struct ModulesSettingsView: View {
             } header: {
                 Text("Tabs")
             } footer: {
-                Text("In the open notch, ⌘1 opens the first module that's on, ⌘2 the next, and so on.").foregroundStyle(.secondary)
+                Text("In the open notch, ⌘1 opens the first module that's on, ⌘2 the next, and so on. Modules that are off move to the bottom.").foregroundStyle(.secondary)
             }
             Section {
                 slotPicker("Left of the notch", selection: $registry.compactLeftID)
@@ -23,25 +23,28 @@ struct ModulesSettingsView: View {
             } header: {
                 Text("Closed notch")
             } footer: {
-                Text("The closed notch widens on both sides while either side has something to show.").foregroundStyle(.secondary)
+                Text("The closed notch widens on each side that has something to show.").foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
     }
 
+    /// Modules that are off sit at the bottom, greyed, and can't be moved until they are on again (D36).
     private func row(_ module: any NotchModule, index: Int) -> some View {
-        HStack {
-            Toggle(isOn: Binding(get: { registry.enabledIDs.contains(module.id) },
-                                 set: { registry.setEnabled(module.id, $0) })) {
+        let isOn = registry.enabledIDs.contains(module.id)
+        let onCount = registry.tabOrder.filter(registry.enabledIDs.contains).count
+        return HStack {
+            Toggle(isOn: Binding(get: { isOn }, set: { on in withAnimation { registry.setEnabled(module.id, on) } })) {
                 Label { Text(module.title) } icon: { Image(systemName: module.systemImage) }
+                    .foregroundStyle(isOn ? .primary : .secondary)
             }
             Spacer()
             // Buttons rather than drag to reorder, so the order can be changed by keyboard and VoiceOver.
             Button { registry.moveTab(module.id, by: -1) } label: { Image(systemName: "chevron.up") }
-                .disabled(index == 0)
+                .disabled(!isOn || index == 0)
                 .accessibilityLabel(Text("Move \(Text(module.title)) up"))
             Button { registry.moveTab(module.id, by: 1) } label: { Image(systemName: "chevron.down") }
-                .disabled(index == registry.tabOrder.count - 1)
+                .disabled(!isOn || index >= onCount - 1)
                 .accessibilityLabel(Text("Move \(Text(module.title)) down"))
         }
         .buttonStyle(.borderless)
