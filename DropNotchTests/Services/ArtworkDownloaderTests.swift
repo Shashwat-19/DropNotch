@@ -48,6 +48,14 @@ final class ArtworkDownloaderTests: XCTestCase {
         XCTAssertEqual(Stub.requests, 0)
     }
 
+    /// Settings › Privacy › artwork downloads off (D34): not even an allowed URL is requested.
+    func testDownloadsSwitchedOffMakeNoRequest() async {
+        let off = ArtworkDownloader(protocolClasses: [Stub.self], isAllowed: { false })
+        let data = await off.data(from: good)
+        XCTAssertNil(data)
+        XCTAssertEqual(Stub.requests, 0)
+    }
+
     func testAnImageIsReturned() async {
         let data = await downloader.data(from: good)
         XCTAssertEqual(data, Data([0xFF, 0xD8, 0xFF, 0xE0]))
