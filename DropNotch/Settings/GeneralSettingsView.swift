@@ -8,6 +8,7 @@ struct GeneralSettingsView: View {
     let notchState: NotchState
 
     /// Read from the system, never saved by DropNotch: the user can change it in System Settings › Login Items.
+    /// Waiting for approval shows as on, so the toggle can withdraw it (security-auditor L4).
     @State private var loginStatus = SMAppService.mainApp.status
     @State private var loginError = false
     @AppStorage(NotchDisplay.key) private var display = NotchDisplay.builtIn
@@ -15,7 +16,8 @@ struct GeneralSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Launch at login", isOn: Binding(get: { loginStatus == .enabled }, set: setLaunchAtLogin))
+                Toggle("Launch at login", isOn: Binding(get: { loginStatus == .enabled || loginStatus == .requiresApproval },
+                                                      set: setLaunchAtLogin))
                 if loginStatus == .requiresApproval {
                     // Registered, but macOS waits for the user to allow it in Login Items.
                     LabeledContent("Allow DropNotch in System Settings › General › Login Items.") {

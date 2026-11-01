@@ -910,4 +910,6 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Alternatives:** images saved too, one file each (rejected by Shash: screenshots are often sensitive, and up to 50 MB of writes); an encrypted file with a Keychain key (rejected: protects against little that FileVault and 0600 don't, since a same-user process can ask the Keychain too); a file included in backups (rejected: copied text would live in Time Machine). Drag to reorder tabs (rejected: not reachable by keyboard). Offering every module for a compact slot (rejected: only Now Playing draws one).
 
+**Review:** security-auditor, 2026-11-01: Pass with changes. M1 tests used the real clipboard.json (now a temporary file per test). L1 load requires a regular file (a symlink reports its own size; a FIFO would hang launch). L2 the folder is created 0700, and the 0600 and backup steps fail separately. L3 turning history off also turns keeping off, so Turn On never resumes writing unasked. L4 a login item waiting for approval shows as on, so the toggle can withdraw it. Not run: launch at login in a Release build (device check).
+
 **Not done:** module-specific settings views (`settingsView()` stays empty); confirmation before Clear; a saved file written by a crashed or older run is deleted only by Clear or by turning an option off.

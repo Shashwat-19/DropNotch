@@ -23,7 +23,7 @@ struct PrivacySettingsView: View {
                         .disabled(!clipboard.isOn)
                     Button("Clear Clipboard History") { clipboard.clear() }
                 } footer: {
-                    Text("Kept history is text and links only, saved on this Mac and never in backups. Images are always forgotten when DropNotch quits. Turning history or keeping off deletes the saved file.")
+                    Text("Kept history is text and links only, saved on this Mac and never in backups. Images are always forgotten when DropNotch quits. Turning either off deletes the saved file; turning history off also turns keeping off.")
                         .foregroundStyle(.secondary)
                 }
             }

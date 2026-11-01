@@ -116,7 +116,8 @@ final class ClipboardModule: NotchModule {
         items = []
         hasUnreadChange = false
         lastChangeCount = nil
-        deleteStore()
+        // Keeping is turned off too, so turning history on again never resumes writing to disk unasked (security-auditor L3).
+        setSavesToDisk(false)
     }
 
     /// Settings › Privacy: turning it on saves the current history; turning it off deletes the file (D34).
@@ -265,10 +266,22 @@ final class ClipboardModule: NotchModule {
     private func save() {
         guard savesToDisk, isOn, isRunning else { return }
         do {
-            try FileManager.default.createDirectory(at: storeURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+            // 0700 if it creates the folder, so the moment the new file is 0644 (below) exposes nothing (security-auditor L2).
+            try FileManager.default.createDirectory(at: storeURL.deletingLastPathComponent(), withIntermediateDirectories: true,
+                                                    attributes: [.posixPermissions: 0o700])
             try JSONEncoder().encode(items.compactMap(\.text)).write(to: storeURL, options: .atomic)
-            // An atomic write replaces the file, so its permissions and backup flag are set again each time.
+        } catch {
+            Logger.clipboard.error("Clipboard save failed: \((error as NSError).domain, privacy: .public) \((error as NSError).code)")
+            return
+        }
+        // An atomic write replaces the file, so its permissions and backup flag are set again each time, separately, so
+        // one failing doesn't skip the other.
+        do {
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: storeURL.path)
+        } catch {
+            Logger.clipboard.error("Clipboard save failed: \((error as NSError).domain, privacy: .public) \((error as NSError).code)")
+        }
+        do {
             var store = storeURL
             var values = URLResourceValues()
             values.isExcludedFromBackup = true
@@ -281,7 +294,9 @@ final class ClipboardModule: NotchModule {
     /// The file is untrusted input (any same-user process can edit it): the same text rules as a copy apply.
     private func load() {
         // 25 texts at the length cap, as UTF-8 JSON: well under 100 MB. A bigger file isn't ours to read in full.
-        guard let size = try? storeURL.resourceValues(forKeys: [.fileSizeKey]).fileSize, size <= 100_000_000,
+        // A regular file only: a symlink reports its own size, and a FIFO would block the read forever (security-auditor L1).
+        guard let values = try? storeURL.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
+              values.isRegularFile == true, let size = values.fileSize, size <= 100_000_000,
               let data = try? Data(contentsOf: storeURL) else { return }
         guard let texts = try? JSONDecoder().decode([String].self, from: data) else {
             Logger.clipboard.error("Clipboard file unreadable")

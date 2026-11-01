@@ -67,6 +67,8 @@ private final class FakePasteboard: DropNotch.Pasteboard {
 @MainActor
 final class ClipboardModuleTests: XCTestCase {
     private var suiteName: String!
+    /// A throwaway file, so tests never touch the real saved history (security-auditor M1).
+    private var storeURL: URL!
     private var defaults: UserDefaults!
     private var pasteboard: FakePasteboard!
     private var module: ClipboardModule!
@@ -75,15 +77,17 @@ final class ClipboardModuleTests: XCTestCase {
     override func setUp() {
         super.setUp()
         suiteName = "ClipboardModuleTests-\(UUID())"
+        storeURL = FileManager.default.temporaryDirectory.appending(path: "ClipboardModuleTests-\(UUID()).json")
         defaults = UserDefaults(suiteName: suiteName)
         pasteboard = FakePasteboard()
-        module = ClipboardModule(pasteboard: pasteboard, defaults: defaults)
+        module = ClipboardModule(pasteboard: pasteboard, defaults: defaults, storeURL: storeURL)
     }
 
     /// Always stop, so no timer or NSWorkspace observer from `start()` outlives the test.
     override func tearDown() {
         module.stop()
         defaults.removePersistentDomain(forName: suiteName)
+        try? FileManager.default.removeItem(at: storeURL)
         super.tearDown()
     }
 
@@ -124,7 +128,7 @@ final class ClipboardModuleTests: XCTestCase {
 
         module.turnOn()
         XCTAssertEqual(module.items.map(\.text), ["before"])
-        XCTAssertTrue(ClipboardModule(pasteboard: FakePasteboard(), defaults: defaults).isOn)
+        XCTAssertTrue(ClipboardModule(pasteboard: FakePasteboard(), defaults: defaults, storeURL: storeURL).isOn)
     }
 
     // 2. Always Allow.
@@ -189,7 +193,7 @@ final class ClipboardModuleTests: XCTestCase {
     /// Always Allow chosen while running may apply only after a relaunch, so it stays Ask: no background read (W1, D7c).
     func testAllowChosenAfterLaunchIsTreatedAsAskUntilRelaunch() {
         pasteboard.access = .ask
-        let module = ClipboardModule(pasteboard: pasteboard, defaults: defaults)
+        let module = ClipboardModule(pasteboard: pasteboard, defaults: defaults, storeURL: storeURL)
         module.turnOn()
         pasteboard.access = .allowed
         pasteboard.copy("secret")
@@ -199,7 +203,7 @@ final class ClipboardModuleTests: XCTestCase {
         XCTAssertTrue(module.needsRelaunch)
         XCTAssertTrue(module.hasUnreadChange)
 
-        let relaunched = ClipboardModule(pasteboard: pasteboard, defaults: defaults)
+        let relaunched = ClipboardModule(pasteboard: pasteboard, defaults: defaults, storeURL: storeURL)
         relaunched.tick()
         XCTAssertEqual(relaunched.items.map(\.text), ["secret"])
         XCTAssertFalse(relaunched.needsRelaunch)
