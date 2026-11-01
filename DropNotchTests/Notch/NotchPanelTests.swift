@@ -69,17 +69,17 @@ final class NotchPanelTests: XCTestCase {
                                              menuBarHeight: screen.menuBar, backingScale: scale)
                 let canvas = geometry.panelFrame(for: .open)
                 for phase in [NotchHoverStateMachine.Phase.closed, .peek, .open] {
-                    for compact in [false, true] {
-                        let label = "\(screen.name) \(phase) compact \(compact) at \(scale)x"
-                        let window = NotchPanel.windowFrame(geometry.panelFrame(for: phase, compact: compact))
+                    for wings in [[], [.left], [.right], [.left, .right]] as [Set<CompactSlot>] {
+                        let label = "\(screen.name) \(phase) wings \(wings) at \(scale)x"
+                        let window = NotchPanel.windowFrame(geometry.panelFrame(for: phase, wings: wings))
                         XCTAssertEqual(appKit(window), window, "AppKit would move the window: \(label)")
                         let local = NotchPanel.canvasFrame(panelFrame: window, canvas: canvas)
                         let onScreen = local.offsetBy(dx: appKit(window).minX, dy: appKit(window).minY)
                         // NotchRootView pins the shape to the canvas top at the panel frame's height.
                         let shapeTop = onScreen.maxY
-                        let shapeBottom = shapeTop - geometry.panelFrame(for: phase, compact: compact).height
+                        let shapeBottom = shapeTop - geometry.panelFrame(for: phase, wings: wings).height
                         XCTAssertGreaterThanOrEqual(shapeTop, screen.frame.maxY, label)
-                        XCTAssertEqual(shapeBottom, geometry.frame(for: phase, compact: compact).minY, label)
+                        XCTAssertEqual(shapeBottom, geometry.frame(for: phase, wings: wings).minY, label)
                     }
                 }
             }
@@ -91,11 +91,22 @@ final class NotchPanelTests: XCTestCase {
         let geometry = notched(inset: 37.5, scale: 2)
         let panel = NotchPanel(contentView: NSView())
         for phase in [NotchHoverStateMachine.Phase.closed, .peek, .open] {
-            for compact in [false, true] {
-                let asked = geometry.panelFrame(for: phase, compact: compact)
+            for wings in [[], [.left], [.right], [.left, .right]] as [Set<CompactSlot>] {
+                let asked = geometry.panelFrame(for: phase, wings: wings)
                 panel.setFrame(asked, canvas: geometry.panelFrame(for: .open))
-                XCTAssertEqual(panel.frame, NotchPanel.windowFrame(asked), "\(phase) compact \(compact)")
+                XCTAssertEqual(panel.frame, NotchPanel.windowFrame(asked), "\(phase) wings \(wings)")
                 XCTAssertTrue(panel.frame.contains(asked))
+            }
+        }
+    }
+
+    // Shoulders are whole points (D36), so on a whole-point notch they add nothing for AppKit to round.
+    func testShouldersAddNoRoundingToAWholePointPanel() {
+        let geometry = notched(inset: 32, scale: 2)
+        for phase in [NotchHoverStateMachine.Phase.closed, .peek, .open] {
+            for wings in [[], [.left], [.right], [.left, .right]] as [Set<CompactSlot>] {
+                let asked = geometry.panelFrame(for: phase, wings: wings)
+                XCTAssertEqual(NotchPanel.windowFrame(asked), asked, "\(phase) wings \(wings)")
             }
         }
     }

@@ -7,14 +7,14 @@ struct FileTrayExpandedView: View {
     let module: FileTrayModule
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: NotchStyle.tightSpacing) {
             if module.loadFailed {
-                message("Couldn't open the tray file")
+                NotchEmptyState("Couldn't open the tray file", systemImage: "exclamationmark.triangle")
             } else if module.items.isEmpty {
-                message("Drag files onto the notch to keep them here")
+                NotchEmptyState("Drag files onto the notch to keep them here", systemImage: "tray.and.arrow.down")
             } else {
                 ScrollView(.horizontal) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: NotchStyle.tightSpacing) {
                         ForEach(module.items) { tile($0) }
                     }
                 }
@@ -22,20 +22,9 @@ struct FileTrayExpandedView: View {
                 actions
             }
         }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 8)
         // The open content is inserted each time the notch opens (D19), so files moved or deleted meanwhile
         // show up as moved or missing.
         .onAppear { module.refresh() }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text(module.title))
-    }
-
-    private func message(_ text: LocalizedStringKey) -> some View {
-        Text(text)
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func tile(_ item: TrayItem) -> some View {
@@ -47,7 +36,10 @@ struct FileTrayExpandedView: View {
             Image(nsImage: url.map { NSWorkspace.shared.icon(forFile: $0.path) } ?? NSWorkspace.shared.icon(for: .item))
                 .resizable()
                 .frame(width: 40, height: 40)
-                // A missing file is greyed out and badged, so the state doesn't rest on dimming alone (L6).
+                // Only the icon is dimmed, so the name stays readable.
+                .opacity(url == nil ? 0.4 : 1)
+                // A missing file is greyed out and badged, so the state doesn't rest on dimming alone (L6). The badge
+                // stays white on a dimmed tile: it shows the file's state, not the selection.
                 .overlay(alignment: .bottomTrailing) {
                     if url == nil { Image(systemName: "questionmark.circle.fill").foregroundStyle(.white) }
                 }
@@ -57,9 +49,12 @@ struct FileTrayExpandedView: View {
                 .truncationMode(.middle)
         }
         .frame(width: 72)
-        .padding(4)
-        .opacity(url == nil ? 0.4 : 1)
-        .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(selected ? 0.2 : 0)))
+        .padding([.horizontal, .top], NotchStyle.tightSpacing)
+        // Room for the dot inside the tile: the horizontal scroll view would clip it below.
+        .padding(.bottom, NotchStyle.spacing)
+        // Several tiles can be selected; each gets a dot (D39).
+        .notchSelection(selected, groupHasSelection: !module.selection.isEmpty, dot: .bottom,
+                        offset: CGSize(width: 0, height: -2))
         .overlay {
             TrayItemDragSource(urls: { module.dragURLs(from: item.id) },
                                onClick: { module.select(item.id, extending: $0) })
@@ -73,7 +68,7 @@ struct FileTrayExpandedView: View {
     private var actions: some View {
         let urls = module.shareURLs
         let airDrop = module.airDrop
-        return HStack(spacing: 4) {
+        return HStack(spacing: NotchStyle.tightSpacing) {
             Spacer(minLength: 0)
             Button { airDrop?.perform(withItems: urls) } label: {
                 // The system's own AirDrop image; there is no public SF Symbol for it.
@@ -85,9 +80,11 @@ struct FileTrayExpandedView: View {
             }
             .buttonStyle(.plain)
             .disabled(urls.isEmpty || airDrop?.canPerform(withItems: urls) != true)
+            .help("AirDrop")
             ShareLink(items: urls) { icon("Share", systemImage: "square.and.arrow.up") }
                 .buttonStyle(.plain)
                 .disabled(urls.isEmpty)
+                .help("Share")
             action("Remove", systemImage: "minus.circle", disabled: module.selection.isEmpty) {
                 module.remove(module.selection)
             }
@@ -107,6 +104,7 @@ struct FileTrayExpandedView: View {
         Button(action: perform) { icon(label, systemImage: systemImage) }
             .buttonStyle(.plain)
             .disabled(disabled)
+            .help(Text(label))
     }
 
     /// Icon-only on screen; VoiceOver reads the label. About a 24 pt target (L7).

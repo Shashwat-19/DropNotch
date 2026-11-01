@@ -759,6 +759,8 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Date:** 2026-10-31 · **Status:** Accepted (Shash approved the width, the animation and the 5 s grace)
 
+**Revised by D36** (2026-11-01): the closed shape widens only on the sides whose slot has content, and gains 6 pt shoulders.
+
 **Decision:**
 - While a module fills a compact slot (D8), the closed shape is the notch plus one square wing on each side, as wide as the notch is tall: about 32 pt, so about 250 pt in all on a 14" MacBook Pro. The pill on a screen without a notch widens the same way. Peek grows from that wider shape; the open size is unchanged.
 - Now Playing fills both slots by default: artwork on the left (the open notch's `NowPlayingArtworkView`, smaller), 4 decorative bars on the right (D2).
@@ -846,7 +848,7 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 **Decision:**
 - `FileTrayModule` keeps the list in `~/Library/Application Support/DropNotch/tray.json` (atomic JSON, saved on every change) and fallback copies in `…/DropNotch/Tray/<UUID>/<name>`. An unreadable tray.json turns saving off and shows "Couldn't open the tray file", as for notes (D31). Logs carry error domains and codes only, never names or paths.
 - `NotchHostingView` is the drag destination for file URLs and file promises in every state (closed, compact, open). Mouse tracking pauses during a drag, so drag enter and exit stand in for the pointer (`.pointerEntered` / `.pointerExited`): the notch peeks, opens after the usual delay, and switches to the Tray tab. Per dragged item a file URL is taken before a promise, so a file is bookmarked (D6). The drop operation is `.copy`, else `.link`, never `.move` or `.generic`: Finder treats those as a move, and the original would leave its folder.
-- Bookmarks are plain (unsandboxed, D4), resolved with `.withoutUI, .withoutMounting`, when the tray is shown or a drop arrives, not at launch, so a Desktop/Documents/Downloads prompt appears in context. Usage strings for those three folders are in project.yml. A stale bookmark is rewritten. A file that is gone, or that the bookmark followed into the Trash, is missing: greyed, badged with a question mark, named "missing" for VoiceOver, not draggable.
+- Bookmarks are plain (unsandboxed, D4), resolved with `.withoutUI, .withoutMounting`, when the tray is shown or a drop arrives, not at launch, so a Desktop/Documents/Downloads prompt appears in context. Usage strings for those three folders are in project.yml. A stale bookmark is rewritten. A file that is gone, or that the bookmark followed into the Trash, is missing: its icon greyed (the name stays readable, D37 accessibility pass), badged with a question mark, named "missing" for VoiceOver, not draggable.
 - A dropped symlink is followed: the tray holds the file the user meant. A file already in the tray isn't added twice. If `bookmarkData()` fails the file is copied (off the main thread). Promised files are written by the source app into a fresh folder; a file it reports outside that folder is ignored.
 - Removing an item, or Clear All, never touches an original; only the tray's own copy and its folder are deleted. A copy's path is built from a UUID folder and a single-component name, checked again when tray.json is loaded, so an edited file can't point a delete elsewhere; `removeItem` deletes a symlink, not its target. Before a delete, the storage folder and the item's folder must be real folders, not symlinks, so a planted `Tray/<UUID>` link can't turn Remove into a delete elsewhere (security-auditor M1; check-then-delete by path, marked `shortcut:`). A promised file that is a symlink is refused (L1), and a copy that later turns into a symlink counts as missing. Symlinks inside a promised folder are not checked.
 - Drag out is an AppKit `NSDraggingSource` per tile (SwiftUI's `onDrag` can't set the operation): `.copy` outside the app, nothing inside, so Finder copies and the Trash refuses. Dragging a selected tile drags every selected file. Drags from the tray are never dropped back in (`draggingSource` is set only inside the app).
@@ -902,6 +904,8 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Date:** 2026-11-01 · **Status:** Accepted (Shash chose text and links only, and a plain 0600 file kept out of backups, 2026-11-01; the rest follows D7, D8, D9, D25, D30, D33)
 
+**Revised by D36** (2026-11-01): modules that are off sit last in the tab order, greyed, with their arrows disabled (closes S2); a slot set to Nothing leaves no wing (closes S3).
+
 **Decision:**
 - One SwiftUI `Settings` scene with four tabs, opened from the menu-bar item (D14). `SettingsView` gets the registry and `NotchState` from `AppDelegate`.
 - **General.** Launch at login is `SMAppService.mainApp` (macOS 13+): register and unregister from the toggle; the status is read from the system each time the tab appears, never saved by DropNotch, so a change in System Settings › Login Items shows. `.requiresApproval` shows a button to Login Items; a failed call shows a line and logs the error domain and code. Default off. The hotkey recorder is `KeyboardShortcuts.Recorder` for `.toggleNotch` (D30). "Show the notch on": Built-in display (today's rule: the first screen with a notch, else the main display) or Main display (`NSScreen.screens.first`), saved as `notch.display`; a change re-runs `screensChanged()`.
@@ -933,3 +937,58 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 **Review:** code-reviewer, 2026-11-01: Approve with changes. W1 the top row now shows with every module off, so the gear and ⌘, still reach Settings. W2 ARCHITECTURE §3 and §7, and D31's status. S1 one hint: `.help("Open Settings (⌘,)")`, which macOS also gives VoiceOver as the hint. S2 the registry asserts that its modules and the gear fit `topRowMaxItems`. S4 comments. S3 kept (the wide-notch test still checks containment).
 
 **Not done:** a fifth module needs `topRowMaxItems` raised, which widens the open shape again. The open frame isn't clamped to the screen: a notch within 164 pt of a screen edge would push it off-screen. Real notches are centred, and the 480 pt minimum had the same limit (code-reviewer S5).
+
+---
+
+## D36. Notch shoulders and one-sided compact wings; modules that are off sit last
+
+**Date:** 2026-11-01 · **Status:** Accepted (Shash, 2026-11-01: 6 / 10 pt shoulders from the rendered previews; one-sided wings and the Settings order were asked for in the polish task, closing D34 S2 and S3)
+
+**Decision:**
+- `NotchShape` draws the notch: a flat top, an inverse quarter-circle "shoulder" each side where it meets the menu bar, and rounded bottom corners. Both radii are animatable, so the shoulders grow and shrink with the spring. Shoulders: none on the plain closed shape (it sits inside the hardware notch), 6 pt on the compact and peek shapes, 10 pt open (`NotchGeometry.shoulder(for:wings:)`).
+- `NotchGeometry.frame(for:)` stays the body; `panelFrame(for:)` adds the shoulders either side, so the panel, and with it the hover and click area, is 12–20 pt wider whenever the shape reaches over the menu bar. Whole points, so the panel stays on whole points.
+- The closed notch widens only on the sides whose slot has content (`ModuleRegistry.compactWings`, a `Set<CompactSlot>`). A shape with one wing isn't centred on the canvas, so `NotchRootView` offsets it by the difference of the midpoints; the offset animates with the width.
+- In `tabOrder`, modules that are on come first. Turning one off moves it to the top of those that are off; turning it on makes it the last of those that are on. `moveTab` moves only between modules that are on. An order saved before this is sorted at launch. Settings greys the rows of modules that are off and disables their arrows.
+
+**Alternatives:** shoulders inside the existing frames (rejected: they would eat into the 32 pt wings, leaving the artwork 0.4 pt from the edge); shoulders on the plain closed shape too (rejected: it would cover more of the menu bar for no visible gain); keeping the order of modules that are off in place (D34 S2: arrows stepped past hidden tabs).
+
+**Not done:** the panel includes a transparent strip beside the body on each side, as wide as the shoulder and as tall as the shape (up to 10 × 150 pt open). It is inside the hover area; whether clicks there reach the menu bar depends on AppKit's hit-testing of transparent pixels, which isn't verified (device check).
+
+---
+
+## D37. One style for the open content: spacing, type, empty states, one spring
+
+**Date:** 2026-11-01 · **Status:** Accepted (polish task, Shash, 2026-11-01)
+
+**Decision:**
+- `NotchStyle` holds the shared values: a 4 pt grid (8 between blocks, 4 within one), 24 pt sides and 12 pt bottom margins, and the spring. (The 20 % white selection fill and its edge were replaced by D39.) `NotchRootView` applies the margins once around every module, so modules no longer pad themselves.
+- Type: `.subheadline` for text, `.subheadline.weight(.semibold)` for a title, `.body` in the note's editor; icons take their font's size (`.body` for the top row and actions, `.title3` for Now Playing's controls, `.title2` for an empty state).
+- `NotchEmptyState`: a symbol over one centred line, with an optional button: Now Playing ("Nothing playing in Music or Spotify"), Tray (empty, failed load), Clipboard (off, blocked, nothing copied, no matches), Notes (failed load; the empty note keeps its "Type a note" placeholder). Not `ContentUnavailableView`: its fixed large title and symbol don't fit the ~100 pt under the top row.
+- Motion: one spring, `spring(duration: 0.25, bounce: 0)`, for open, close, the wings, tab switches (a cross-fade, so it stays on under Reduce Motion, L8) and the play/pause morph. Hover and press feedback keep their 0.12–0.15 s ease-outs, and the track text its 0.12 s fades.
+
+**Alternatives:** a spring with a little bounce (rejected: an overshoot is cut flat by the panel's edge); a longer spring (0.25 s already matched the D18 retune on device).
+
+---
+
+## D38. App icon: a drop falling into a notch
+
+**Date:** 2026-11-01 · **Status:** Accepted (Shash chose draft A over a drop held inside the notch, 2026-11-01: it reads at 16–32 px)
+
+**Decision:** An original icon: a blue-to-violet macOS rounded square (824 px body on a 1024 px canvas), a black notch drawn with `NotchShape` hanging from its top edge, and a white drop below it. `scripts/app-icon/main.swift` draws it with SwiftUI's `ImageRenderer`; `scripts/app-icon/make-icons.sh` renders the 1024 px master and scales it with `sips` into `DropNotch/Assets.xcassets/AppIcon.appiconset` (16–512 pt at 1x and 2x). project.yml sets `ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon`. No dependency.
+
+**Alternatives:** a hand-drawn vector in a design tool (no source in the repo); per-size hand tuning (not needed: the shapes are large and simple enough to scale down).
+
+**Not done:** the macOS 26 layered icon format (Icon Composer); the flat icon is used as is.
+
+---
+
+## D39. Dock-style selection: white with a dot, the rest grey (replaces D37's selection fill)
+
+**Date:** 2026-11-01 · **Status:** Accepted (Shash, 2026-11-01: disliked the filled capsule with an edge on device; chose A from rendered previews of A, B (faint fill) and C (brightness only))
+
+**Decision:**
+- `NotchSelection` (a view modifier, `.notchSelection(_:groupHasSelection:dot:offset:)`) styles the selected tab, the selected tray tiles and the clipboard row highlighted by the keyboard: full white with a 4 pt white dot; while the group has a selection, the other items are 50 % white, 75 % under Increase Contrast. The dot carries the state without brightness or colour (L6). 50 % rather than the asked ~45 %: 45 % white on black is 4.4:1, just under the 4.5:1 text needs; 50 % is 5.3:1.
+- Dot placement: 3 pt below a tab's 24 pt button, inside the top row, which is at least 28 pt tall so the dot never reaches the module on a screen without a notch; inside the bottom of a tray tile (the tile gains 4 pt, as the horizontal scroll view would clip a dot below it); in the leading padding of a clipboard row. The Settings gear uses the unselected grey.
+- Clipboard rows dim only while the notch has keyboard focus (only then is a row highlighted); a hover-opened list stays white. Tray tiles dim only while one is selected.
+
+**Alternatives:** B, a faint fill with no outline (kept a shape cue, but read as the same capsule Shash disliked); C, brightness only (rejected: state would rest on brightness alone, failing L6).

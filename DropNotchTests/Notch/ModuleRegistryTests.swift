@@ -189,7 +189,8 @@ final class ModuleRegistryTests: XCTestCase {
         registry.setEnabled("a", true)
         XCTAssertEqual(registry.selectedModule?.id, "a", "the selection survives the module being off")
         registry.selectedTabID = "nope"
-        XCTAssertEqual(registry.selectedModule?.id, "a")
+        // Turned back on, "a" joined the end of the modules that are on (D36), so "b" is first now.
+        XCTAssertEqual(registry.selectedModule?.id, "b")
     }
 
     func testSelectedModuleIsNilWithNoEnabledModules() {
@@ -200,39 +201,40 @@ final class ModuleRegistryTests: XCTestCase {
         XCTAssertNil(ModuleRegistry(modules: [], defaults: makeDefaults()).selectedModule)
     }
 
-    // MARK: hasCompactContent (D28)
+    // MARK: compactWings (D28, D36)
 
-    func testHasCompactContentNeedsAnEnabledSlotModuleWithContent() {
+    func testCompactWingsNeedAnEnabledSlotModuleWithContent() {
         let a = FakeModule("a")
         let registry = ModuleRegistry(modules: [a, FakeModule("b")], defaults: makeDefaults())
         XCTAssertEqual(registry.compactRightID, "a", "the right slot defaults to the first module")
-        XCTAssertTrue(registry.hasCompactContent)
+        XCTAssertEqual(registry.compactWings, [.left, .right])
         a.hasCompactContent = false
-        XCTAssertFalse(registry.hasCompactContent)
+        XCTAssertEqual(registry.compactWings, [])
         a.hasCompactContent = true
         registry.setEnabled("a", false)
-        XCTAssertFalse(registry.hasCompactContent)
+        XCTAssertEqual(registry.compactWings, [])
     }
 
-    func testHasCompactContentWhenEitherSlotHasContent() {
+    func testCompactWingsAreOnlyTheSidesWithContent() {
         let a = FakeModule("a"), b = FakeModule("b")
         let registry = ModuleRegistry(modules: [a, b], defaults: makeDefaults())
         registry.compactRightID = "b"
         a.hasCompactContent = false
-        XCTAssertTrue(registry.hasCompactContent, "right slot only")
+        XCTAssertEqual(registry.compactWings, [.right], "right slot only")
         a.hasCompactContent = true
         b.hasCompactContent = false
-        XCTAssertTrue(registry.hasCompactContent, "left slot only")
-        a.hasCompactContent = false
-        XCTAssertFalse(registry.hasCompactContent)
+        XCTAssertEqual(registry.compactWings, [.left], "left slot only")
+        registry.compactLeftID = nil
+        b.hasCompactContent = true
+        XCTAssertEqual(registry.compactWings, [.right], "a slot set to Nothing has no wing")
     }
 
-    func testHasCompactContentIsFalseWithEmptySlotsOrNoModules() {
+    func testCompactWingsAreEmptyWithEmptySlotsOrNoModules() {
         let registry = ModuleRegistry(modules: [FakeModule("a")], defaults: makeDefaults())
         registry.compactLeftID = nil
         registry.compactRightID = nil
-        XCTAssertFalse(registry.hasCompactContent)
-        XCTAssertFalse(ModuleRegistry(modules: [], defaults: makeDefaults()).hasCompactContent)
+        XCTAssertEqual(registry.compactWings, [])
+        XCTAssertEqual(ModuleRegistry(modules: [], defaults: makeDefaults()).compactWings, [])
     }
 
     // MARK: Saved layout (D34)
@@ -294,6 +296,62 @@ final class ModuleRegistryTests: XCTestCase {
         registry.moveTab("c", by: 1)
         registry.moveTab("nope", by: 1)
         XCTAssertEqual(registry.tabOrder, ["a", "b", "c"])
+    }
+
+    // MARK: Modules that are off sit last (D36)
+
+    func testInitSortsASavedOrderSoModulesThatAreOnComeFirst() {
+        let defaults = makeDefaults()
+        defaults.set(["c", "a", "d", "b"], forKey: "layout.tabOrder")
+        defaults.set(false, forKey: "module.a.enabled")
+        defaults.set(false, forKey: "module.b.enabled")
+        XCTAssertEqual(registry(["a", "b", "c", "d"], defaults).tabOrder, ["c", "d", "a", "b"],
+                       "each group keeps its saved order")
+    }
+
+    func testTurningOffMovesTheModuleToTheFirstSlotOfThoseThatAreOff() {
+        let registry = registry(["a", "b", "c", "d"], makeDefaults())
+        registry.setEnabled("d", false)
+        XCTAssertEqual(registry.tabOrder, ["a", "b", "c", "d"])
+        registry.setEnabled("a", false)
+        XCTAssertEqual(registry.tabOrder, ["b", "c", "a", "d"])
+        registry.setEnabled("a", false)
+        XCTAssertEqual(registry.tabOrder, ["b", "c", "a", "d"], "turning off again changes nothing")
+    }
+
+    func testTurningOnMakesTheModuleTheLastOfThoseThatAreOn() {
+        let registry = registry(["a", "b", "c", "d"], makeDefaults())
+        registry.setEnabled("a", false)
+        registry.setEnabled("b", false)
+        XCTAssertEqual(registry.tabOrder, ["c", "d", "b", "a"])
+        registry.setEnabled("a", true)
+        XCTAssertEqual(registry.tabOrder, ["c", "d", "a", "b"])
+        XCTAssertEqual(registry.expandedModules.map(\.id), ["c", "d", "a"])
+    }
+
+    func testMoveTabRefusesModulesThatAreOffAndTheBoundary() {
+        let registry = registry(["a", "b", "c", "d"], makeDefaults())
+        registry.setEnabled("c", false)
+        registry.setEnabled("d", false)
+        XCTAssertEqual(registry.tabOrder, ["a", "b", "d", "c"])
+        registry.moveTab("d", by: -1)
+        registry.moveTab("d", by: 1)
+        registry.moveTab("c", by: -1)
+        registry.moveTab("b", by: 1)
+        XCTAssertEqual(registry.tabOrder, ["a", "b", "d", "c"], "nothing crosses between on and off")
+        registry.moveTab("b", by: -1)
+        XCTAssertEqual(registry.tabOrder, ["b", "a", "d", "c"])
+    }
+
+    func testOrderAfterTogglingSurvivesANewRegistry() {
+        let defaults = makeDefaults()
+        let first = registry(["a", "b", "c"], defaults)
+        first.setEnabled("a", false)
+        first.moveTab("c", by: -1)
+        XCTAssertEqual(first.tabOrder, ["c", "b", "a"])
+        let second = registry(["a", "b", "c"], defaults)
+        XCTAssertEqual(second.tabOrder, ["c", "b", "a"])
+        XCTAssertEqual(second.enabledIDs, ["b", "c"])
     }
 
     func testSavedSlotWithoutCompactViewIsEmpty() {

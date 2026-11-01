@@ -33,13 +33,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         screenObserver = ScreenObserver { [notchState] in notchState.screensChanged() }
     }
 
-    /// Widens the closed notch while a module fills a compact slot (D28). Observation reports one change and
+    /// Widens the closed notch on each side where a module fills a compact slot (D28, D36). Observation reports one change and
     /// then has to be asked again; `onChange` runs before the new value is stored, so re-read on the next turn.
     private func followCompactContent() {
-        let shown = withObservationTracking { registry.hasCompactContent } onChange: { [weak self] in
+        let wings = withObservationTracking { registry.compactWings } onChange: { [weak self] in
             Task { @MainActor in self?.followCompactContent() }
         }
-        notchState.setCompact(shown)
+        notchState.setWings(wings)
     }
 
     func applicationWillTerminate(_ notification: Notification) {

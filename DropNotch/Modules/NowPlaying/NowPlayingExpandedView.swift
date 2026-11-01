@@ -16,10 +16,10 @@ struct NowPlayingExpandedView: View {
     var body: some View {
         if let info = module.shown {
             let text = displayedText ?? TrackText(info)
-            VStack(spacing: 8) {
+            VStack(spacing: NotchStyle.spacing) {
                 HStack(spacing: 12) {
                     NowPlayingArtworkView(artwork: info.artwork, player: info.player, size: 56)
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: NotchStyle.tightSpacing) {
                         // Verbatim (a String, not a literal): track names are never looked up for translation.
                         Text(text.title)
                             .font(.subheadline.weight(.semibold))
@@ -58,10 +58,6 @@ struct NowPlayingExpandedView: View {
             .onChange(of: hasKeyboardFocus, initial: true) { if hasKeyboardFocus { focus = .playPause } }
             .onMoveCommand { moveFocus($0, denied: module.deniedPlayer == info.player) }
             .lineLimit(1)
-            .padding(.horizontal, 24)
-            // One group named after the module, so VoiceOver announces where the controls belong (L4).
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel(Text(module.title))
             // The open content is inserted each time the notch opens (D19), so this runs once per open.
             .onAppear {
                 displayedText = TrackText(info)
@@ -69,9 +65,7 @@ struct NowPlayingExpandedView: View {
             }
             .onChange(of: TrackText(info)) { fadeToCurrentText() }
         } else {
-            Text("Nothing playing")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+            NotchEmptyState("Nothing playing in Music or Spotify", systemImage: "music.note")
         }
     }
 
@@ -81,7 +75,7 @@ struct NowPlayingExpandedView: View {
             control(.playPause, isPlaying ? "Pause" : "Play", systemImage: isPlaying ? "pause.fill" : "play.fill")
                 // Play morphs into pause; under Reduce Motion it only fades.
                 .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))
-                .animation(.default, value: isPlaying)
+                .animation(NotchStyle.spring, value: isPlaying)
             control(.next, "Next track", systemImage: "forward.fill")
         }
         // Not disabled while a command is in flight: that dimmed the controls on every click. `perform`

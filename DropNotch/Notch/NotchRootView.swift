@@ -7,19 +7,24 @@ struct NotchRootView: View {
     let registry: ModuleRegistry
 
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         // The panel's frame, not the shape's: the shape fills the 1 pt strip above the screen too, so its top
         // edge is off-screen in every state and during every animation (D29).
-        let size = state.geometry?.panelFrame(for: state.displayedPhase, compact: state.displaysCompact).size ?? .zero
-        let radius: CGFloat = state.displayedPhase == .open ? 18 : 10
-        let shape = UnevenRoundedRectangle(bottomLeadingRadius: radius, bottomTrailingRadius: radius)
+        let phase = state.displayedPhase, wings = state.displayedWings
+        let frame = state.geometry?.panelFrame(for: phase, wings: wings) ?? .zero
+        // Placed from the canvas's leading edge rather than centred: a shape with one wing isn't centred (D36), and
+        // whole-point edges keep it on whole pixels, which centring an odd width difference wouldn't (code-reviewer S1).
+        let offset = frame.minX - (state.geometry?.panelFrame(for: .open).minX ?? frame.minX)
+        let shape = NotchShape(shoulder: NotchGeometry.shoulder(for: phase, wings: wings),
+                               bottomRadius: phase == .open ? 18 : 10)
         shape
             .fill(.black)
-            .frame(width: size.width, height: size.height)
+            .frame(width: frame.width, height: frame.height)
             .overlay(alignment: .top) {
-                if state.displayedPhase != .open, state.displaysCompact, let geometry = state.geometry {
-                    compactSlots(geometry)
+                if phase != .open, !wings.isEmpty, let geometry = state.geometry {
+                    compactSlots(geometry, wings: wings)
                         .padding(.top, NotchGeometry.topOverhang)
                         .transition(.opacity)
                 }
@@ -33,12 +38,29 @@ struct NotchRootView: View {
                     VStack(spacing: 0) {
                         // The tabs sit in the strip right of the camera housing; the module starts below it. The row
                         // shows with every module off too, so Settings stays reachable (code-reviewer W1, D35).
-                        topRow.frame(height: state.geometry?.closedFrame.height ?? 0)
-                        registry.selectedModule?.expandedView().frame(maxHeight: .infinity)
+                        // At least 4 pt under the buttons for the selected tab's dot (D39): without a notch the row is
+                        // only the menu bar's height, and the dot would hang into the module (code-reviewer W1).
+                        topRow.frame(height: max(state.geometry?.closedFrame.height ?? 0,
+                                                 NotchGeometry.topRowItemSize.height + 4))
+                        if let module = registry.selectedModule {
+                            // Every module gets the same margins (D37). The id makes a tab switch cross-fade.
+                            module.expandedView()
+                                .padding(.horizontal, NotchStyle.sidePadding)
+                                .padding(.bottom, NotchStyle.bottomPadding)
+                                .frame(maxHeight: .infinity)
+                                // One group named after the module, empty states included, so VoiceOver announces
+                                // where the content belongs (L4).
+                                .accessibilityElement(children: .contain)
+                                .accessibilityLabel(Text(module.title))
+                                .id(module.id)
+                                .transition(.opacity)
+                        }
                     }
                     // Keeps the row at the top when no module fills the space below it.
                     .frame(maxHeight: .infinity, alignment: .top)
                     .padding(.top, NotchGeometry.topOverhang)
+                    // The content sits in the body, between the shoulders.
+                    .padding(.horizontal, NotchGeometry.openShoulder)
                     // The shape is always black, so its content uses dark colours in light mode too (L5).
                     .environment(\.colorScheme, .dark)
                     .environment(\.notchHasKeyboardFocus, state.hasKeyboardFocus)
@@ -49,7 +71,8 @@ struct NotchRootView: View {
                     .transition(.asymmetric(insertion: .opacity, removal: .identity))
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .offset(x: offset)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             // The panel overlaps the camera housing; without this SwiftUI would push
             // the content below the screen's safe area.
             .ignoresSafeArea()
@@ -84,7 +107,9 @@ struct NotchRootView: View {
             Label("Settings", systemImage: "gearshape")
                 .labelStyle(.iconOnly)
                 .frame(width: NotchGeometry.topRowItemSize.width, height: NotchGeometry.topRowItemSize.height)
-                .foregroundStyle(.secondary)
+                // The same grey as the tabs that aren't selected (D39).
+                .foregroundStyle(.white.opacity(NotchSelection.opacity(isSelected: false, groupHasSelection: true,
+                                                                       increasedContrast: contrast == .increased)))
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -97,13 +122,13 @@ struct NotchRootView: View {
 
     private func tab(_ module: any NotchModule, index: Int) -> some View {
         let selected = module.id == registry.selectedModule?.id
-        return Button { registry.selectedTabID = module.id } label: {
+        // The shared spring, which here only cross-fades, so it stays on under Reduce Motion (L8).
+        return Button { withAnimation(NotchStyle.spring) { registry.selectedTabID = module.id } } label: {
             Label { Text(module.title) } icon: { Image(systemName: module.systemImage) }
                 .labelStyle(.iconOnly)
                 .frame(width: NotchGeometry.topRowItemSize.width, height: NotchGeometry.topRowItemSize.height)
-                // A filled capsule as well as brighter, so the selection doesn't rest on colour alone (L6).
-                .background(Capsule().fill(.white.opacity(selected ? 0.2 : 0)))
-                .foregroundStyle(selected ? .primary : .secondary)
+                // White with a dot below; the others grey (D39). The dot sits in the row's space under the button.
+                .notchSelection(selected, groupHasSelection: true, dot: .bottom, offset: CGSize(width: 0, height: 3))
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -111,16 +136,18 @@ struct NotchRootView: View {
         .keyboardShortcut(index < 9 ? KeyboardShortcut(KeyEquivalent(Character("\(index + 1)"))) : nil)
         .focusable(false)
         .accessibilityAddTraits(selected ? .isSelected : [])
+        .help(index < 9 ? Text("\(Text(module.title)) (⌘\(index + 1))") : Text(module.title))
     }
 
-    /// The compact wings either side of the notch (D8, D28), at the closed height so peek doesn't move them.
-    private func compactSlots(_ geometry: NotchGeometry) -> some View {
+    /// The compact wings beside the notch (D8, D28), on the sides that have content (D36), at the closed height so
+    /// peek doesn't move them.
+    private func compactSlots(_ geometry: NotchGeometry, wings: Set<CompactSlot>) -> some View {
         HStack(spacing: 0) {
-            compactSlot(.left, geometry)
+            if wings.contains(.left) { compactSlot(.left, geometry) }
             Spacer(minLength: 0)
-            compactSlot(.right, geometry)
+            if wings.contains(.right) { compactSlot(.right, geometry) }
         }
-        .frame(width: geometry.compactFrame.width, height: geometry.closedFrame.height)
+        .frame(width: geometry.frame(for: .closed, wings: wings).width, height: geometry.closedFrame.height)
         .environment(\.colorScheme, .dark)
     }
 

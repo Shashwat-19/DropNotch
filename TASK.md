@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, 4, `feat/hotkey`, 5, `feat/notes`, 6, `feat/file-tray`, and 7, `feat/clipboard`, are merged to main and pushed to `origin`. Branch 8, `feat/settings`, is in progress. Next: polish, release. See "Phase 3" below.
+**Status (2026-10-31):** Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, 4, `feat/hotkey`, 5, `feat/notes`, 6, `feat/file-tray`, and 7, `feat/clipboard`, are merged to main and pushed to `origin`. Branches 8, `feat/settings`, and 9, `feat/polish`, are merged to main (2026-11-01). Next: release. See "Phase 3" below.
 
 ## Goal
 Run a reverse-engineering analysis (REA) of Canopy and Atoll, turn it into a feature matrix and architecture plan for DropNotch, then scaffold the foundation. DropNotch must be original code that Shash owns.
@@ -316,9 +316,34 @@ Device checks (notched Mac; Debug build except 57).
 64. (D35) On the Air (208 pt housing), open the notch with all four modules on, with one on, and with none on: no tab or gear sits under the housing, and the gear is always at the far right. With none on, the gear still opens Settings. Send Shash's screenshot with this one.
 65. (D35) VoiceOver on the gear: "Settings, button" and one hint ("Open Settings"), not "Settings" twice; the tabs still read their module names. Tab and ←/→ in Now Playing move through the same controls as before.
 
+### Branch 9: `feat/polish` (D36–D39; branched from `feat/settings`; both merged to main 2026-11-01)
+
+The visual and feel pass before release: shoulders where the shape meets the menu bar; the closed notch widens only on sides with content; modules that are off sit greyed at the bottom of Settings › Modules; one spacing grid, type scale, empty states and spring across the tabs; an original app icon. Shape radii (6 / 10 pt) and icon (draft A) chosen by Shash from rendered previews, 2026-11-01. Package search: skipped (SwiftUI shapes and an asset catalogue).
+
+Out of this branch: the macOS 26 layered icon, per-module settings views, keyboard access to Tray and Clipboard buttons, a VoiceOver element for the closed notch (Release checklist).
+
+Reviews: accessibility-auditor: applied the selection edge (3:1, stronger under Increase Contrast), one VoiceOver group per module around every tab incl. empty states, "Copied" announcement, missing tray file dims only its icon, tooltips on tabs and tray actions, highlighted clipboard row is Selected, Settings rows don't slide under Reduce Motion. performance-optimizer (Debug, closed and idle, clipboard history on, 62 s): CPU 0.0 %, about 9 context switches a second (the 0.5 s clipboard poll), footprint 20 MB → 19.6 MB; no High findings. M1 (Tray refreshes on each switch to its tab) kept: a different module's `AnyView` already re-ran `onAppear` before `.id`. Its human checks (energy while playing, tab switching with tray files on a slow drive, memory over a day) join the Release checklist energy and memory items. test-writer: 18 tests, then 5 for D39 (opacity table, 50 % grey is 5.28:1) (one-sided frames, shoulders, NotchShape, off modules last); found one-sided wings half a point off at 1x with a fractional inset (fixed: each side trimmed by its own snapped wing). 412 tests, 0 failures. code-reviewer: Approve with changes, no W findings; applied S1 (shape placed from the canvas's leading edge, whole points), S2 (D36 click-strip size), S3 (one defaults write), S4 (script runs from anywhere, cleans up), S5 (one initialiser form); S6 (pure test of NotchState's frame choice) skipped. D39 review: Approve with changes; W1 (row at least 28 pt so the dot clears the module without a notch), S1–S5 applied. Clean-room grep: `NotchShape` name and an `AnimatablePair` of two radii also appear in Atoll; the path is built differently (tangent arcs with shoulders), judged not copied.
+
+Device results (Shash, 2026-11-01): 66–71 passed except the selection highlight (filled capsule with an edge), which Shash disliked; replaced by the Dock-style dot (D39), chosen from rendered previews.
+
+Device checks (Debug build is enough: project.yml gains only the icon setting, no entitlement or signing change; notched Mac).
+66. Play music, then hover-open and close a few times, with each of the four tabs selected: the shoulders flow out of the menu bar with no seam or step against the hardware notch (compact, peek, open), no bounce, nothing feels slow. On close the content vanishes at once and nothing pokes outside the shrinking shape (code-reviewer device check 1: the tab cross-fade sits inside the open overlay).
+67. Settings › Modules while music plays and the notch is closed: Left = Now Playing, Right = Nothing → only the left wing shows and the right side is flush with the hardware notch; swap to Right only; then both Nothing → it narrows to the notch. No clipped frame mid-animation. With the notch compact or open, click the menu bar a few points beside the shape: note whether the click reaches the menu bar.
+68. Settings › Modules: turn Notes off → its row slides to the bottom, greyed, arrows disabled; turn it on → it becomes the last of those on; ⌃⌥N: the tab icons and ⌘1… follow the list. With Reduce Motion on, the row moves without sliding.
+69. All four tabs: the same side margins and bottom spacing; empty states for Now Playing (quit Music and Spotify), Tray (Clear All), Clipboard (off, then on with nothing copied, then a search with no matches). The selected tab, tray tile and highlighted clipboard row have a thin edge; with Increase Contrast it is brighter. ⌘1–⌘4 cross-fade.
+70. App icon: Finder › Get Info on the built DropNotch.app, the Settings window's About tab, and System Settings › Login Items show the drop-into-notch icon (if Finder shows a generic icon, `touch` the app and relaunch Finder). No Dock icon at launch.
+71. VoiceOver on: ⌃⌥N on each tab reads the module name as a group (also on the Now Playing empty state); in Clipboard, Return on a row says "Copied"; hovering a tab or a tray action shows a tooltip.
+72. **Passed (Shash, 2026-11-01).** (D39) The selected tab icon is white with a small dot below it and the others grey; the dot doesn't touch the module content or the camera housing. Select tray tiles (click, ⌘-click): each selected tile shows a dot inside its bottom edge, the others' names dim; nothing is clipped. ⌃⌥N on Clipboard: the highlighted row has a dot at its left edge and the other rows dim; hover-opened, all rows are white. On an external display without a notch, the dot sits under the tab and clear of the module. Increase Contrast on: the grey is visibly brighter and the dot remains.
+
+
 ## Release checklist
 
 Device checks moved here from feature branches (speed mode, CLAUDE.md). Run them in the release branch on a Release build on a notched Mac.
+
+From branch 9, `feat/polish` (accessibility-auditor, 2026-11-01; not fixed on the branch, decide before release):
+- **Open (High).** File Tray has no keyboard path: tiles can't take focus, the actions are Tab stops only with Keyboard navigation on, and the hotkey sets no first focus. Same for Clipboard's Turn On, Add Clipboard and Clear (Medium).
+- **Open (Medium).** VoiceOver finds nothing in the closed or compact notch (no element or open action); also the start of click-to-open. No announcement on open or ⌘N tab switch (L4); copy-back now says "Copied".
+- **Pending.** VoiceOver with ⌃⌥N on each tab and the closed notch; Increase Contrast on the selected tab, tile and row; Reduce Motion: ⌘1/⌘2 only cross-fade, Settings rows don't slide.
 
 From branch 7, `feat/clipboard`:
 - **Pending.** Energy with history on: about 2 wakes a second from the poll and none while the screens sleep; CPU idle otherwise. Memory stays under about 60 MB of images after 25 large screenshots.

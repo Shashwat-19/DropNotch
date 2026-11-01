@@ -16,6 +16,10 @@ struct NotchGeometry: Equatable {
     /// How far the panel reaches above the screen. A pointer pushed against the top edge
     /// reports y == screen maxY, which a frame ending there counts as outside (D20).
     static let topOverhang: CGFloat = 1
+    /// Radius of the inverse curves where the shape meets the menu bar (D36), so it reads as one piece with the
+    /// hardware notch. Whole points, so a panel widened by them stays on whole points.
+    static let compactShoulder: CGFloat = 6
+    static let openShoulder: CGFloat = 10
     /// The open notch's top row sits right of the camera housing (D35): module tabs, then the Settings button.
     static let topRowItemSize = CGSize(width: 28, height: 24)
     /// Space between neighbouring buttons in the row.
@@ -88,19 +92,39 @@ struct NotchGeometry: Equatable {
     /// Width of one compact wing (D28).
     var wingWidth: CGFloat { (compactFrame.width - closedFrame.width) / 2 }
 
-    /// Where the shape is drawn in each phase; `compact` while a module fills the compact slots (D28).
-    func frame(for phase: NotchHoverStateMachine.Phase, compact: Bool = false) -> CGRect {
+    /// Where the shape's body is drawn in each phase; `wings` are the compact slots with something to show (D28).
+    /// Only those sides widen, so a slot set to Nothing leaves no empty wing (D36).
+    func frame(for phase: NotchHoverStateMachine.Phase, wings: Set<CompactSlot> = []) -> CGRect {
         switch phase {
-        case .closed: compact ? compactFrame : closedFrame
-        case .peek: compact ? compactPeekFrame : peekFrame
+        case .closed: wings.isEmpty ? closedFrame : trimmed(compactFrame, to: wings)
+        case .peek: wings.isEmpty ? peekFrame : trimmed(compactPeekFrame, to: wings)
         case .open: openFrame
         }
     }
 
-    /// The panel's frame: the shape's frame plus `topOverhang` above the screen.
-    func panelFrame(for phase: NotchHoverStateMachine.Phase, compact: Bool = false) -> CGRect {
-        let frame = frame(for: phase, compact: compact)
-        return CGRect(x: frame.minX, y: frame.minY, width: frame.width, height: frame.height + Self.topOverhang)
+    /// The shoulder radius for a phase (D36). The closed shape without wings sits inside the hardware notch, so it
+    /// has none; everything that reaches over the menu bar has them.
+    static func shoulder(for phase: NotchHoverStateMachine.Phase, wings: Set<CompactSlot> = []) -> CGFloat {
+        switch phase {
+        case .closed: wings.isEmpty ? 0 : compactShoulder
+        case .peek: compactShoulder
+        case .open: openShoulder
+        }
+    }
+
+    /// The panel's frame: the body plus the shoulders either side and `topOverhang` above the screen.
+    func panelFrame(for phase: NotchHoverStateMachine.Phase, wings: Set<CompactSlot> = []) -> CGRect {
+        let frame = frame(for: phase, wings: wings), shoulder = Self.shoulder(for: phase, wings: wings)
+        return CGRect(x: frame.minX - shoulder, y: frame.minY, width: frame.width + 2 * shoulder,
+                      height: frame.height + Self.topOverhang)
+    }
+
+    /// Takes the wing off each side not in `wings`. Each side by its own snapped width, not `wingWidth`: at 1x a
+    /// 33.5 pt wing snaps to 33 on one side and 34 on the other, and the average would land on a half point.
+    private func trimmed(_ frame: CGRect, to wings: Set<CompactSlot>) -> CGRect {
+        let minX = frame.minX + (wings.contains(.left) ? 0 : closedFrame.minX - compactFrame.minX)
+        let maxX = frame.maxX - (wings.contains(.right) ? 0 : compactFrame.maxX - closedFrame.maxX)
+        return CGRect(x: minX, y: frame.minY, width: maxX - minX, height: frame.height)
     }
 
     /// AppKit's y axis points up, so a frame hanging from the top edge has `maxY == top`.

@@ -3,18 +3,39 @@
 DropNotch is an open-source macOS utility that turns the MacBook notch into a productivity surface. The notch opens when you hover over it and stays minimal otherwise.
 
 What works today:
-- Now Playing for Apple Music and Spotify: the open notch shows the current title and artist, with artwork, a progress bar you can seek, and play/pause, next and previous controls.
-- While music plays, the closed notch widens a little to show the artwork on the left and small animated bars on the right.
+- **Now Playing** for Apple Music and Spotify: the current title and artist, with artwork, a progress bar you can seek, and play/pause, next and previous controls.
+- **Compact view:** while music plays, the closed notch widens a little on each side that has something to show. By default that is the artwork on the left and small animated bars on the right; either side can be set to Nothing in Settings.
+- **Notes:** one plain-text note, saved as you type.
+- **File tray:** drop files on the notch to keep them at hand, then drag them out again, send them with AirDrop or share them. Dropped files stay where they are; the tray keeps a link to them.
+- **Clipboard history:** off until you turn it on in its tab. Keeps the last 25 text, link and image items; click one to copy it back.
+- **Hotkey:** ⌃⌥N opens and closes the notch with keyboard focus. ⌘1, ⌘2… switch tabs and ⌘, opens Settings while the notch has focus.
 
-Planned, not built yet: a hotkey to open the notch, a file tray with AirDrop, clipboard history and quick notes.
+Each module has its own tab in the open notch, next to a Settings button.
+
+Planned, not built yet: a downloadable release, signed releases, automatic updates and per-module settings.
 
 ## Status
 
-Pre-alpha. Some checks are still outstanding, including how the Automation permission behaves (see [Permissions](#permissions)). The plans are in:
+Pre-alpha. Some checks on a real Mac are still outstanding, including how the Automation permission behaves (see [Permissions](#permissions)). The plans are in:
 
 - [docs/FEATURE_MATRIX.md](docs/FEATURE_MATRIX.md)
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - [docs/DECISIONS.md](docs/DECISIONS.md)
+
+## Install
+
+There is no release yet: build from source (below).
+
+Planned: a DMG on GitHub Releases. Until DropNotch has a Developer ID, those builds will be unsigned, and macOS will refuse to open them the first time. To open one anyway: open DropNotch once and close the warning, then go to System Settings › Privacy & Security, scroll to Security, click Open Anyway next to DropNotch and confirm. These steps will be checked against the first release.
+
+## Settings
+
+Open Settings from the DropNotch menu-bar item, or with the gear button in the open notch.
+
+- **General:** launch at login, the hotkey, and which display shows the notch (the built-in display, or the main display).
+- **Modules:** turn each module on or off, change the tab order, and choose what fills each side of the closed notch (Now Playing or Nothing). Modules that are off are greyed and move to the bottom of the list.
+- **Privacy:** Spotify artwork downloads, clipboard history on or off, keep clipboard history after quitting, clear the clipboard history, clear the tray.
+- **About:** version, licence and third-party notices.
 
 ## Requirements
 
@@ -56,15 +77,30 @@ DropNotch asks for a permission only when you first use the feature that needs i
 
 If you choose Don't Allow, the notch shows "Allow control of Music (or Spotify) in System Settings". To allow it later, open System Settings › Privacy & Security › Automation, find DropNotch and turn on Music or Spotify.
 
-The prompt and the denied state are not yet checked on a device; this section describes the intended behaviour.
+**Files and folders (Desktop, Documents, Downloads).** The file tray keeps a link to each file you drop. macOS may ask once per folder when the tray first opens a file from one of these folders: when you drop it, or when you open the Tray tab.
+
+**Paste from Other Apps (macOS 15.4 and later).** Clipboard history reads what you copy only if System Settings › Privacy & Security › Paste from Other Apps is set to Always Allow for DropNotch. Otherwise the Clipboard tab shows an Add Clipboard button after each copy, and macOS asks when you click it. If it is set to Always Deny, the tab says so and reads nothing. A change to this setting may need DropNotch to be relaunched.
+
+**Login Items.** Only if you turn on Launch at login. macOS may ask you to approve it in System Settings › General › Login Items; Settings › General shows a button that opens it.
+
+The prompts and denied states above are not all checked on a device yet; this section describes the intended behaviour.
 
 ## Privacy
 
 DropNotch does not include analytics or telemetry.
 
-Its one network request is for Spotify artwork: when a new Spotify track starts, it downloads that track's cover image over HTTPS from Spotify's image server (`i.scdn.co`), using the image address Spotify itself provides. The request carries the standard headers macOS adds (a User-Agent naming DropNotch and the macOS networking versions, your preferred languages), and Spotify's server sees your IP address; nothing else is sent, no cookies are kept, and the image is held in memory only. Music artwork comes from the Music app, with no network.
+Its one network request is for Spotify artwork: when a new Spotify track starts, it downloads that track's cover image over HTTPS from Spotify's image server (`i.scdn.co`), using the image address Spotify itself provides. The request carries the standard headers macOS adds (a User-Agent naming DropNotch and the macOS networking versions, your preferred languages), and Spotify's server sees your IP address; nothing else is sent, no cookies are kept, and the image is held in memory only. Music artwork comes from the Music app, with no network. To stop it, turn off Download Spotify artwork in Settings › Privacy; Spotify tracks then show Spotify's icon and nothing leaves the Mac.
+
+Files leave the Mac only when you send them yourself with AirDrop or Share from the tray.
 
 Now Playing reads track details from the notifications Music and Spotify broadcast on your Mac, and sends its commands straight to the player. Titles and artists are held in memory while shown, and are never saved to disk or logged.
+
+What DropNotch stores on your Mac, all in `~/Library/Application Support/DropNotch/`:
+- `Notes/note.txt`: your note, as plain text.
+- `tray.json`: the tray's list, with a link (bookmark) to each file, which includes its path. `Tray/` holds copies of drops with no file behind them (for example an image dragged from Photos or Mail) and of files that couldn't be linked. Removing an item or Clear Tray deletes only these copies, never your originals.
+- `clipboard.json`: only if you turn on Keep history after quitting. Text and link items only (images stay in memory), readable only by your user account and excluded from Time Machine backups. Turning the option off, turning history off, or Clear deletes it. Otherwise clipboard history is held in memory only and is cleared when DropNotch quits.
+
+Clipboard history skips items that password managers and other apps mark as concealed or transient. Logs never contain clipboard contents, file names or track details. The open Clipboard tab shows your history to anyone who can see your screen, including in screen sharing and recordings.
 
 ## Contributing
 
