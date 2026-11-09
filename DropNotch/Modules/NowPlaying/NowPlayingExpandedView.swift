@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Now Playing as a Home card (D42): artwork beside the title and artist, then the progress bar and three controls
-/// (D22–D26) in one row.
+/// (D22–D26) in one row, with the time under the bar (D46).
 struct NowPlayingExpandedView: View {
     let module: NowPlayingModule
     @Environment(\.openURL) private var openURL
@@ -19,13 +19,12 @@ struct NowPlayingExpandedView: View {
             let text = displayedText ?? TrackText(info)
             VStack(spacing: NotchStyle.tightSpacing) {
                 HStack(alignment: .top, spacing: 10) {
-                    // Whatever height the control row leaves, up to 54 pt: 54 on the Air's 86 pt card, less under a
-                    // taller notch (37.5 pt on a 14" MacBook Pro, D29), so the card's padding is never eaten (D42).
+                    // Whatever height the bar and time leave (D46): about 89 pt on the Air's 126 pt card, less under a
+                    // taller notch (D29), so the card's padding is never eaten (D42).
                     GeometryReader { proxy in
                         NowPlayingArtworkView(artwork: info.artwork, player: info.player, size: proxy.size.height)
                     }
                     .aspectRatio(1, contentMode: .fit)
-                    .frame(maxHeight: 54)
                     VStack(alignment: .leading, spacing: 2) {
                         // Verbatim (a String, not a literal): track names are never looked up for translation.
                         Text(text.title)
@@ -36,7 +35,7 @@ struct NowPlayingExpandedView: View {
                             Button(action: openAutomationSettings) {
                                 // Underlined as well as coloured, so it reads as a link without colour (L6).
                                 Text("Allow control of \(info.player.displayName) in System Settings").underline()
-                                    // Two lines: the card's text column is about 140 pt wide.
+                                    // Two lines: the card's text column is about 165 pt wide on the Air (D46).
                                     .lineLimit(2)
                                     // A 24 pt target (L7): it is the only way out of the denied state.
                                     .frame(minHeight: 24, alignment: .leading)
@@ -56,7 +55,8 @@ struct NowPlayingExpandedView: View {
                     .padding(.top, 2)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                HStack(spacing: NotchStyle.spacing) {
+                // Top-aligned, so the controls sit beside the bar rather than centred on the bar and time.
+                HStack(alignment: .top, spacing: NotchStyle.spacing) {
                     // An ad can report a zero duration: no bar rather than a dead one.
                     if let duration = info.duration, duration > 0, info.position != nil {
                         PlaybackProgressView(info: info, duration: duration) { seconds in

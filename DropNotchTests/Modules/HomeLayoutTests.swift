@@ -3,13 +3,17 @@ import XCTest
 @testable import DropNotch
 
 final class HomeLayoutTests: XCTestCase {
-    // The approved mock-up (docs/mockups/home-v0.2.html): 488 pt row on the Air, 8 pt gaps (D42).
-    func testTheMockUpRowOnTheAir() {
-        XCTAssertEqual(HomeLayout.widths([.wide, .medium, .narrow], total: 488, spacing: 8), [225, 142, 105])
+    // The approved mock-up (docs/mockups/home-layout-v0.2.html): 488 pt row on the Air, 8 pt gaps, Calendar at 40 % (D46).
+    func testTheDefaultTwoCardsOnTheAir() {
+        XCTAssertEqual(HomeLayout.widths([.wide, .medium], total: 488, spacing: 8), [285, 195])
     }
 
-    func testTheMockUpRowWithoutANotch() {
-        XCTAssertEqual(HomeLayout.widths([.wide, .medium, .narrow], total: 432, spacing: 8), [198, 125, 93])
+    func testAllThreeCardsOnTheAir() {
+        XCTAssertEqual(HomeLayout.widths([.wide, .medium, .narrow], total: 488, spacing: 8), [172, 195, 105])
+    }
+
+    func testAllThreeCardsWithoutANotch() {
+        XCTAssertEqual(HomeLayout.widths([.wide, .medium, .narrow], total: 432, spacing: 8), [150, 173, 93])
     }
 
     func testNoCardsHaveNoWidths() {
@@ -22,10 +26,10 @@ final class HomeLayoutTests: XCTestCase {
         }
     }
 
-    // 480 free: 480 × 0.29 / 0.505 = 275.6 and 480 × 0.215 / 0.505 = 204.4; the last card takes the spare point.
+    // 480 free: 480 × 0.4 / 0.615 = 312.2 and 480 × 0.215 / 0.615 = 167.8; the last card takes the spare point.
     func testWithoutAWideCardMediumAndNarrowShareInProportion() {
-        XCTAssertEqual(HomeLayout.widths([.medium, .narrow], total: 488, spacing: 8), [275, 205])
-        XCTAssertEqual(HomeLayout.widths([.narrow, .medium], total: 488, spacing: 8), [204, 276])
+        XCTAssertEqual(HomeLayout.widths([.medium, .narrow], total: 488, spacing: 8), [312, 168])
+        XCTAssertEqual(HomeLayout.widths([.narrow, .medium], total: 488, spacing: 8), [167, 313])
     }
 
     // Every order of 1 to 3 cards, repeats included, on every whole width from the no-notch row to beyond the Air's.

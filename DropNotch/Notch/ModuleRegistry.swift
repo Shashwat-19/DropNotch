@@ -31,8 +31,9 @@ final class ModuleRegistry {
                "Raise NotchGeometry.topRowMaxItems for another module")
         self.modules = modules
         self.defaults = defaults
-        // A module with no saved flag is on.
-        let enabled = Set(modules.map(\.id).filter { defaults.object(forKey: Self.key($0)) as? Bool ?? true })
+        // A module with no saved flag takes its default (D46).
+        let enabled = Set(modules.filter { defaults.object(forKey: Self.key($0.id)) as? Bool ?? $0.isEnabledByDefault }
+            .map(\.id))
         enabledIDs = enabled
         let ids = modules.map(\.id)
         // Saved values are checked against today's modules: one may have been removed or added since.

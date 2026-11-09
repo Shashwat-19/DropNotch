@@ -9,6 +9,8 @@ final class BatteryModule: NotchModule {
     let systemImage = "battery.75percent"
     let hasCompactContent = false
     let homeCard: HomeCardSize? = .narrow
+    /// Off until turned on in Settings: Home shows two cards by default (D46).
+    let isEnabledByDefault = false
     /// What the source last reported; nil before the first read and while the module is off.
     private(set) var status: BatteryStatus?
 

@@ -8,8 +8,11 @@ struct CalendarCardView: View {
     @Environment(\.openURL) private var openURL
     @FocusState private var focus: Focus?
 
-    /// Fixed heights, so the number of rows that fit can be worked out from the card's height.
-    private static let headerHeight: CGFloat = 30
+    /// Fixed heights, so the number of rows that fit can be worked out from the card's height. The header is the
+    /// weekday line over the 30 pt date (D46).
+    private static let weekdayHeight: CGFloat = 14
+    private static let dateHeight: CGFloat = 30
+    private static let headerHeight = weekdayHeight + dateHeight
     private static let rowHeight: CGFloat = 14
     private static let rowSpacing: CGFloat = 2
 
@@ -77,7 +80,7 @@ struct CalendarCardView: View {
     /// The locale's narrow AM/PM marker, where it has one: "Tomorrow 9:00 AM" left no room for the title.
     private static let time = Date.FormatStyle.dateTime.hour(.defaultDigits(amPM: .narrow)).minute()
 
-    /// Rows under the header; at least one. Three on the Air's 86 pt card and on a 14" MacBook Pro's (D44).
+    /// Rows under the header; at least one. Five on the Air's 126 pt card, four on a 14" MacBook Pro's (D46).
     static func capacity(height: CGFloat) -> Int {
         let space = height - headerHeight - NotchStyle.tightSpacing
         return max(1, Int((space + rowSpacing) / (rowHeight + rowSpacing)))
@@ -92,21 +95,24 @@ struct CalendarCardView: View {
     }
 
     private func header(now: Date, hidden: Int) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 4) {
+                Text(now.formatted(.dateTime.weekday(.wide)).localizedUppercase)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.red)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
+                if hidden > 0 {
+                    Text(verbatim: "+\(hidden)")
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel(Text("\(hidden) more events today"))
+                }
+            }
+            .frame(height: Self.weekdayHeight)
             Text(now, format: .dateTime.day())
                 .font(.system(size: 30, weight: .semibold).monospacedDigit())
-            Text(now.formatted(.dateTime.weekday(.wide)).localizedUppercase)
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(.red)
-                .minimumScaleFactor(0.8)
-            Spacer(minLength: 0)
-            if hidden > 0 {
-                Text(verbatim: "+\(hidden)")
-                    .foregroundStyle(.secondary)
-                    .accessibilityLabel(Text("\(hidden) more events today"))
-            }
+                .frame(height: Self.dateHeight)
         }
-        .frame(height: Self.headerHeight)
     }
 
     @ViewBuilder
