@@ -9,9 +9,13 @@ final class ModuleRegistryTests: XCTestCase {
         let title: LocalizedStringResource = "Fake"
         var hasCompactView = true
         var hasCompactContent = true
+        var homeCard: HomeCardSize?
         let systemImage = "square"
         private(set) var starts = 0, stops = 0
-        init(_ id: String) { self.id = id }
+        init(_ id: String, card: HomeCardSize? = nil) {
+            self.id = id
+            homeCard = card
+        }
         func compactView(slot: CompactSlot) -> AnyView { AnyView(EmptyView()) }
         func expandedView() -> AnyView { AnyView(EmptyView()) }
         func settingsView() -> AnyView { AnyView(EmptyView()) }
@@ -361,5 +365,101 @@ final class ModuleRegistryTests: XCTestCase {
         b.hasCompactView = false
         let registry = ModuleRegistry(modules: [FakeModule("a"), b], defaults: defaults)
         XCTAssertNil(registry.compactLeftID, "Settings doesn't offer a module without a compact view (code-reviewer S5)")
+    }
+
+    // MARK: Home cards (D42)
+
+    /// Tabs a and b, cards c1 and c2, interleaved: [a, c1, b, c2].
+    private func mixedRegistry(_ defaults: UserDefaults) -> ModuleRegistry {
+        ModuleRegistry(modules: [FakeModule("a"), FakeModule("c1", card: .wide), FakeModule("b"),
+                                 FakeModule("c2", card: .narrow)], defaults: defaults)
+    }
+
+    func testCardsAreHomeCardsInTabOrderAndNotTabs() {
+        let registry = mixedRegistry(makeDefaults())
+        XCTAssertEqual(registry.expandedModules.map(\.id), ["a", "b"])
+        XCTAssertEqual(registry.homeCards.map(\.id), ["c1", "c2"])
+        registry.tabOrder = ["c2", "a", "b", "c1"]
+        XCTAssertEqual(registry.homeCards.map(\.id), ["c2", "c1"])
+    }
+
+    func testDisabledCardsAreNeitherTabsNorHomeCards() {
+        let registry = mixedRegistry(makeDefaults())
+        registry.setEnabled("c1", false)
+        XCTAssertEqual(registry.expandedModules.map(\.id), ["a", "b"])
+        XCTAssertEqual(registry.homeCards.map(\.id), ["c2"])
+    }
+
+    func testSelectedModuleIsNeverACard() {
+        let registry = mixedRegistry(makeDefaults())
+        registry.tabOrder = ["c1", "a", "b", "c2"]
+        XCTAssertEqual(registry.selectedModule?.id, "a", "the first tab, not the first module")
+        registry.selectedTabID = "c2"
+        XCTAssertEqual(registry.selectedModule?.id, "a")
+        let cardsOnly = ModuleRegistry(modules: [FakeModule("c", card: .wide)], defaults: makeDefaults())
+        cardsOnly.selectedTabID = "c"
+        XCTAssertNil(cardsOnly.selectedModule)
+    }
+
+    func testMoveTabOnACardSwapsWithTheNextCardSkippingTabsAndSaves() {
+        let defaults = makeDefaults()
+        let registry = mixedRegistry(defaults)
+        registry.moveTab("c1", by: 1)
+        XCTAssertEqual(registry.tabOrder, ["a", "c2", "b", "c1"])
+        XCTAssertEqual(registry.homeCards.map(\.id), ["c2", "c1"])
+        XCTAssertEqual(mixedRegistry(defaults).tabOrder, ["a", "c2", "b", "c1"])
+        registry.moveTab("c1", by: -1)
+        XCTAssertEqual(registry.tabOrder, ["a", "c1", "b", "c2"])
+    }
+
+    func testMoveTabOnATabSkipsCards() {
+        let registry = mixedRegistry(makeDefaults())
+        registry.moveTab("a", by: 1)
+        XCTAssertEqual(registry.tabOrder, ["b", "c1", "a", "c2"])
+        registry.moveTab("a", by: -1)
+        XCTAssertEqual(registry.tabOrder, ["a", "c1", "b", "c2"])
+    }
+
+    func testMoveTabDoesNothingAtTheEndOfItsOwnKind() {
+        let registry = mixedRegistry(makeDefaults())
+        registry.moveTab("c1", by: -1)
+        registry.moveTab("c2", by: 1)
+        registry.moveTab("a", by: -1)
+        registry.moveTab("b", by: 1)
+        XCTAssertEqual(registry.tabOrder, ["a", "c1", "b", "c2"], "a card before the first tab or a tab after the last card")
+    }
+
+    func testMoveTabDoesNothingWhenTheNeighbourOfItsKindIsOff() {
+        let registry = mixedRegistry(makeDefaults())
+        registry.setEnabled("c2", false)
+        registry.moveTab("c1", by: 1)
+        registry.moveTab("c2", by: -1)
+        XCTAssertEqual(registry.tabOrder, ["a", "c1", "b", "c2"])
+    }
+
+    // v0.1 had no Home; its saved order must not leave Home last.
+    func testHomeIsFirstForASavedV01Order() {
+        let defaults = makeDefaults()
+        defaults.set(["now-playing", "notes", "file-tray", "clipboard"], forKey: "layout.tabOrder")
+        // As in the app: Now Playing is a card, so four tabs plus the gear fit the top row (D35).
+        let modules = [FakeModule("home"), FakeModule("now-playing", card: .wide), FakeModule("notes"),
+                       FakeModule("file-tray"), FakeModule("clipboard")]
+        let registry = ModuleRegistry(modules: modules, defaults: defaults)
+        XCTAssertEqual(registry.tabOrder, ["home", "now-playing", "notes", "file-tray", "clipboard"])
+    }
+
+    func testUnsavedCompactSlotsDefaultToTheFirstModuleWithACompactView() {
+        let home = FakeModule("home")
+        home.hasCompactView = false
+        let registry = ModuleRegistry(modules: [home, FakeModule("now-playing", card: .wide)], defaults: makeDefaults())
+        XCTAssertEqual(registry.compactLeftID, "now-playing")
+        XCTAssertEqual(registry.compactRightID, "now-playing")
+        XCTAssertNil(ModuleRegistry(modules: [home], defaults: makeDefaults()).compactLeftID,
+                     "no module with a compact view leaves the slot empty")
+    }
+
+    func testRealModulesDeclareTheirHomeCard() {
+        XCTAssertNil(HomeModule().homeCard)
+        XCTAssertEqual(NowPlayingModule(source: NoNowPlayingSource()).homeCard, .wide)
     }
 }
