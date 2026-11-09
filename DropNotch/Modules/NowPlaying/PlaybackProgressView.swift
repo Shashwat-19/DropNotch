@@ -27,7 +27,9 @@ struct PlaybackProgressView: View {
 
     private func content(now: Date) -> some View {
         let elapsed = info.elapsed(at: now) ?? 0
-        let start = now.addingTimeInterval(-elapsed)
+        // While dragging, the time follows the pointer and holds still (code-reviewer S1).
+        let shown = dragSeconds ?? elapsed
+        let start = now.addingTimeInterval(-shown)
         return VStack(spacing: 0) {
             // The gesture needs the bar's width to turn a pointer position into seconds.
             GeometryReader { geometry in
@@ -38,13 +40,24 @@ struct PlaybackProgressView: View {
             }
             // The bar is 4 pt; the 28 pt frame is the click and drag target (L7), as tall as the controls beside it.
             .frame(height: 28)
-            HStack {
-                // SwiftUI updates this text about once a second while the view exists and is playing, visible or
-                // not; closing the notch (including on screen sleep) removes it (ARCHITECTURE §9).
-                Text(timerInterval: start...start.addingTimeInterval(duration), pauseTime: info.isPlaying ? nil : now,
-                     countsDown: false, showsHours: false)
-                Spacer(minLength: NotchStyle.spacing)
-                Text(verbatim: Duration.seconds(duration).formatted(.time(pattern: .minuteSecond)))
+            // SwiftUI updates this text about once a second while the view exists and is playing, visible or not;
+            // closing the notch (including on screen sleep) removes it (ARCHITECTURE §9).
+            let elapsedText = Text(timerInterval: start...start.addingTimeInterval(duration),
+                                   pauseTime: info.isPlaying && dragSeconds == nil ? nil : now,
+                                   countsDown: false, showsHours: false)
+            // A narrow card (Battery on, or no notch) may not fit both times: then the elapsed time alone, else none,
+            // rather than both cut to "0:…" (code-reviewer W1, D46).
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    elapsedText
+                    Spacer(minLength: NotchStyle.spacing)
+                    Text(verbatim: Duration.seconds(duration).formatted(.time(pattern: .minuteSecond)))
+                }
+                HStack {
+                    elapsedText
+                    Spacer(minLength: 0)
+                }
+                Color.clear.frame(width: 0, height: 0)
             }
             .font(.subheadline.monospacedDigit())
             .foregroundStyle(.secondary)
