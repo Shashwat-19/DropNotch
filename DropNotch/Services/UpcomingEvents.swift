@@ -26,7 +26,8 @@ struct UpcomingEvents: Equatable {
         let startOfToday = calendar.startOfDay(for: now)
         let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfToday) ?? now
         let endOfTomorrow = calendar.date(byAdding: .day, value: 2, to: startOfToday) ?? now
-        let visible = events.filter { !$0.isHidden }.sorted { $0.start < $1.start }
+        // Start, then end, then id: events at the same time keep their places across reloads.
+        let visible = events.filter { !$0.isHidden }.sorted { ($0.start, $0.end, $0.id) < ($1.start, $1.end, $1.id) }
         let today = visible.filter { $0.start < startOfTomorrow && $0.end > startOfToday }
         let allDay = today.filter(\.isAllDay)
         // An event in progress counts as upcoming until it ends.

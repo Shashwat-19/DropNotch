@@ -83,10 +83,12 @@ struct CalendarCardView: View {
         return max(1, Int((space + rowSpacing) / (rowHeight + rowSpacing)))
     }
 
-    /// The ends of today's timed events still to come: the moments the list changes.
+    /// The ends of today's timed events still to come, and midnight: the moments the card changes. Midnight redraws
+    /// the date even when the day-change reload leaves the events as they were (code-reviewer S2).
     private var boundaries: [Date] {
-        let now = Date()
-        return module.events.filter { !$0.isAllDay && $0.end > now }.map(\.end).sorted()
+        let now = Date(), calendar = Calendar.autoupdatingCurrent
+        let midnight = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))
+        return (module.events.filter { !$0.isAllDay && $0.end > now }.map(\.end) + [midnight].compactMap { $0 }).sorted()
     }
 
     private func header(now: Date, hidden: Int) -> some View {
@@ -114,6 +116,9 @@ struct CalendarCardView: View {
             line(events.first?.colour, label: Text("All day"),
                  title: module.showsTitles ? events.map(\.title).joined(separator: ", ") : nil,
                  count: module.showsTitles ? nil : events.count)
+                // Without titles the row is "All day · 3"; VoiceOver would read the dot (code-reviewer S7).
+                .accessibilityLabel(module.showsTitles ? Text("All day: \(events.map(\.title).joined(separator: ", "))")
+                                                       : Text("\(events.count) all-day events"))
         case .event(let event):
             line(event.colour, label: Text(event.start, format: Self.time),
                  title: module.showsTitles ? event.title : nil)

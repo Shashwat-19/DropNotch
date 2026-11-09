@@ -1075,6 +1075,18 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - Refresh on `EKEventStoreChanged`, `NSCalendarDayChanged` and `NSSystemTimeZoneDidChange`; no timer. An event that ends while the notch is open drops off through a render-time timeline that runs only while the card is visible.
 - Privacy: titles stay in memory, are never logged or saved, and are cleared by `stop()`. Logs carry only the access status and counts.
 
+**As built (feat/calendar-card, 2026-11-09):**
+- The header is one line: the date at 30 pt with the weekday beside it, and "+N" at the right when events are left out (VoiceOver: "N more events today"). The mock-up's weekday above the date left room for 2 rows; the additions need up to 3. The row count follows the card's height (`CalendarCardView.capacity`): 3 on the Air's 86 pt card and on a 14" MacBook Pro's.
+- Times use the locale's narrow AM/PM marker ("9:00a" in US English; 24-hour locales are unchanged), so "Tomorrow 9:00 AM" leaves some room for the title. On the 122 pt card the tomorrow row's title still truncates early.
+- "No events today" when today had none at all; "No more events today" after the last one.
+- With titles off, the all-day row reads "All day · N" (VoiceOver: "N all-day events").
+- The event store lives in a private actor, built lazily on first use, so it is used from one place at a time and never on the main thread; this fixes the Sendable warnings rather than silencing them. `EKEventStoreChanged` is observed for any store, since the actor's store can't leave it. The store is reset before the first fetch after access becomes allowed, whether by the prompt or in System Settings [I: device check].
+- One access request at a time (a second Allow while the prompt is up does nothing); only the newest reload's result lands.
+- Turning the card on in Settings › Modules asks for access even while the Home tab is off: the user acted, and the card is then ready when Home is turned on.
+- Known limit (code-reviewer S1, for Shash): a timed event that started yesterday and is still running shows yesterday's start time and sorts first ("10:00p" above "9:00a"). Showing "Now" or "until <end>" instead would change the card's text.
+
+**Review:** code-reviewer, 2026-11-09: Approve with changes. W1 lazy store off the main thread; W2 reset on any change to allowed; W3 this section; S2 midnight redraw; S3 newest reload wins; S4 stable order; S5 simpler declined check; S6 project.yml comment; S7 VoiceOver label; S8 footer wording. S1 recorded above. S9 recorded above.
+
 **Alternatives:** write-only access (cannot read); the deprecated `requestAccess(to:)`; vinhnx/Shift (MIT; latest tag predates full access, adds a dependency for about 20 lines); opening a specific event via `ical://` (undocumented).
 
 ---

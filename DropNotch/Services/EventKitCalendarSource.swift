@@ -37,17 +37,24 @@ final class EventKitCalendarSource: CalendarSource {
     /// Owns the store, so it is only ever used from one place at a time and off the main thread [I: EventKit doesn't
     /// document the store as thread-safe]. One store for the app's lifetime, as Apple advises; creating it doesn't prompt.
     private actor Reader {
-        private let store = EKEventStore()
+        /// Lazy, so it is built on this actor the first time it's needed, not on the main thread at launch, and never
+        /// for someone who doesn't use the card (code-reviewer W1).
+        private lazy var store = EKEventStore()
+        /// Whether the last fetch had access; a change to allowed resets the store first.
+        private var hadAccess = false
 
         func requestFullAccess() async throws {
-            let granted = try await store.requestFullAccessToEvents()
-            // A store made before the grant may not see the calendars until it is reset [I].
-            if granted { store.reset() }
+            _ = try await store.requestFullAccessToEvents()
         }
 
         /// shortcut: one synchronous fetch, blocking this actor (not the main thread) for its length; fine for two days of
         /// events [I: not measured]. Upgrade to `enumerateEvents` in chunks if performance-optimizer measures it slow.
         func events(from start: Date, to end: Date) -> [CalendarEvent] {
+            // A store made before access was granted, by the prompt or in System Settings, may not see the calendars
+            // until it is reset [I: device check] (code-reviewer W2).
+            let hasAccess = EKEventStore.authorizationStatus(for: .event) == .fullAccess
+            if hasAccess, !hadAccess { store.reset() }
+            hadAccess = hasAccess
             let predicate = store.predicateForEvents(withStart: start, end: end, calendars: nil)
             return store.events(matching: predicate).map(CalendarEvent.init)
         }
@@ -56,7 +63,7 @@ final class EventKitCalendarSource: CalendarSource {
 
 private extension CalendarEvent {
     init(_ event: EKEvent) {
-        let declined = event.attendees?.first(where: \.isCurrentUser)?.participantStatus == .declined
+        let declined = event.attendees?.contains { $0.isCurrentUser && $0.participantStatus == .declined } == true
         self.init(id: "\(event.calendarItemIdentifier)@\(event.startDate.timeIntervalSinceReferenceDate)",
                   title: event.title ?? "", start: event.startDate, end: event.endDate, isAllDay: event.isAllDay,
                   colour: event.calendar?.cgColor, isHidden: event.status == .canceled || declined)

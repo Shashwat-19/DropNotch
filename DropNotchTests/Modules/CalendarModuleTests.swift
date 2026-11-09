@@ -319,6 +319,26 @@ final class CalendarModuleTests: XCTestCase {
         XCTAssertEqual(module.events, [Self.sample])
     }
 
+    func testWhenTwoReloadsOverlapOnlyTheNewestLands() async {
+        let older = CalendarEvent(id: "older", title: "Older", start: Date(timeIntervalSince1970: 0),
+                                  end: Date(timeIntervalSince1970: 60), isAllDay: false, colour: nil, isHidden: false)
+        let source = FakeSource(access: .allowed)
+        let module = makeModule(source)
+        module.start()
+        await settle()
+        source.events = [older]
+        source.suspends = true
+        let first = Task { await module.reload() }
+        await waitUntil { source.isSuspended }
+        source.suspends = false
+        source.events = [Self.sample]
+        await module.reload()
+        XCTAssertEqual(module.events, [Self.sample])
+        source.release()
+        await first.value
+        XCTAssertEqual(module.events, [Self.sample], "the older fetch finished last but mustn't land (code-reviewer S3)")
+    }
+
     // MARK: Titles setting
 
     func testShowsTitlesDefaultsToOnAndPersists() {

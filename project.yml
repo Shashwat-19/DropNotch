@@ -41,10 +41,10 @@ targets:
         LSUIElement: true
         # Covers the reads of the track, artwork and position (D23, D26) as well as the controls.
         NSAppleEventsUsageDescription: DropNotch shows the current track, its artwork and progress from Music and Spotify, and sends play, pause, skip and seek commands when you use the controls in the notch.
-        # Shown when the tray first opens a file kept in one of these folders (D32, RISKS.md §2).
         # Asked only from the Calendar card's Allow button or when the card is turned on in Settings (D44). macOS 14 has
         # no read-only level, so this is the full-access key; the card only reads.
         NSCalendarsFullAccessUsageDescription: "DropNotch shows today's next events in the notch. It only reads your calendars: it never adds, changes or deletes events, and nothing leaves your Mac."
+        # Shown when the tray first opens a file kept in one of these folders (D32, RISKS.md §2).
         NSDesktopFolderUsageDescription: DropNotch keeps a link to files you drop on the notch, so they stay in the tray.
         NSDocumentsFolderUsageDescription: DropNotch keeps a link to files you drop on the notch, so they stay in the tray.
         NSDownloadsFolderUsageDescription: DropNotch keeps a link to files you drop on the notch, so they stay in the tray.
