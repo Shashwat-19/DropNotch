@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-11-09):** v0.1.0 is released. v0.2 (Home dashboard, D42–D45) is in progress in speed mode: see "v0.2" at the end. Branch 1, `feat/home`, is built and reviewed; device checks 73–78 are next.
+**Status (2026-11-09):** v0.1.0 is released. v0.2 (Home dashboard, D42–D45) is in progress in speed mode: see "v0.2" at the end. Branch 1, `feat/home`, is merged to main (2026-11-09). Branch 2, `feat/battery-card`, is being built.
 
 **Phase 3 status (2026-11-01, kept for history):** release/v0.1.0 in progress: the keyboard fix (D40), reviews and DMG (D41) are done; the one device session below is next, then Shash approves the public steps. Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, 4, `feat/hotkey`, 5, `feat/notes`, 6, `feat/file-tray`, and 7, `feat/clipboard`, are merged to main and pushed to `origin`. Branches 8, `feat/settings`, and 9, `feat/polish`, are merged to main (2026-11-01). Next: release. See "Phase 3" below.
 
@@ -391,7 +391,7 @@ Decisions D42–D45; mock-up docs/mockups/home-v0.2.html (Air, 208 pt housing: c
 ### Branch 1: `feat/home` (D42)
 Steps: `homeCard` and `HomeCardSize`; registry (cards aren't tabs, `homeCards`, moves within a group, new ids at their default index, compact-slot default skips modules without a compact view); `HomeModule`, `HomeView`, `HomeLayout`; Now Playing as the wide card; Settings › Modules sections. No permissions, no entitlement: Debug build is enough.
 
-**Status (2026-11-09):** built. test-writer: 16 tests (HomeLayout; registry cards, moves, v0.1 order, slot default), no bugs. code-reviewer: Approve with changes (W1 artwork follows the card's height; S1–S5 applied; D42 Review). 445 tests, 0 failures. Offscreen render of the row at the Air's and a 14" MacBook Pro's card height checked by the lead (artwork 54 pt, then smaller; nothing clipped). Device checks 73–78 open.
+**Status (2026-11-09):** built. test-writer: 16 tests (HomeLayout; registry cards, moves, v0.1 order, slot default), no bugs. code-reviewer: Approve with changes (W1 artwork follows the card's height; S1–S5 applied; D42 Review). 445 tests, 0 failures. Offscreen render of the row at the Air's and a 14" MacBook Pro's card height checked by the lead (artwork 54 pt, then smaller; nothing clipped). Device checks 73–76 passed (Shash, 2026-11-09, MacBook Air M3, macOS 27.0.1, Debug): the card matches the mock-up, 54 pt artwork is big enough, no time text is fine. 77 and 78 were not reported (the report kept the template text); both move to the release checklist. Merged to main 2026-11-09.
 
 Device checks (notched Mac, Debug build):
 73. ⌃⌥N opens Home first with play/pause focused. ⌘1 is Home, ⌘2 Notes. On the Air: 536 pt, nothing under the housing.
@@ -406,3 +406,4 @@ Device checks (notched Mac, Debug build):
 ### Branch 4: `feat/quick-commands` (D45; security-auditor)
 ### Branch 5: `release/v0.2.0`
 README (permissions: two entitlements, Calendars; features; roadmap), ARCHITECTURE, FEATURE_MATRIX, RISKS via docs-writer; performance-optimizer; accessibility-auditor; dependency-manager; changelog-agent; MARKETING_VERSION 0.2.0; DMG.
+- **Pending (from feat/home).** 77: VoiceOver on Home (reads "Home", then a "Now Playing" group; Tab and ←/→ reach the controls; the bar is adjustable). 78: Larger Text keeps the cards' padding with smaller artwork; every card off shows "Turn on a Home card in Settings".
