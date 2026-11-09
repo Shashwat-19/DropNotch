@@ -32,13 +32,15 @@ DropNotch/
                   TrayItemDragSource (drag out), TrayShareMenu (share picker) (D32, D40)
     Clipboard/    ClipboardModule (poll, access states, history), ClipboardItem, ClipboardExpandedView (D7c, D33)
     Notes/        NotesModule (load and save), NotesExpandedView (D31)
+    Battery/      BatteryModule, BatteryCardView: the narrow Home card (D43)
   Services/       one protocol + implementations per system dependency:
                   Now Playing (D21–D24): NowPlayingSource, NowPlayingInfo, NoNowPlayingSource,
                   MediaPlayer, PlayerNotificationParser, NowPlayingSelection, AppleEventOutcome,
                   AppleEventSending, AppleEventSender, ScriptablePlayersSource, PlaybackPosition.
                   Artwork (D25, D26): NowPlayingArtwork, ArtworkLoading, ArtworkDownloader.
                   Clipboard (D33): Pasteboard (protocol, NSPasteboard conforms), PasteboardAccess.
-                  Planned: MediaRemote (v0.2), BluetoothBatteryProvider (later), …
+                  Battery (D43): BatterySource, BatteryStatus, PowerSourceBatterySource (IOKit power sources).
+                  Planned: MediaRemote (v0.2), BluetoothBatteryProvider (deferred, D43), …
   Settings/       SettingsView with General, Modules, Privacy and About tabs (D34). Planned: per-module settings
   Support/        Logger categories, small shared helpers (FourCharCode+Code). Planned: file locations (section 5)
 DropNotchTests/   mirrors the folders above
