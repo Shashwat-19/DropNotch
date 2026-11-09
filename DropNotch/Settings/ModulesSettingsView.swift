@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Turn modules on and off, order their tabs and fill the compact slots (D8, D21, D34).
+/// Turn modules on and off, order their tabs and Home cards, and fill the compact slots (D8, D21, D34, D42).
 struct ModulesSettingsView: View {
     @Bindable var registry: ModuleRegistry
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -8,15 +8,18 @@ struct ModulesSettingsView: View {
     var body: some View {
         Form {
             Section {
-                ForEach(Array(registry.tabOrder.enumerated()), id: \.element) { index, id in
-                    if let module = registry.modules.first(where: { $0.id == id }) {
-                        row(module, index: index)
-                    }
-                }
+                rows(cards: false)
             } header: {
                 Text("Tabs")
             } footer: {
                 Text("In the open notch, ⌘1 opens the first module that's on, ⌘2 the next, and so on. Modules that are off move to the bottom.").foregroundStyle(.secondary)
+            }
+            Section {
+                rows(cards: true)
+            } header: {
+                Text("Home cards")
+            } footer: {
+                Text("Cards show on the Home tab, left to right.").foregroundStyle(.secondary)
             }
             Section {
                 slotPicker("Left of the notch", selection: $registry.compactLeftID)
@@ -30,10 +33,19 @@ struct ModulesSettingsView: View {
         .formStyle(.grouped)
     }
 
+    /// One section's modules in `tabOrder`: the tabs, or the Home cards (D42). The arrows move within the section.
+    private func rows(cards: Bool) -> some View {
+        let modules = registry.tabOrder.compactMap { id in registry.modules.first { $0.id == id } }
+            .filter { ($0.homeCard != nil) == cards }
+        let onCount = modules.filter { registry.enabledIDs.contains($0.id) }.count
+        return ForEach(Array(modules.enumerated()), id: \.element.id) { index, module in
+            row(module, index: index, onCount: onCount)
+        }
+    }
+
     /// Modules that are off sit at the bottom, greyed, and can't be moved until they are on again (D36).
-    private func row(_ module: any NotchModule, index: Int) -> some View {
+    private func row(_ module: any NotchModule, index: Int, onCount: Int) -> some View {
         let isOn = registry.enabledIDs.contains(module.id)
-        let onCount = registry.tabOrder.filter(registry.enabledIDs.contains).count
         return HStack {
             Toggle(isOn: Binding(get: { isOn }, set: { on in withAnimation(reduceMotion ? nil : .default) { registry.setEnabled(module.id, on) } })) {
                 Label { Text(module.title) } icon: { Image(systemName: module.systemImage) }
