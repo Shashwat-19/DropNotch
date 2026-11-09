@@ -34,6 +34,9 @@ final class EventKitCalendarSource: CalendarSource {
         }
     }
 
+    /// Read-only by promise: the usage string says DropNotch never adds, changes or deletes events, though full access
+    /// would allow it. Any write needs a new decision and new usage text (security-auditor L1).
+    ///
     /// Owns the store, so it is only ever used from one place at a time and off the main thread [I: EventKit doesn't
     /// document the store as thread-safe]. One store for the app's lifetime, as Apple advises; creating it doesn't prompt.
     private actor Reader {

@@ -32,7 +32,7 @@ struct PrivacySettingsView: View {
                     Toggle("Show event titles", isOn: Binding(get: { calendar.showsTitles },
                                                               set: { calendar.showsTitles = $0 }))
                 } footer: {
-                    Text("When off, the Calendar card shows only times, useful when sharing your screen. DropNotch only reads your calendars; titles stay in memory and are never logged or saved.")
+                    Text("When off, the Calendar card shows only times, useful when sharing your screen. It shows every calendar, including ones hidden in Calendar. DropNotch only reads your calendars; titles stay in memory and are never logged or saved.")
                         .foregroundStyle(.secondary)
                 }
             }
