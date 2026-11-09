@@ -10,11 +10,13 @@ final class ModuleRegistryTests: XCTestCase {
         var hasCompactView = true
         var hasCompactContent = true
         var homeCard: HomeCardSize?
+        let isEnabledByDefault: Bool
         let systemImage = "square"
         private(set) var starts = 0, stops = 0
-        init(_ id: String, card: HomeCardSize? = nil) {
+        init(_ id: String, card: HomeCardSize? = nil, onByDefault: Bool = true) {
             self.id = id
             homeCard = card
+            isEnabledByDefault = onByDefault
         }
         func compactView(slot: CompactSlot) -> AnyView { AnyView(EmptyView()) }
         func expandedView() -> AnyView { AnyView(EmptyView()) }
@@ -475,5 +477,66 @@ final class ModuleRegistryTests: XCTestCase {
     func testRealModulesDeclareTheirHomeCard() {
         XCTAssertNil(HomeModule().homeCard)
         XCTAssertEqual(NowPlayingModule(source: NoNowPlayingSource()).homeCard, .wide)
+    }
+
+    func testHomeAndNowPlayingAreOnByDefault() {
+        XCTAssertTrue(HomeModule().isEnabledByDefault)
+        XCTAssertTrue(NowPlayingModule(source: NoNowPlayingSource()).isEnabledByDefault)
+    }
+
+    // MARK: Default-off modules (D46)
+
+    /// As in the app: Home, then Now Playing, Calendar and Battery cards (Battery off by default), then a tab.
+    private func defaultsRegistry(_ defaults: UserDefaults, batteryOnByDefault: Bool = false)
+        -> (ModuleRegistry, battery: FakeModule) {
+        let battery = FakeModule("battery", card: .narrow, onByDefault: batteryOnByDefault)
+        let registry = ModuleRegistry(modules: [FakeModule("home"), FakeModule("now-playing", card: .wide),
+                                                FakeModule("calendar", card: .medium), battery, FakeModule("notes")],
+                                      defaults: defaults)
+        return (registry, battery)
+    }
+
+    func testADefaultOffModuleWithNoSavedFlagIsOffNotStartedAndLast() {
+        let (registry, battery) = defaultsRegistry(makeDefaults())
+        XCTAssertFalse(registry.enabledIDs.contains("battery"))
+        XCTAssertEqual(registry.homeCards.map(\.id), ["now-playing", "calendar"])
+        XCTAssertEqual(registry.expandedModules.map(\.id), ["home", "notes"])
+        XCTAssertEqual(registry.tabOrder, ["home", "now-playing", "calendar", "notes", "battery"],
+                       "below the modules that are on (D36)")
+        registry.start()
+        XCTAssertEqual(battery.starts, 0)
+    }
+
+    /// Init writes no flag, so a later release can change a module's default for users who never chose.
+    func testInitSavesNoFlagSoTheDefaultCanChangeLater() {
+        let defaults = makeDefaults()
+        _ = defaultsRegistry(defaults)
+        for id in ["home", "now-playing", "calendar", "battery", "notes"] {
+            XCTAssertNil(defaults.object(forKey: "module.\(id).enabled"), id)
+        }
+        let (later, _) = defaultsRegistry(defaults, batteryOnByDefault: true)
+        XCTAssertTrue(later.enabledIDs.contains("battery"))
+    }
+
+    func testASavedFlagBeatsTheDefaultEitherWay() {
+        let defaults = makeDefaults()
+        defaults.set(true, forKey: "module.battery.enabled")
+        defaults.set(false, forKey: "module.calendar.enabled")
+        let (registry, battery) = defaultsRegistry(defaults)
+        XCTAssertEqual(registry.enabledIDs, ["home", "now-playing", "battery", "notes"])
+        XCTAssertEqual(registry.homeCards.map(\.id), ["now-playing", "battery"])
+        registry.start()
+        XCTAssertEqual(battery.starts, 1)
+    }
+
+    func testTurningADefaultOffModuleOnSavesTrueStartsItAndSurvivesANewRegistry() {
+        let defaults = makeDefaults()
+        let (registry, battery) = defaultsRegistry(defaults)
+        registry.start()
+        registry.setEnabled("battery", true)
+        XCTAssertEqual(battery.starts, 1)
+        XCTAssertEqual(defaults.object(forKey: "module.battery.enabled") as? Bool, true)
+        XCTAssertEqual(registry.homeCards.map(\.id), ["now-playing", "calendar", "battery"])
+        XCTAssertTrue(defaultsRegistry(defaults).0.enabledIDs.contains("battery"))
     }
 }

@@ -63,6 +63,10 @@ final class FileTrayModuleTests: XCTestCase {
         XCTAssertFalse(module.hasCompactContent)
     }
 
+    func testIsOnByDefault() {
+        XCTAssertTrue(makeModule().isEnabledByDefault)
+    }
+
     func testStartWithNoFileIsEmptyAndWritesNothing() {
         let module = makeModule()
         module.start()

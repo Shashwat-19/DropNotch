@@ -34,6 +34,11 @@ final class BatteryModuleTests: XCTestCase {
         XCTAssertNil(module.status)
     }
 
+    /// Home shows two cards until Battery is turned on (D46).
+    func testIsOffByDefault() {
+        XCTAssertFalse(BatteryModule(source: FakeSource(stream: AsyncStream { _ in })).isEnabledByDefault)
+    }
+
     func testStartShowsFirstStatusAndFollowsLaterOnes() async {
         let (stream, continuation) = AsyncStream.makeStream(of: BatteryStatus?.self)
         let module = BatteryModule(source: FakeSource(stream: stream))
