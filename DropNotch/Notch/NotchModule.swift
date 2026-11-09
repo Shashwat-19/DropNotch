@@ -5,6 +5,20 @@ enum CompactSlot {
     case left, right
 }
 
+/// How much of the Home tab's row a card takes (D42): a wide card takes what the others leave.
+enum HomeCardSize {
+    case wide, medium, narrow
+
+    /// Share of the row's width, from the approved mock-up (docs/mockups/home-v0.2.html); nil for wide.
+    var share: CGFloat? {
+        switch self {
+        case .wide: nil
+        case .medium: 0.29
+        case .narrow: 0.215
+        }
+    }
+}
+
 /// One feature of the notch (ARCHITECTURE.md §3, D21). `ModuleRegistry` owns the instances,
 /// decides when `start()` and `stop()` run, and keeps the enabled flag.
 ///
@@ -24,6 +38,8 @@ protocol NotchModule: AnyObject {
     var hasCompactView: Bool { get }
     /// Whether the compact view has anything to show right now (for example, music is playing).
     var hasCompactContent: Bool { get }
+    /// Non-nil: the module's `expandedView()` is a card on the Home tab, and it has no tab of its own (D42).
+    var homeCard: HomeCardSize? { get }
 
     func compactView(slot: CompactSlot) -> AnyView
     func expandedView() -> AnyView
@@ -37,4 +53,5 @@ protocol NotchModule: AnyObject {
 
 extension NotchModule {
     var hasCompactView: Bool { false }
+    var homeCard: HomeCardSize? { nil }
 }

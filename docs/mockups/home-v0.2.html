@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home mock-up v0.2</title>
+<!--
+  DropNotch v0.2 Home tab mock-up. Not app code: a planning aid only.
+  Sizes are computed from DropNotch/Notch/NotchGeometry.swift and NotchStyle.swift (main, 2026-11-09):
+    openSize 480 × 150, topRowItemSize 28 × 24, topRowSpacing 2, topRowInset 8, topRowMaxItems 5,
+    openShoulder 10, bottom radius 18 (NotchRootView), sidePadding 24, bottomPadding 12,
+    top row height = max(closed height, 24 + 4).
+  1 CSS px = 1 pt at 1×. The 32 pt Air housing height matches NotchGeometryTests (approximate, not measured).
+-->
+<style>
+  :root {
+    --page: #e9e9ee; --ink: #1d1d1f; --muted: #6e6e73; --panel: #ffffff; --line: #d2d2d7;
+    --menubar: rgba(246,246,246,.72); --menuink: #1d1d1f;
+    --wall-a: #4b6cb7; --wall-b: #182848;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page: #111113; --ink: #f5f5f7; --muted: #a1a1a6; --panel: #1c1c1e; --line: #38383a;
+      --menubar: rgba(30,30,30,.6); --menuink: #f5f5f7;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page: #111113; --ink: #f5f5f7; --muted: #a1a1a6; --panel: #1c1c1e; --line: #38383a;
+    --menubar: rgba(30,30,30,.6); --menuink: #f5f5f7;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink);
+         font: 14px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif; }
+  main { max-width: 1320px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 28px 0 8px; }
+  p.lead { color: var(--muted); margin: 0 0 16px; max-width: 70ch; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 16px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; background: var(--panel); color: var(--ink); padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: #0a84ff; color: #fff; }
+  .label { font-size: 12px; color: var(--muted); }
+
+  /* The desktop: wallpaper with a menu bar; the notch hangs from the top edge. */
+  .stage-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--line); }
+  .stage { position: relative; height: 230px; min-width: 100%;
+           background: linear-gradient(160deg, var(--wall-a), var(--wall-b)); overflow: hidden; }
+  .scaler { position: absolute; left: 50%; top: 0; transform-origin: top center; }
+  .menubar { position: absolute; top: 0; height: 32px; background: var(--menubar); backdrop-filter: blur(20px);
+             color: var(--menuink); font-size: 13px; display: flex; align-items: center; justify-content: space-between;
+             padding: 0 14px; }
+  .menubar span { opacity: .85; }
+
+  .notch { position: absolute; top: 0; }
+  .notch svg.shape { position: absolute; left: 0; top: 0; }
+  .housing { position: absolute; top: 0; border: 1px dashed rgba(255,255,255,.22); border-top: 0;
+             border-radius: 0 0 10px 10px; }
+  .housing .cam { position: absolute; left: 50%; top: 11px; width: 9px; height: 9px; margin-left: -4.5px;
+                  border-radius: 50%; background: #0c0c12; box-shadow: inset 0 0 0 2px #1a1a26; }
+  .tab { position: absolute; width: 28px; height: 24px; display: grid; place-items: center; color: rgba(255,255,255,.5); }
+  .tab svg { width: 15px; height: 15px; }
+  .tab.sel { color: #fff; }
+  .tab.sel::after { content: ""; position: absolute; left: 12px; top: 24px; width: 4px; height: 4px; border-radius: 50%; background: #fff; }
+
+  .module { position: absolute; display: flex; gap: 8px; }
+  .card { background: #1c1c1e; border-radius: 14px; padding: 10px; color: #fff; position: relative; overflow: hidden;
+          font-family: -apple-system, "SF Pro Text", sans-serif; }
+  .card .cap { font-size: 11px; font-weight: 600; letter-spacing: .02em; color: rgba(255,255,255,.55); text-transform: uppercase; }
+
+  /* Now Playing */
+  .np-top { display: flex; gap: 10px; }
+  .art { width: 54px; height: 54px; border-radius: 9px; flex: none;
+         background: linear-gradient(135deg, #ff9a5a, #c2366c 55%, #3a1c71); }
+  .np-text { min-width: 0; padding-top: 3px; }
+  .np-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .np-artist { font-size: 11px; color: rgba(255,255,255,.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .np-bottom { position: absolute; left: 10px; right: 10px; bottom: 9px; display: flex; align-items: center; gap: 8px; }
+  .bar { flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,.2); position: relative; }
+  .bar i { position: absolute; inset: 0 62% 0 0; border-radius: 2px; background: #fff; }
+  .ctl { display: flex; gap: 2px; }
+  .ctl b { width: 22px; height: 22px; display: grid; place-items: center; }
+  .ctl svg { width: 14px; height: 14px; fill: #fff; }
+  .ctl b.pp svg { width: 16px; height: 16px; }
+
+  /* Calendar */
+  .cal-day { font-size: 11px; font-weight: 700; color: #ff453a; text-transform: uppercase; letter-spacing: .03em; }
+  .cal-date { font-size: 30px; font-weight: 600; line-height: 1; margin: 1px 0 6px; font-variant-numeric: tabular-nums; }
+  .ev { display: flex; gap: 6px; font-size: 11px; line-height: 14px; }
+  .ev::before { content: ""; width: 3px; border-radius: 2px; background: var(--c, #0a84ff); flex: none; }
+  .ev .t { color: rgba(255,255,255,.55); font-variant-numeric: tabular-nums; flex: none; }
+  .ev .n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ev + .ev { margin-top: 3px; }
+
+  /* Battery */
+  .bat { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  .ring { position: relative; display: grid; place-items: center; }
+  .ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .ring .pct { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .bat .name { font-size: 11px; color: rgba(255,255,255,.6); display: flex; align-items: center; gap: 3px; }
+
+  /* Empty / permission states */
+  .empty { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 6px; text-align: center;
+           font-size: 11px; color: rgba(255,255,255,.6); }
+  .empty .btn { font-size: 11px; color: #fff; background: rgba(255,255,255,.14); padding: 3px 9px; border-radius: 6px; }
+
+  .dims { position: absolute; font: 11px/1 ui-monospace, Menlo, monospace; color: #ffd60a; white-space: nowrap; }
+  .notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .note { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .note h3 { margin: 0 0 4px; font-size: 14px; }
+  .note p, .note li { margin: 0; color: var(--muted); font-size: 13px; }
+  .note ul { margin: 0; padding-left: 18px; }
+  code { font: 12px ui-monospace, Menlo, monospace; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Home tab: v0.2 mock-up</h1>
+  <p class="lead">The open notch at its real size from <code>NotchGeometry</code>, which is fixed (D16, D19, D29): there is no room to grow
+    for Home, so the cards share the module area under the top row. 1 px = 1 pt at 1×. The yellow labels are the computed sizes.</p>
+
+  <div class="controls">
+    <div>
+      <div class="label">Screen</div>
+      <div class="seg" id="screen">
+        <button data-v="air" aria-pressed="true">MacBook Air, 208 pt notch</button>
+        <button data-v="pill">No notch (480 pt minimum)</button>
+        <button data-v="air6">Air with a 6th tab</button>
+      </div>
+    </div>
+    <div>
+      <div class="label">State</div>
+      <div class="seg" id="state">
+        <button data-v="full" aria-pressed="true">Everything allowed</button>
+        <button data-v="first">First run</button>
+      </div>
+    </div>
+    <div>
+      <div class="label">Zoom</div>
+      <div class="seg" id="zoom">
+        <button data-v="1">1×</button>
+        <button data-v="2" aria-pressed="true">2×</button>
+      </div>
+    </div>
+    <div>
+      <div class="label">Measurements</div>
+      <div class="seg" id="dims">
+        <button data-v="on" aria-pressed="true">Show</button>
+        <button data-v="off">Hide</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage-wrap"><div class="stage" id="stage"><div class="scaler" id="scaler"></div></div></div>
+  <p class="label" id="caption"></p>
+
+  <h2>Notes on the layout</h2>
+  <div class="notes">
+    <div class="note"><h3>Module area</h3><p id="areaNote"></p></div>
+    <div class="note"><h3>Top row</h3><p id="rowNote"></p></div>
+    <div class="note"><h3>Cards</h3>
+      <ul>
+        <li>Now Playing: 54 pt artwork (the most the card's height allows under the bar row; the old tab's was 56 pt), title, artist, a progress bar and three controls in one row.</li>
+        <li>Calendar: weekday, a 30 pt date, the next two events today. Click opens Calendar.app.</li>
+        <li>Battery: a 60 pt ring for the Mac. Headphones only if the probe finds a public API.</li>
+        <li>A card that's off leaves its space to the others; a Mac with no battery hides the Battery card.</li>
+      </ul>
+    </div>
+  </div>
+</main>
+
+<script>
+// Mirrors NotchGeometry.swift / NotchStyle.swift. Change these only if the Swift constants change.
+const G = { openW: 480, openH: 150, item: { w: 28, h: 24 }, spacing: 2, inset: 8, shoulder: 10, bottomR: 18,
+            side: 24, bottom: 12, gap: 8 };
+const rowWidth = n => n * G.item.w + (n - 1) * G.spacing + 2 * G.inset;
+
+const SCREENS = {
+  air:  { housing: 208, closedH: 32, items: 5, label: "MacBook Air-like screen: 208 × 32 pt housing (the value NotchGeometryTests uses; approximate)." },
+  pill: { housing: 0,   closedH: 24, items: 5, label: "No notch: a 200 pt pill, menu bar 24 pt; the 480 pt minimum applies." },
+  air6: { housing: 208, closedH: 32, items: 6, label: "Air with a 6th top-row item (for example a Commands tab): topRowMaxItems = 6 widens the open shape." }
+};
+
+// Tab icons: simple original glyphs, not SF Symbols.
+const ICON = {
+  home: '<svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.6"/><rect x="9" y="1" width="6" height="6" rx="1.6"/><rect x="1" y="9" width="6" height="6" rx="1.6"/><rect x="9" y="9" width="6" height="6" rx="1.6"/></svg>',
+  notes: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="1.5" width="11" height="13" rx="2"/><path d="M5 5.5h6M5 8.5h6M5 11.5h3.5"/></svg>',
+  tray: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1.5 9.5l2-6.5h9l2 6.5v4h-13z"/><path d="M1.5 9.5h4l1 1.5h3l1-1.5h4"/></svg>',
+  clip: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2.5" width="10" height="12" rx="2"/><rect x="5.5" y="1" width="5" height="3" rx="1" fill="currentColor"/></svg>',
+  cmd: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="2.5" width="13" height="11" rx="2"/><path d="M4.5 6.5l2 1.5-2 1.5M8 10h3.5"/></svg>',
+  gear: '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M6.6 1h2.8l.4 1.9 1.3.6 1.7-1 2 2-1 1.7.6 1.3 1.9.4v2.8l-1.9.4-.6 1.3 1 1.7-2 2-1.7-1-1.3.6-.4 1.9H6.6l-.4-1.9-1.3-.6-1.7 1-2-2 1-1.7-.6-1.3L-.3 9.4V6.6l1.9-.4.6-1.3-1-1.7 2-2 1.7 1 1.3-.6zM8 5.4a2.6 2.6 0 100 5.2 2.6 2.6 0 000-5.2z" transform="translate(.3 0) scale(.96)"/></svg>'
+};
+const PLAY = {
+  prev: '<svg viewBox="0 0 16 16"><path d="M3 3h2v10H3zM14 3v10L6 8z"/></svg>',
+  pause: '<svg viewBox="0 0 16 16"><rect x="3.5" y="2.5" width="3.2" height="11" rx="1"/><rect x="9.3" y="2.5" width="3.2" height="11" rx="1"/></svg>',
+  next: '<svg viewBox="0 0 16 16"><path d="M11 3h2v10h-2zM2 3v10l8-5z"/></svg>'
+};
+
+// The open NotchShape: flat top, a 10 pt inverse shoulder each side, 18 pt bottom corners. Body width w, height h.
+function shapePath(w, h) {
+  const s = G.shoulder, r = G.bottomR, W = w + 2 * s;
+  return `M0 0 H${W} Q${W - s} 0 ${W - s} ${s} V${h - r} Q${W - s} ${h} ${W - s - r} ${h} H${s + r} Q${s} ${h} ${s} ${h - r} V${s} Q${s} 0 0 0 Z`;
+}
+
+function ring(size, pct, colour, charging) {
+  const stroke = 7, r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  return `<div class="ring" style="width:${size}px;height:${size}px">
+    <svg width="${size}" height="${size}"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="${stroke}"/>
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${colour}" stroke-width="${stroke}" stroke-linecap="round"
+      stroke-dasharray="${c * pct / 100} ${c}"/></svg>
+    <span class="pct">${pct}%</span></div>`;
+}
+
+const state = { screen: "air", mode: "full", zoom: 2, dims: true };
+
+function render() {
+  const S = SCREENS[state.screen];
+  const tabs = ["home", "notes", "tray", "clip"].concat(S.items === 6 ? ["cmd"] : []);
+  const rw = rowWidth(S.items);
+  const w = Math.max(G.openW, S.housing + 2 * rw);           // NotchGeometry.open width (peek is never wider here)
+  const h = G.openH;
+  const rowH = Math.max(S.closedH, G.item.h + 4);              // NotchRootView top row height
+  const areaW = w - 2 * G.side, areaH = h - rowH - G.bottom;    // module area after NotchStyle margins
+  const rowLead = S.housing ? (w - S.housing) / 2 + S.housing : w / 2;  // openTopRowLeading
+  const W = w + 2 * G.shoulder;
+
+  // Card widths: Now Playing gets the spare width; Calendar and Battery stay near widget proportions.
+  const cal = Math.round(areaW * 0.29), bat = Math.round(areaW * 0.215);
+  const np = areaW - cal - bat - 2 * G.gap;
+
+  const first = state.mode === "first";
+  let x = rowLead + G.inset;
+  const tabHTML = tabs.map((t, i) => {
+    const el = `<div class="tab ${i === 0 ? "sel" : ""}" style="left:${G.shoulder + x}px;top:${(rowH - G.item.h - 4) / 2}px">${ICON[t]}</div>`;
+    x += G.item.w + G.spacing; return el;
+  }).join("") + `<div class="tab" style="left:${G.shoulder + w - G.inset - G.item.w}px;top:${(rowH - G.item.h - 4) / 2}px">${ICON.gear}</div>`;
+
+  const npCard = first
+    ? `<div class="card empty" style="width:${np}px;height:${areaH}px"><span>Nothing playing in Music or Spotify</span></div>`
+    : `<div class="card" style="width:${np}px;height:${areaH}px">
+        <div class="np-top"><div class="art"></div>
+          <div class="np-text"><div class="np-title">Afterglow Avenue</div><div class="np-artist">The Placeholder Band</div></div></div>
+        <div class="np-bottom"><div class="bar"><i></i></div>
+          <div class="ctl"><b>${PLAY.prev}</b><b class="pp">${PLAY.pause}</b><b>${PLAY.next}</b></div></div>
+      </div>`;
+  const calCard = first
+    ? `<div class="card empty" style="width:${cal}px;height:${areaH}px"><span>Show today's events</span><span class="btn">Allow Calendar</span></div>`
+    : `<div class="card" style="width:${cal}px;height:${areaH}px">
+        <div class="cal-day">Monday</div><div class="cal-date">9</div>
+        <div class="ev"><span class="t">10:30</span><span class="n">Stand-up</span></div>
+        <div class="ev" style="--c:#30d158"><span class="t">14:00</span><span class="n">Design review</span></div>
+      </div>`;
+  const batCard = `<div class="card bat" style="width:${bat}px;height:${areaH}px">
+        ${ring(60, first ? 100 : 82, first ? "#30d158" : "#30d158")}
+        <div class="name">Mac</div></div>`;
+
+  const dims = !state.dims ? "" : `
+    <div class="dims" style="left:${G.shoulder + 6}px;top:${h + 6}px">open shape ${w} × ${h} pt · panel ${W} × ${h + 1} pt (shoulders + 1 pt overhang)</div>
+    <div class="dims" style="left:${G.shoulder + G.side}px;top:${rowH - 12}px">module ${areaW} × ${areaH}</div>
+    <div class="dims" style="left:${G.shoulder + G.side}px;top:${h + 20}px">cards ${np} · ${cal} · ${bat} × ${areaH} pt, ${G.gap} pt gaps</div>`;
+
+  const notch = `
+    <div class="notch" style="left:${-W / 2}px;width:${W}px;height:${h}px">
+      <svg class="shape" width="${W}" height="${h}" viewBox="0 0 ${W} ${h}"><path d="${shapePath(w, h)}" fill="#000"/></svg>
+      ${S.housing ? `<div class="housing" style="left:${G.shoulder + (w - S.housing) / 2}px;width:${S.housing}px;height:${S.closedH}px"><div class="cam"></div></div>` : ""}
+      ${tabHTML}
+      <div class="module" style="left:${G.shoulder + G.side}px;top:${rowH}px">${npCard}${calCard}${batCard}</div>
+      ${dims}
+    </div>`;
+
+  const menuW = Math.max(W + 360, 1000);
+  document.getElementById("scaler").innerHTML =
+    `<div class="menubar" style="left:${-menuW / 2}px;width:${menuW}px;height:${S.closedH}px"><span> File  Edit  View</span><span>Mon 9 Nov 09:41</span></div>${notch}`;
+  const scaler = document.getElementById("scaler");
+  scaler.style.transform = `scale(${state.zoom})`;
+  document.getElementById("stage").style.height = `${(h + 44) * state.zoom}px`;
+  document.getElementById("stage").style.minWidth = `${(W + 40) * state.zoom}px`;
+
+  document.getElementById("caption").textContent = S.label;
+  document.getElementById("areaNote").textContent =
+    `${areaW} × ${areaH} pt for the whole dashboard: the open shape (${w} × ${h}) minus the 24 pt side margins, the ${rowH} pt top row and the 12 pt bottom margin (D37). A macOS small widget is about 170 × 170 pt, so these cards are wider than tall and use one line of large type, not two.`;
+  document.getElementById("rowNote").textContent =
+    `${S.items - 1} tabs + the gear = ${S.items} items, ${rw} pt right of the housing. Home is first and replaces the Now Playing tab here (decision Q1). ` +
+    (S.items === 6 ? "A 6th item raises topRowMaxItems and widens the open shape from 536 to 596 pt on this notch." : "This keeps topRowMaxItems at 5 and the Air's open width at 536 pt.");
+}
+
+function bind(id, key, parse = v => v) {
+  document.getElementById(id).addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    for (const o of e.currentTarget.querySelectorAll("button")) o.setAttribute("aria-pressed", String(o === b));
+    state[key] = parse(b.dataset.v); render();
+  });
+}
+bind("screen", "screen"); bind("state", "mode"); bind("zoom", "zoom", Number); bind("dims", "dims", v => v === "on");
+render();
+</script>
+</body>
+</html>

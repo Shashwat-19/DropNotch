@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Spacing, type and motion shared by every module's open content, so the tabs look and move alike (D37).
-/// Spacing is on a 4 pt grid. Text is `.subheadline` (11 pt) or larger; the note's editor uses `.body` for typing.
+/// Spacing is on a 4 pt grid. Text is `.subheadline` (11 pt) or larger; the note's editor uses `.body` for typing, and
+/// a Home card's title `.body` semibold (D42).
 /// Icons take the size of the font they sit in: `.body` for the top row and actions, `.title3` for Now Playing's
 /// controls, `.title2` for an empty state's symbol.
 enum NotchStyle {
@@ -13,6 +14,11 @@ enum NotchStyle {
     static let spacing: CGFloat = 8
     /// Within one block: a title and its subtitle, tiles in a row.
     static let tightSpacing: CGFloat = 4
+    /// Home cards (D42): corners, inner padding, the fill's white opacity, and the edge shown under Increase Contrast.
+    static let cardRadius: CGFloat = 14
+    static let cardPadding: CGFloat = 10
+    static let cardFill = 0.1
+    static let cardEdge = 0.35
     /// Open, close, the compact wings and tab switches all use this one spring (D37). No bounce: an overshoot past
     /// the open size would be cut flat by the panel's edges.
     static let spring = Animation.spring(duration: 0.25, bounce: 0)

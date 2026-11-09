@@ -63,6 +63,8 @@ struct NotchRootView: View {
                     .padding(.horizontal, NotchGeometry.openShoulder)
                     // The shape is always black, so its content uses dark colours in light mode too (L5).
                     .environment(\.colorScheme, .dark)
+                    // For the Home tab, which lays out the modules that are Home cards (D42).
+                    .environment(registry)
                     .environment(\.notchHasKeyboardFocus, state.hasKeyboardFocus)
                     // A click in a hover-opened note takes keyboard focus (D31).
                     .environment(\.requestNotchKeyboardFocus, NotchFocusRequest { state.send(.focusRequested) })

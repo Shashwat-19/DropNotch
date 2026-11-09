@@ -6,7 +6,8 @@ import KeyboardShortcuts
 final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Internal so the Settings scene can reach them.
     let notchState = NotchState()
-    let registry = ModuleRegistry(modules: [NowPlayingModule(source: ScriptablePlayersSource()), NotesModule(), FileTrayModule(), ClipboardModule()])
+    let registry = ModuleRegistry(modules: [HomeModule(), NowPlayingModule(source: ScriptablePlayersSource()), NotesModule(),
+                                              FileTrayModule(), ClipboardModule()])
     private var screenObserver: ScreenObserver?
 
     /// Unit tests run inside the app, so it launches for them too. Xcode sets this variable for the

@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The progress bar with the elapsed and total time (D26). Shown only when both are known.
+/// The progress bar (D26). Shown only when the position and duration are known. The card has no room for the time
+/// as text (D42), so only VoiceOver speaks it.
 struct PlaybackProgressView: View {
     let info: NowPlayingInfo
     let duration: TimeInterval
@@ -14,11 +15,11 @@ struct PlaybackProgressView: View {
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverOn
 
     var body: some View {
-        // The bar and the time text move on their own. Only for VoiceOver is the whole view redrawn, once a
-        // second while playing, so the spoken position is current; otherwise this timeline is paused.
+        // The bar moves on its own. Only for VoiceOver is the whole view redrawn, once a second while playing, so
+        // the spoken position is current; otherwise this timeline is paused.
         TimelineView(.animation(minimumInterval: 1, paused: !(voiceOverOn && info.isPlaying))) { _ in
             // Not `context.date`: while paused it stays at the timeline's first entry, so after any update the
-            // time text ran ahead by however long the view had been open [V: scratch probe, 2026-10-31].
+            // position ran ahead by however long the view had been open [V: scratch probe, 2026-10-31].
             content(now: Date())
         }
         .onChange(of: info.position) { seekTarget = nil }
@@ -26,26 +27,15 @@ struct PlaybackProgressView: View {
 
     private func content(now: Date) -> some View {
         let elapsed = info.elapsed(at: now) ?? 0
-        let start = now.addingTimeInterval(-elapsed)
-        return HStack(spacing: 8) {
-            // The gesture needs the bar's width to turn a pointer position into seconds.
-            GeometryReader { geometry in
-                PlaybackProgressBar(elapsed: dragSeconds ?? elapsed, duration: duration,
-                                    isPlaying: dragSeconds == nil && info.isPlaying)
-                    .contentShape(Rectangle())
-                    .gesture(seekGesture(width: geometry.size.width))
-            }
-            // The bar is 4 pt; the 24 pt frame is the click and drag target (L7).
-            .frame(height: 24)
-            // SwiftUI updates this text about once a second while the view exists and is playing, visible or
-            // not; closing the notch (including on screen sleep) removes it (ARCHITECTURE §9).
-            (Text(timerInterval: start...start.addingTimeInterval(duration), pauseTime: info.isPlaying ? nil : now,
-                  countsDown: false, showsHours: false)
-                + Text(verbatim: " / " + Duration.seconds(duration).formatted(.time(pattern: .minuteSecond))))
-                .font(.subheadline.monospacedDigit())
-                .foregroundStyle(.secondary)
-                .fixedSize()
+        // The gesture needs the bar's width to turn a pointer position into seconds.
+        return GeometryReader { geometry in
+            PlaybackProgressBar(elapsed: dragSeconds ?? elapsed, duration: duration,
+                                isPlaying: dragSeconds == nil && info.isPlaying)
+                .contentShape(Rectangle())
+                .gesture(seekGesture(width: geometry.size.width))
         }
+        // The bar is 4 pt; the 24 pt frame is the click and drag target (L7).
+        .frame(height: 24)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("Playback position"))
         .accessibilityValue(Text("\(Self.spoken(seekTarget ?? elapsed)) of \(Self.spoken(duration))"))
