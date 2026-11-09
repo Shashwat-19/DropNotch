@@ -95,7 +95,7 @@ Feature workflow: dependency-manager (package search) → planner → implement 
 - security-auditor also on branches touching files, network, clipboard or permissions. performance-optimizer, accessibility-auditor and docs-writer run once, in the release branch.
 - At most 6 device checks per branch: only what a human must see. Everything else goes on the release checklist.
 - One sub-agent at a time. Commit per step.
-- Remaining order (v0.2, D42–D45): home → battery-card → calendar-card → quick-commands → release.
+- Remaining order (v0.2, D42–D46): home → battery-card → calendar-card → home-layout → quick-commands → release.
 
 ## Current focus
 See TASK.md.
