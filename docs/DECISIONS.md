@@ -924,6 +924,8 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 ## D35. Top row right of the camera housing, with a Settings button (revises D31's tab placement)
 
+**Revised by D45** (2026-11-09): the open width follows the tabs that are on instead of a fixed `topRowMaxItems`.
+
 **Date:** 2026-11-01 · **Status:** Accepted (Shash, 2026-11-01: on a crowded MacBook Air menu bar the DropNotch menu-bar item hides behind the notch, and the Clipboard tab overlapped the 208 pt housing)
 
 **Decision:**
@@ -1010,6 +1012,8 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 ## D41. v0.1.0 ships as an ad-hoc-signed DMG built by create-dmg
 
+**Revised by D44** (2026-11-09): from v0.2 the app has two entitlements, apple-events and calendars.
+
 **Date:** 2026-11-01 · **Status:** Accepted (Shash, 2026-11-01: unsigned DMG via create-dmg from Homebrew; install approved)
 
 **Decision:**
@@ -1020,3 +1024,67 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - create-dmg 1.3.0 (github.com/create-dmg/create-dmg, MIT) is a build tool on the maintainer's Mac, not linked into or shipped with the app, so it has no effect on DropNotch's licence.
 
 **Alternatives:** `hdiutil` with a hand-made symlink (no window layout; kept as the fallback if create-dmg breaks). The npm `create-dmg` (it signs and needs Node; rejected, no Node in this project).
+
+---
+
+## D42. Home dashboard: cards are modules, Home is the first tab, and Now Playing becomes a card
+
+**Date:** 2026-11-09 · **Status:** Accepted (Shash, 2026-11-09: v0.2 plan, Q1–Q3; layout from docs/mockups/home-v0.2.html)
+
+**Decision:**
+- `NotchModule.homeCard: HomeCardSize?` (default nil). A module with a size is drawn as a card on Home instead of having its own tab: Now Playing `.wide`, Calendar `.medium` (D44), Battery `.narrow` (D43). Each card keeps its own enabled flag (`module.<id>.enabled`), `start()`/`stop()` and permission flow. Card order is the order of the card modules within `layout.tabOrder`; no new storage keys.
+- `HomeModule` (id `home`) is an ordinary tab. Its view reads the registry from the SwiftUI environment and lays out `registry.homeCards`. It is the only module that reads the registry; no module depends on another module's type (ARCHITECTURE §2).
+- Layout: one row in the module area, 488 × 106 pt on the Air's 208 pt housing and 432 × 110 pt without a notch. A medium card takes 29 % and a narrow one 21.5 % of the row (rounded); a wide card takes the rest: 225 · 142 · 105 pt on the Air, 8 pt gaps. Without a wide card the others share the row in those proportions, and one card fills it. `HomeLayout.widths` is pure and tested.
+- Cards: 14 pt corners, 10 pt padding, a 10 % white fill, and a 35 % white edge under Increase Contrast. A card's title is `.body` semibold, one step larger than D37's `.subheadline` for tabs (widget style).
+- Now Playing card: 54 pt artwork beside the title and artist, then the bar and the three controls (28 pt targets, L7) in one row. The elapsed / total text is dropped: the bar has about 109 pt; VoiceOver still reads the position. 54 pt is the most the card's height allows under the bar row, 2 pt less than the old tab's 56. The mock-up's note claimed its 52 pt artwork was larger than the tab's; that was wrong and is corrected.
+- Top row: Home, Notes, Tray, Clipboard and the gear, 5 items, so the Air stays at 536 pt (D35). Settings › Modules has "Tabs" and "Home cards" sections; the arrows move a module within its own section.
+- Defaults: Home first; the cards Now Playing, Calendar, Battery, all on (Calendar asks only from its Allow button, D44). A module id missing from a saved order is inserted at its default index, so v0.1 users get Home first rather than last. The compact slots default to the first module that has a compact view; this used to be the first module, which would now be Home.
+- Home with every card off shows "Turn on a Home card in Settings".
+
+**Alternatives:** keep the Now Playing tab as well as the card (rejected, Q1: 6 items, 596 pt for everyone); Home builds the cards itself (rejected: Home would depend on every card's module type); a fixed card set (rejected, Q2); Home hides itself when no card is on (rejected: a special case in the registry).
+
+---
+
+## D43. Battery card: IOKit power sources, a ring, AirPods deferred
+
+**Date:** 2026-11-09 · **Status:** Accepted (Shash, 2026-11-09: Q6 and the plan's additions); built on `feat/battery-card`
+
+**Decision:**
+- Public IOKit only: `IOPSCopyPowerSourcesInfo`, `IOPSCopyPowerSourcesList`, `IOPSGetPowerSourceDescription`, and `IOPSNotificationCreateRunLoopSource` for changes, so no timer. Only the `InternalBattery` source is read; UPS sources are ignored. Behind `BatterySource` in Services/.
+- A Mac without an internal battery at launch doesn't register the module: no card and no Settings row.
+- A ring of about 60 pt (SwiftUI `Gauge` with a small custom style, so VoiceOver gets the value) with the percentage in the middle. Charging shows a bolt and "Charging"; on power but not charging, "On power". Below 20 % the ring turns a low colour; the percentage is always shown, so the state never rests on colour alone (L6).
+- AirPods and other Bluetooth headphones are deferred (Q6). Evidence (dependency-manager, 2026-11-09): public `IOPSCopyPowerSourcesInfo` returned only the internal battery while `pmset -g accps` listed the AirPods, so pmset uses a private path; IOBluetooth's public headers have only the hands-free 0–5 indicator; a CoreBluetooth Battery Service route is unverified; `system_profiler SPBluetoothDataType` works but its output is undocumented and it needs polling (against the energy rule).
+
+**Alternatives:** `Gauge` with `.accessoryCircularCapacity` (not chosen: its size on macOS is unchecked); polling system_profiler or private IOBluetooth keys for headphones (rejected, Q6).
+
+---
+
+## D44. Calendar card: EventKit full access, the calendars entitlement, today's next events
+
+**Date:** 2026-11-09 · **Status:** Accepted (Shash, 2026-11-09: Q3, Q7, Q8 and the plan's additions); built on `feat/calendar-card`
+
+**Decision:**
+- EventKit behind `CalendarSource` in Services/. macOS 14 has no read-only level, so the card asks for full access (`requestFullAccessToEvents`) and only reads. `NSCalendarsFullAccessUsageDescription`: "DropNotch shows today's next events in the notch. It only reads your calendars: it never adds, changes or deletes events, and nothing leaves your Mac."
+- The prompt appears only from the card's Allow button or from turning the card on in Settings while access is undecided; `start()` only reads the status. Denied or write-only: a link to System Settings. Restricted: a line saying the Mac's administrator manages it.
+- Entitlement `com.apple.security.personal-information.calendars`. Apple lists it under the hardened runtime's Resource Access, next to apple-events, and its page says to enable the App Sandbox *or* the Hardened Runtime, then Calendar [V: developer.apple.com/documentation/security/hardened-runtime; …/entitlements/com.apple.security.personal-information.calendars]. It is resource access, not a runtime exception (D4 stands). Under D11, Debug builds have no hardened runtime, so a missing entitlement would pass in Debug and fail in Release: the branch needs a Release build, a Release launch and `codesign -d --entitlements -`. README's "one entitlement" and D41's "only the apple-events entitlement" become two entitlements.
+- What the card shows: the weekday and a large date; all-day events on one line above the timed ones; then the timed events that haven't ended (one in progress counts), by start time. Cancelled events and those the user declined are left out. After today's last event: "No more events today", then tomorrow's first event labelled "Tomorrow" (the first timed event, else an all-day one). "+N more" when rows run out. A "Show event titles" setting (on by default) shows times only when off. A click opens Calendar.app.
+- Refresh on `EKEventStoreChanged`, `NSCalendarDayChanged` and `NSSystemTimeZoneDidChange`; no timer. An event that ends while the notch is open drops off through a render-time timeline that runs only while the card is visible.
+- Privacy: titles stay in memory, are never logged or saved, and are cleared by `stop()`. Logs carry only the access status and counts.
+
+**Alternatives:** write-only access (cannot read); the deprecated `requestAccess(to:)`; vinhnx/Shift (MIT; latest tag predates full access, adds a dependency for about 20 lines); opening a specific event via `ical://` (undocumented).
+
+---
+
+## D45. Quick commands, not an embedded terminal, in v0.2
+
+**Date:** 2026-11-09 · **Status:** Accepted (Shash, 2026-11-09: Q4, Q5, Q9–Q11 and the plan's additions); built on `feat/quick-commands`
+
+**Decision:**
+- Saved commands run with one click or Return; the output shows as plain text. Its own Commands tab, off by default. The open width follows the tabs that are on: `max(5, tabs on + gear)` items, so 536 pt on the Air unless Commands is on, then 596 pt (revises D35's fixed `topRowMaxItems`).
+- Only commands the user saved in Settings › Commands ever run. There is no import from the clipboard, a URL or a file, and no placeholders: nothing external is put into a command.
+- Each runs as `/bin/zsh -lc <command>`, with the home folder as working directory, stdin from `/dev/null` and `TERM=dumb`, `NO_COLOR=1`. Settings says: ".zprofile is loaded (Homebrew PATH works); .zshrc aliases are not." One command at a time; a 2-minute timeout; Stop sends SIGTERM, then SIGKILL after 2 s, to the command's own process group. Turning the module off or quitting stops it. Nothing runs at launch.
+- Output: stdout and stderr together, the last 64 KB kept, in memory only. ANSI escapes and control characters other than newline and tab are stripped; `\r\n` and a lone `\r` become newlines; invalid UTF-8 becomes replacement characters. Never logged; logs carry exit status and duration only.
+- Storage: `~/Library/Application Support/DropNotch/commands.json`, mode 0600, included in backups (Q10). Loaded as untrusted input: a regular file only (no symlink), at most 256 KB, 50 commands, 60-character names, 4,096-byte commands, no NUL.
+- Folder and Automation usage strings: decided after the branch's device check shows which app name macOS gives prompts from a command's child processes (Q11).
+
+**Alternatives:** an embedded terminal with SwiftTerm (MIT; rejected for v0.2). It could take keys only while the panel is key (hotkey or a click asking for focus, as Notes does), and even then `NotchPanel.sendEvent` takes Escape for the whole panel (D31), ⌘1… and ⌘, belong to the tabs and Settings, the notch closes when it loses key or the pointer leaves, and the area is about 6 rows × 70 columns. SwiftTerm is also pre-2.0, about 72,000 lines, and has a build plugin an open PR (#808) says breaks Xcode 27 builds. A real terminal belongs in a separate window, a later feature. Foundation `Process` and `Pipe` cover running commands; swift-subprocess (Apache-2.0) was not worth a dependency.
