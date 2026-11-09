@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-11-09):** v0.1.0 is released. v0.2 (Home dashboard, D42–D45) is in progress in speed mode: see "v0.2" at the end. Branch 1, `feat/home`, is merged to main (2026-11-09). Branch 2, `feat/battery-card`, is being built.
+**Status (2026-11-09):** v0.1.0 is released. v0.2 (Home dashboard, D42–D45) is in progress in speed mode: see "v0.2" at the end. Branch 1, `feat/home`, is merged to main (2026-11-09). Branch 2, `feat/battery-card`, is built and reviewed; device checks 79–83 are next.
 
 **Phase 3 status (2026-11-01, kept for history):** release/v0.1.0 in progress: the keyboard fix (D40), reviews and DMG (D41) are done; the one device session below is next, then Shash approves the public steps. Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, 4, `feat/hotkey`, 5, `feat/notes`, 6, `feat/file-tray`, and 7, `feat/clipboard`, are merged to main and pushed to `origin`. Branches 8, `feat/settings`, and 9, `feat/polish`, are merged to main (2026-11-01). Next: release. See "Phase 3" below.
 
@@ -402,8 +402,17 @@ Device checks (notched Mac, Debug build):
 78. Displays › Larger Text (or a 14"/16" MacBook Pro): Home's cards keep padding top and bottom, the artwork is smaller, nothing is clipped. Turn every card off: "Turn on a Home card in Settings".
 
 ### Branch 2: `feat/battery-card` (D43)
+**Status (2026-11-09):** built. IOKit power sources behind `BatterySource`; narrow card with ring, percentage, Charging / On power / Mac, red below 20 %; not registered without a battery. Live reading checked by the lead on the Air (80 %, on power, not charging) and an offscreen render of five states. test-writer: 22 tests, no bugs. code-reviewer: Approve with changes (W1, S1–S3, S5–S8 applied, S4 recorded in D43). 469 tests, 0 failures. No permission or entitlement: Debug build is enough. Device checks 79–83 open.
+
+Device checks (notched Mac, Debug build):
+79. Home on the Air: Battery is the right-hand card; its percentage matches the menu-bar battery; at the highest charge you can reach, the percentage doesn't touch the ring.
+80. Notch open: unplug and replug. The label switches between "Mac", "Charging" and "On power" within a second or two, without reopening. At a charge limit or full on the adapter: "On power", no bolt.
+81. Notch closed: unplug or replug, then open: the card shows the new state at once.
+82. Settings › Modules: Battery is under "Home cards" after Now Playing. Turn it off and on about 5 times, then plug or unplug: no crash and the card follows.
+83. VoiceOver on the card: "Battery", then "N%, Charging" / "On power" / "On battery".
 ### Branch 3: `feat/calendar-card` (D44; entitlement: Release build and Release launch; security-auditor)
 ### Branch 4: `feat/quick-commands` (D45; security-auditor)
 ### Branch 5: `release/v0.2.0`
 README (permissions: two entitlements, Calendars; features; roadmap), ARCHITECTURE, FEATURE_MATRIX, RISKS via docs-writer; performance-optimizer; accessibility-auditor; dependency-manager; changelog-agent; MARKETING_VERSION 0.2.0; DMG.
 - **Pending (from feat/home).** 77: VoiceOver on Home (reads "Home", then a "Now Playing" group; Tab and ←/→ reach the controls; the bar is adjustable). 78: Larger Text keeps the cards' padding with smaller artwork; every card off shows "Turn on a Home card in Settings".
+- **Pending (from feat/battery-card).** Below 20 %: the ring is red and turns green again above. On a 14"/16" MacBook Pro the Battery card fits (about 2.5 pt spare, calculated). On a desktop Mac there is no Battery card and no Settings row. Activity Monitor › Energy: no extra idle wake-ups with the notch closed on battery.

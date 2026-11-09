@@ -33,6 +33,9 @@ struct BatteryCardView: View {
                 .rotationEffect(.degrees(-90))
             Text(Double(status.percent) / 100, format: .percent)
                 .font(.title3.weight(.semibold).monospacedDigit())
+                // "100 %" in locales with a space before the sign is wider than the ring's opening.
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         .padding(lineWidth / 2)
         .frame(width: 60, height: 60)
@@ -45,7 +48,8 @@ struct BatteryCardView: View {
         } else if status.isOnPower {
             Label("On power", systemImage: "powerplug.fill")
         } else {
-            Text("Mac")
+            // "Mac" names the device, as headphones may sit beside it later (D43); VoiceOver says the state.
+            Text("Mac").accessibilityLabel(Text("On battery"))
         }
     }
 }
