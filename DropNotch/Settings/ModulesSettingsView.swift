@@ -47,7 +47,11 @@ struct ModulesSettingsView: View {
     private func row(_ module: any NotchModule, index: Int, onCount: Int) -> some View {
         let isOn = registry.enabledIDs.contains(module.id)
         return HStack {
-            Toggle(isOn: Binding(get: { isOn }, set: { on in withAnimation(reduceMotion ? nil : .default) { registry.setEnabled(module.id, on) } })) {
+            Toggle(isOn: Binding(get: { isOn }, set: { on in
+                withAnimation(reduceMotion ? nil : .default) { registry.setEnabled(module.id, on) }
+                // Turning Calendar on is the other place its prompt may appear, besides the card's Allow button (D44).
+                if on, let calendar = module as? CalendarModule { Task { await calendar.requestAccess() } }
+            })) {
                 Label { Text(module.title) } icon: { Image(systemName: module.systemImage) }
                     .foregroundStyle(isOn ? .primary : .secondary)
             }

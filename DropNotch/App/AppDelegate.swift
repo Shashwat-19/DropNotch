@@ -7,7 +7,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Internal so the Settings scene can reach them.
     let notchState = NotchState()
     /// A Mac without a battery gets no Battery card at all (D43).
-    let registry = ModuleRegistry(modules: [HomeModule(), NowPlayingModule(source: ScriptablePlayersSource())]
+    let registry = ModuleRegistry(modules: [HomeModule(), NowPlayingModule(source: ScriptablePlayersSource()),
+                                            CalendarModule(source: EventKitCalendarSource())]
         + (PowerSourceBatterySource.hasInternalBattery ? [BatteryModule(source: PowerSourceBatterySource())] : [])
         + [NotesModule(), FileTrayModule(), ClipboardModule()])
     private var screenObserver: ScreenObserver?

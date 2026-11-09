@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Network, clipboard and tray data (D7, D25, D33, D34).
+/// Network, clipboard, calendar and tray data (D7, D25, D33, D34, D44).
 struct PrivacySettingsView: View {
     let registry: ModuleRegistry
 
@@ -27,6 +27,15 @@ struct PrivacySettingsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            if let calendar {
+                Section {
+                    Toggle("Show event titles", isOn: Binding(get: { calendar.showsTitles },
+                                                              set: { calendar.showsTitles = $0 }))
+                } footer: {
+                    Text("Off, the Calendar card shows times only, for screen sharing. DropNotch only reads your calendars; titles stay in memory and are never logged or saved.")
+                        .foregroundStyle(.secondary)
+                }
+            }
             if let tray {
                 Section {
                     Button("Clear Tray") { tray.clear() }
@@ -41,5 +50,6 @@ struct PrivacySettingsView: View {
     }
 
     private var clipboard: ClipboardModule? { registry.modules.lazy.compactMap { $0 as? ClipboardModule }.first }
+    private var calendar: CalendarModule? { registry.modules.lazy.compactMap { $0 as? CalendarModule }.first }
     private var tray: FileTrayModule? { registry.modules.lazy.compactMap { $0 as? FileTrayModule }.first }
 }
