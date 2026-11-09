@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-11-09):** v0.1.0 is released. v0.2 (Home dashboard, D42–D45) is in progress in speed mode: see "v0.2" at the end. Branch 1, `feat/home`, is being built.
+**Status (2026-11-09):** v0.1.0 is released. v0.2 (Home dashboard, D42–D45) is in progress in speed mode: see "v0.2" at the end. Branch 1, `feat/home`, is built and reviewed; device checks 73–78 are next.
 
 **Phase 3 status (2026-11-01, kept for history):** release/v0.1.0 in progress: the keyboard fix (D40), reviews and DMG (D41) are done; the one device session below is next, then Shash approves the public steps. Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, 4, `feat/hotkey`, 5, `feat/notes`, 6, `feat/file-tray`, and 7, `feat/clipboard`, are merged to main and pushed to `origin`. Branches 8, `feat/settings`, and 9, `feat/polish`, are merged to main (2026-11-01). Next: release. See "Phase 3" below.
 
@@ -391,12 +391,15 @@ Decisions D42–D45; mock-up docs/mockups/home-v0.2.html (Air, 208 pt housing: c
 ### Branch 1: `feat/home` (D42)
 Steps: `homeCard` and `HomeCardSize`; registry (cards aren't tabs, `homeCards`, moves within a group, new ids at their default index, compact-slot default skips modules without a compact view); `HomeModule`, `HomeView`, `HomeLayout`; Now Playing as the wide card; Settings › Modules sections. No permissions, no entitlement: Debug build is enough.
 
+**Status (2026-11-09):** built. test-writer: 16 tests (HomeLayout; registry cards, moves, v0.1 order, slot default), no bugs. code-reviewer: Approve with changes (W1 artwork follows the card's height; S1–S5 applied; D42 Review). 445 tests, 0 failures. Offscreen render of the row at the Air's and a 14" MacBook Pro's card height checked by the lead (artwork 54 pt, then smaller; nothing clipped). Device checks 73–78 open.
+
 Device checks (notched Mac, Debug build):
 73. ⌃⌥N opens Home first with play/pause focused. ⌘1 is Home, ⌘2 Notes. On the Air: 536 pt, nothing under the housing.
 74. Upgrade with v0.1 settings: Home is first, Now Playing has no tab, and the wings still appear while playing.
 75. Settings › Modules: Now Playing is under "Home cards". Off removes the card and the wings; on brings both back. The arrows reorder within each section.
-76. Screenshot of Home next to the mock-up, playing and with nothing playing. Is the 54 pt artwork big enough (D42)?
+76. Screenshot of Home next to the mock-up, playing and with nothing playing. Is the 54 pt artwork big enough (D42)? On macOS 26, the hover glass circles on the three 28 pt controls don't touch. With Automation denied for the player, the "Allow control…" link wraps to two lines and doesn't push the control row.
 77. VoiceOver: ⌃⌥N reads "Home", then a "Now Playing" group; Tab and ←/→ reach the three controls; the bar is adjustable.
+78. Displays › Larger Text (or a 14"/16" MacBook Pro): Home's cards keep padding top and bottom, the artwork is smaller, nothing is clipped. Turn every card off: "Turn on a Home card in Settings".
 
 ### Branch 2: `feat/battery-card` (D43)
 ### Branch 3: `feat/calendar-card` (D44; entitlement: Release build and Release launch; security-auditor)
