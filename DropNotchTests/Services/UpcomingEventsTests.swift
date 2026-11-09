@@ -89,6 +89,31 @@ final class UpcomingEventsTests: XCTestCase {
                        "on the day it started it shows its time")
     }
 
+    func testStartedBeforeTodayAtTheMidnightBoundary() {
+        let justBefore = event("justBefore", today(0).addingTimeInterval(-1), today(1))
+        let atMidnight = event("atMidnight", today(0), today(1))
+        XCTAssertTrue(UpcomingEvents.startedBeforeToday(justBefore, now: today(0), calendar: calendar))
+        XCTAssertFalse(UpcomingEvents.startedBeforeToday(atMidnight, now: today(0), calendar: calendar),
+                       "now is midnight too")
+        XCTAssertFalse(UpcomingEvents.startedBeforeToday(atMidnight, now: today(23, 59), calendar: calendar))
+    }
+
+    /// London's clocks change at 01:00 GMT (forward on 2026-03-29, back on 2026-10-25); midnight still begins the day.
+    func testStartedBeforeTodayOnDaylightSavingChangeDays() {
+        for day in [date(2026, 3, 29), date(2026, 10, 25)] {
+            let yesterday = calendar.date(byAdding: .day, value: -1, to: day)!
+            let overnight = event("overnight", calendar.date(byAdding: .hour, value: 23, to: yesterday)!,
+                                  calendar.date(byAdding: .hour, value: 14, to: day)!)
+            let atMidnight = event("atMidnight", day, calendar.date(byAdding: .hour, value: 1, to: day)!)
+            // 23:30 local: past the change, 22.5 or 24.5 elapsed hours after midnight.
+            let late = calendar.date(bySettingHour: 23, minute: 30, second: 0, of: day)!
+            for now in [calendar.date(byAdding: .hour, value: 3, to: day)!, late] {
+                XCTAssertTrue(UpcomingEvents.startedBeforeToday(overnight, now: now, calendar: calendar), "\(now)")
+                XCTAssertFalse(UpcomingEvents.startedBeforeToday(atMidnight, now: now, calendar: calendar), "\(now)")
+            }
+        }
+    }
+
     func testHiddenEventsNeverAppearTodayOrTomorrow() {
         let result = upcoming([
             event("cancelled", today(14), today(15), hidden: true),

@@ -80,6 +80,10 @@ final class NotesModuleTests: XCTestCase {
         XCTAssertFalse(module.hasCompactContent)
     }
 
+    func testIsOnByDefault() {
+        XCTAssertTrue(makeModule().isEnabledByDefault)
+    }
+
     func testStartWithNoFileIsEmptyAndWritesNothingUntilAnEdit() async throws {
         let module = makeModule()
         module.start()

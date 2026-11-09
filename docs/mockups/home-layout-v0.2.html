@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notch Height Options</title>
+<!--
+  DropNotch feat/home-layout mock-up: three taller open heights (+30, +40, +50 pt) against today's 150 pt.
+  Not app code: a planning aid only. Sizes come from NotchGeometry.swift, NotchStyle.swift, NotchRootView.swift and the
+  module views (feat/calendar-card, 2026-11-09):
+    openSize 480 × 150, top row height = max(closed height, 24 + 4), sidePadding 24, bottomPadding 12, card padding 10,
+    card gap 8, Calendar share 0.29 (HomeLayout), Calendar rows 14 pt + 2 pt spacing (CalendarCardView),
+    Clipboard rows 24 pt under a ~22 pt search field, Tray tiles 72 × 67 pt over a 24 pt action row.
+  1 CSS px = 1 pt at 1×. Housing sizes are approximate, not measured: Air 208 × 32 (as NotchGeometryTests),
+  14-inch MacBook Pro 200 × 38.
+-->
+<style>
+  :root {
+    --page: #e9e9ee; --ink: #1d1d1f; --muted: #6e6e73; --panel: #ffffff; --line: #d2d2d7; --accent: #0a84ff;
+    --menubar: rgba(246,246,246,.72); --menuink: #1d1d1f; --good: #1f8f3a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page: #111113; --ink: #f5f5f7; --muted: #a1a1a6; --panel: #1c1c1e; --line: #38383a;
+      --menubar: rgba(30,30,30,.6); --menuink: #f5f5f7; --good: #30d158;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page: #111113; --ink: #f5f5f7; --muted: #a1a1a6; --panel: #1c1c1e; --line: #38383a;
+    --menubar: rgba(30,30,30,.6); --menuink: #f5f5f7; --good: #30d158;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink);
+         font: 14px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif; }
+  main { max-width: 1320px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 0; }
+  p.lead { color: var(--muted); margin: 0 0 16px; max-width: 78ch; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: flex-end; margin-bottom: 20px;
+              position: sticky; top: 0; z-index: 2; background: var(--page); padding: 8px 0; }
+  .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; background: var(--panel); color: var(--ink); padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .label { font-size: 12px; color: var(--muted); }
+
+  .option { margin: 0 0 28px; }
+  .option header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 8px; }
+  .option header .facts { font-size: 13px; color: var(--muted); }
+  .option.ref h2 { color: var(--muted); }
+  .badge { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 10px; background: var(--accent); color: #fff; }
+
+  .stage-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--line); }
+  .stage { position: relative; min-width: 100%; background: linear-gradient(160deg, #4b6cb7, #182848); overflow: hidden; }
+  .scaler { position: absolute; left: 50%; top: 0; transform-origin: top center; }
+  .menubar { position: absolute; top: 0; background: var(--menubar); backdrop-filter: blur(20px); color: var(--menuink);
+             font-size: 13px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; }
+  .menubar span { opacity: .85; }
+
+  .notch { position: absolute; top: 0; color: #fff; font-family: -apple-system, "SF Pro Text", sans-serif; }
+  .notch svg.shape { position: absolute; left: 0; top: 0; }
+  .housing { position: absolute; top: 0; border: 1px dashed rgba(255,255,255,.22); border-top: 0; border-radius: 0 0 10px 10px; }
+  .housing .cam { position: absolute; left: 50%; top: 11px; width: 9px; height: 9px; margin-left: -4.5px; border-radius: 50%;
+                  background: #0c0c12; box-shadow: inset 0 0 0 2px #1a1a26; }
+  .tab { position: absolute; width: 28px; height: 24px; display: grid; place-items: center; color: rgba(255,255,255,.5); }
+  .tab svg { width: 15px; height: 15px; }
+  .tab.sel { color: #fff; }
+  .tab.sel::after { content: ""; position: absolute; left: 12px; top: 24px; width: 4px; height: 4px; border-radius: 50%; background: #fff; }
+  .area { position: absolute; }
+
+  /* Home cards */
+  .cards { display: flex; gap: 8px; height: 100%; }
+  .card { background: rgba(255,255,255,.1); border-radius: 14px; padding: 10px; position: relative; overflow: hidden; flex: none; }
+  .np { display: flex; flex-direction: column; justify-content: space-between; }
+  .np-top { display: flex; gap: 10px; min-height: 0; }
+  .art { border-radius: 10px; flex: none; background: linear-gradient(135deg, #ff9a5a, #c2366c 55%, #3a1c71); }
+  .np-text { min-width: 0; padding-top: 2px; }
+  .np-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .np-artist { font-size: 11px; color: rgba(255,255,255,.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .np-bottom { display: flex; align-items: flex-start; gap: 8px; }
+  .np-bar { flex: 1; min-width: 0; }
+  .bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,.2); position: relative; margin-top: 12px; }
+  .bar i { position: absolute; inset: 0 62% 0 0; border-radius: 2px; background: #fff; }
+  .times { display: flex; justify-content: space-between; font-size: 11px; line-height: 12px; margin-top: 6px;
+           color: rgba(255,255,255,.55); font-variant-numeric: tabular-nums; }
+  .ctl { display: flex; gap: 2px; flex: none; }
+  .ctl b { width: 28px; height: 28px; display: grid; place-items: center; }
+  .ctl svg { width: 15px; height: 15px; fill: #fff; }
+  .ctl b.pp svg { width: 17px; height: 17px; }
+
+  .cal-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .cal-day { font-size: 11px; line-height: 13px; font-weight: 700; color: #ff453a; text-transform: uppercase; letter-spacing: .03em; }
+  .cal-more { font-size: 11px; color: rgba(255,255,255,.55); }
+  .cal-date { font-size: 30px; font-weight: 600; line-height: 30px; font-variant-numeric: tabular-nums; margin-bottom: 4px; }
+  .cal-line { display: flex; align-items: baseline; gap: 6px; height: 30px; margin-bottom: 4px; }
+  .cal-line .cal-date { margin: 0; }
+  .cal-line .cal-more { margin-left: auto; }
+  .ev { display: flex; gap: 6px; font-size: 11px; line-height: 14px; height: 14px; }
+  .ev::before { content: ""; width: 3px; border-radius: 2px; background: var(--c, #0a84ff); flex: none; }
+  .ev .t { color: rgba(255,255,255,.55); font-variant-numeric: tabular-nums; flex: none; }
+  .ev .n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ev + .ev { margin-top: 2px; }
+
+  /* Notes */
+  .note-text { font-size: 13px; line-height: 16px; padding-left: 5px; height: 100%; overflow: hidden; white-space: pre-wrap; }
+
+  /* Tray */
+  .tiles { display: flex; gap: 4px; }
+  .tile { width: 72px; height: 67px; padding: 4px 4px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; border-radius: 8px; }
+  .tile.sel { background: rgba(255,255,255,.14); }
+  .doc { width: 40px; height: 40px; border-radius: 6px; display: grid; place-items: center; font-size: 9px; font-weight: 700; }
+  .tile span { font-size: 11px; line-height: 13px; max-width: 64px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .actions { display: flex; justify-content: flex-end; gap: 2px; margin-top: 4px; height: 24px; }
+  .actions b { width: 28px; height: 24px; display: grid; place-items: center; color: rgba(255,255,255,.85); }
+  .actions svg { width: 15px; height: 15px; }
+
+  /* Clipboard */
+  .search { display: flex; gap: 8px; height: 22px; margin-bottom: 4px; }
+  .field { flex: 1; border-radius: 6px; background: rgba(255,255,255,.1); font-size: 11px; line-height: 22px; padding: 0 8px; color: rgba(255,255,255,.45); }
+  .btn { font-size: 11px; line-height: 22px; padding: 0 10px; border-radius: 6px; background: rgba(255,255,255,.16); }
+  .clips { overflow: hidden; }
+  .clip { height: 24px; display: flex; align-items: center; gap: 8px; padding: 0 6px; font-size: 11px; border-radius: 5px; }
+  .clip:first-child { background: rgba(255,255,255,.1); }
+  .clip .s { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .thumb { width: 32px; height: 20px; border-radius: 3px; background: linear-gradient(135deg, #5ac8fa, #34c759); flex: none; }
+
+  .unused { border: 1px dashed rgba(255,214,10,.55); border-radius: 6px; display: grid; place-items: center;
+            font: 10px/1 ui-monospace, Menlo, monospace; color: #ffd60a; }
+  .dims { position: absolute; font: 11px/1 ui-monospace, Menlo, monospace; color: #ffd60a; white-space: nowrap; }
+
+  table { border-collapse: collapse; font-size: 13px; margin: 8px 0 24px; min-width: 560px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 6px 10px; text-align: left; }
+  th { font-weight: 600; }
+  td.best { color: var(--good); font-weight: 600; }
+  .table-wrap { overflow-x: auto; }
+  .notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+  .note { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .note h3 { margin: 0 0 4px; font-size: 14px; }
+  .note p, .note li { margin: 0; color: var(--muted); font-size: 13px; }
+  .note ul { margin: 0; padding-left: 18px; }
+  code { font: 12px ui-monospace, Menlo, monospace; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Taller open notch: +30, +40 or +50 pt</h1>
+  <p class="lead">One fixed open height for every tab (D16, D29 still hold), drawn at real size from <code>NotchGeometry</code>.
+    Home has two cards (Battery off by default). Today's 150 pt is at the top for reference. Pick a tab to see it at all four
+    heights. Yellow labels are computed sizes; dashed yellow boxes are space a tab leaves empty.</p>
+
+  <div class="controls">
+    <div><div class="label">Tab</div>
+      <div class="seg" id="tab">
+        <button data-v="home" aria-pressed="true">Home</button><button data-v="notes">Notes</button><button data-v="tray">Tray</button><button data-v="clip">Clipboard</button>
+      </div></div>
+    <div><div class="label">Screen</div>
+      <div class="seg" id="screen">
+        <button data-v="air" aria-pressed="true">MacBook Air, 208 pt notch</button><button data-v="mbp">14-inch MacBook Pro (approx.)</button>
+      </div></div>
+    <div><div class="label">Calendar width</div>
+      <div class="seg" id="calw">
+        <button data-v="0.29" aria-pressed="true">As built (29%)</button><button data-v="0.4">Wider (40%)</button>
+      </div></div>
+    <div><div class="label">Zoom</div>
+      <div class="seg" id="zoom"><button data-v="1">1×</button><button data-v="1.5" aria-pressed="true">1.5×</button><button data-v="2">2×</button></div></div>
+    <div><div class="label">Measurements</div>
+      <div class="seg" id="dims"><button data-v="on" aria-pressed="true">Show</button><button data-v="off">Hide</button></div></div>
+  </div>
+
+  <div id="options"></div>
+
+  <h2>What each height buys</h2>
+  <div class="table-wrap"><table id="summary"></table></div>
+
+  <div class="notes">
+    <div class="note"><h3>Recommendation: +40 pt (190 pt)</h3>
+      <p id="rec"></p></div>
+    <div class="note"><h3>Per tab</h3>
+      <ul>
+        <li>Now Playing: the artwork grows by the full height gain; elapsed and total time return under the bar at every option.</li>
+        <li>Calendar: weekday over the date, then rows of 14 pt + 2 pt. Rows only step every 16 pt, so some heights add no row.</li>
+        <li>Clipboard: search, then 24 pt rows; a cut-off row hints that the list scrolls.</li>
+        <li>Notes: more lines of the editor.</li>
+        <li>Tray: the tiles and actions take 95 pt and don't grow, so the extra height is empty unless the tiles get bigger (not in this branch).</li>
+      </ul></div>
+    <div class="note"><h3>Not in the picture</h3>
+      <ul>
+        <li>Housing sizes are approximate; check 88-style on-device for the real fit.</li>
+        <li>The taller panel covers 30–50 pt more of the window under it while open; hover-out (D18) is unchanged.</li>
+        <li>Larger Text and long titles are on the release checklist (77, 78).</li>
+      </ul></div>
+  </div>
+</main>
+
+<script>
+// Mirrors the Swift constants listed in the header comment. Change these only if those change.
+const G = { openW: 480, base: 150, item: { w: 28, h: 24 }, spacing: 2, inset: 8, shoulder: 10, bottomR: 18,
+            side: 24, bottom: 12, gap: 8, pad: 10, items: 5 };
+const rowWidth = n => n * G.item.w + (n - 1) * G.spacing + 2 * G.inset;
+const SCREENS = {
+  air: { housing: 208, closedH: 32, name: "MacBook Air" },
+  mbp: { housing: 200, closedH: 38, name: "14-inch MacBook Pro" }
+};
+const OPTIONS = [
+  { d: 0, title: "Today: 150 pt", ref: true },
+  { d: 30, title: "+30 pt: 180 pt" },
+  { d: 40, title: "+40 pt: 190 pt", rec: true },
+  { d: 50, title: "+50 pt: 200 pt" }
+];
+
+// Card internals, in pt.
+const NP_BAR_ROW = 28, NP_TIME = 12, NP_GAP = 6;   // bar + controls row, time line under the bar, gap above the bottom block
+const CAL = { day: 13, date: 30, lineHead: 30, after: 4, row: 14, rowGap: 2 };
+const CLIP = { search: 22, after: 4, row: 24 };
+const TRAY = { tiles: 67, after: 4, actions: 24 };
+const NOTE_LINE = 16;
+
+function metrics(S, d) {
+  const h = G.base + d;
+  const rowH = Math.max(S.closedH, G.item.h + 4);
+  const rw = rowWidth(G.items);
+  const w = Math.max(G.openW, S.housing + 2 * rw);
+  const areaW = w - 2 * G.side, areaH = h - rowH - G.bottom, content = areaH - 2 * G.pad;
+  const today = d === 0;
+  // Today as built: no time line, 54 pt artwork (D42), one-line calendar header (D44 as built).
+  const art = today ? 54 : content - NP_BAR_ROW - NP_TIME - NP_GAP;
+  const head = today ? CAL.lineHead : CAL.day + CAL.date;
+  const calRows = Math.max(1, Math.floor((content - head - CAL.after + CAL.rowGap) / (CAL.row + CAL.rowGap)));
+  const clipRows = (areaH - CLIP.search - CLIP.after) / CLIP.row;
+  const trayUsed = TRAY.tiles + TRAY.after + TRAY.actions;
+  return { h, rowH, w, areaW, areaH, content, art, calRows, clipRows, noteLines: Math.floor(areaH / NOTE_LINE),
+           trayFree: areaH - trayUsed, time: !today };
+}
+
+const ICON = {
+  home: '<svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.6"/><rect x="9" y="1" width="6" height="6" rx="1.6"/><rect x="1" y="9" width="6" height="6" rx="1.6"/><rect x="9" y="9" width="6" height="6" rx="1.6"/></svg>',
+  notes: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="1.5" width="11" height="13" rx="2"/><path d="M5 5.5h6M5 8.5h6M5 11.5h3.5"/></svg>',
+  tray: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1.5 9.5l2-6.5h9l2 6.5v4h-13z"/><path d="M1.5 9.5h4l1 1.5h3l1-1.5h4"/></svg>',
+  clip: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2.5" width="10" height="12" rx="2"/><rect x="5.5" y="1" width="5" height="3" rx="1" fill="currentColor"/></svg>',
+  gear: '<svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="5.2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-dasharray="2.2 1.6"/><circle cx="8" cy="8" r="2"/></svg>',
+  airdrop: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="1.6"/><path d="M5 11a4.2 4.2 0 116 0M3 13a7 7 0 1110 0"/></svg>',
+  share: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M5 6H3.5v8.5h9V6H11M8 1v9M5.5 3.5L8 1l2.5 2.5"/></svg>',
+  remove: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="6"/><path d="M5 8h6"/></svg>',
+  clear: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2.5 4h11M6 4V2.5h4V4M4 4l.8 10h6.4L12 4"/></svg>'
+};
+const PLAY = {
+  prev: '<svg viewBox="0 0 16 16"><path d="M3 3h2v10H3zM14 3v10L6 8z"/></svg>',
+  pause: '<svg viewBox="0 0 16 16"><rect x="3.5" y="2.5" width="3.2" height="11" rx="1"/><rect x="9.3" y="2.5" width="3.2" height="11" rx="1"/></svg>',
+  next: '<svg viewBox="0 0 16 16"><path d="M11 3h2v10h-2zM2 3v10l8-5z"/></svg>'
+};
+const EVENTS = [
+  { allDay: true, n: "Bin day", c: "#ff9f0a" },
+  { t: "09:00", n: "Stand-up", c: "#0a84ff" },
+  { t: "11:30", n: "Design review", c: "#30d158" },
+  { t: "13:00", n: "Lunch with Sam", c: "#bf5af2" },
+  { t: "15:30", n: "Dentist", c: "#ff375f" },
+  { t: "17:00", n: "Gym", c: "#64d2ff" },
+  { t: "19:30", n: "Book club", c: "#ffd60a" }
+];
+const NOTE = "Release v0.2\n- device checks 84–89 (Release build)\n- record results in TASK.md\n- pick the notch height\n\nIdeas\n- tray tiles at 56 pt?\n- AirPods battery: only with a public API\n- quick commands: decide on the D45 note\n- check Larger Text (77, 78)\n- changelog";
+const FILES = [["Invoice-Oct.pdf", "#ff453a", "PDF"], ["hero@2x.png", "#0a84ff", "PNG"], ["notes.md", "#8e8e93", "MD"],
+               ["budget.numbers", "#30d158", "NUM"], ["talk-final.key", "#ff9f0a", "KEY"]];
+const CLIPS = [["s", "https://developer.apple.com/documentation/eventkit"], ["s", "Thanks, that works for me. Let's go with Thursday."],
+               ["img"], ["s", "xcodebuild -scheme DropNotch -configuration Release"], ["s", "Afterglow Avenue"],
+               ["s", "1 Infinite Loop"], ["s", "#ff453a"]];
+
+function shapePath(w, h) {
+  const s = G.shoulder, r = G.bottomR, W = w + 2 * s;
+  return `M0 0 H${W} Q${W - s} 0 ${W - s} ${s} V${h - r} Q${W - s} ${h} ${W - s - r} ${h} H${s + r} Q${s} ${h} ${s} ${h - r} V${s} Q${s} 0 0 0 Z`;
+}
+
+const state = { tab: "home", screen: "air", calw: 0.29, zoom: 1.5, dims: true };
+
+function homeHTML(m) {
+  const cal = Math.round(m.areaW * state.calw), np = m.areaW - cal - G.gap;
+  const timed = EVENTS, shown = timed.slice(0, m.calRows), more = timed.length - shown.length;
+  const rows = shown.map(e => `<div class="ev" style="--c:${e.c}"><span class="t">${e.allDay ? "All day" : e.t}</span><span class="n">${e.n}</span></div>`).join("");
+  const header = m.time
+    ? `<div class="cal-head"><span class="cal-day">Monday</span>${more ? `<span class="cal-more">+${more}</span>` : ""}</div><div class="cal-date">9</div>`
+    : `<div class="cal-line"><span class="cal-date">9</span><span class="cal-day">Mon</span>${more ? `<span class="cal-more">+${more}</span>` : ""}</div>`;
+  return `<div class="cards">
+    <div class="card np" style="width:${np}px">
+      <div class="np-top"><div class="art" style="width:${m.art}px;height:${m.art}px"></div>
+        <div class="np-text"><div class="np-title">Afterglow Avenue</div><div class="np-artist">The Placeholder Band</div></div></div>
+      <div class="np-bottom"><div class="np-bar"><div class="bar"><i></i></div>${m.time ? `<div class="times"><span>1:24</span><span>3:52</span></div>` : ""}</div>
+        <div class="ctl"><b>${PLAY.prev}</b><b class="pp">${PLAY.pause}</b><b>${PLAY.next}</b></div></div>
+    </div>
+    <div class="card" style="width:${cal}px">${header}${rows}</div>
+  </div>`;
+}
+const notesHTML = () => `<div class="note-text">${NOTE}</div>`;
+function trayHTML(m) {
+  const tiles = FILES.map(([n, c, k], i) => `<div class="tile ${i === 1 ? "sel" : ""}"><div class="doc" style="background:${c}">${k}</div><span>${n}</span></div>`).join("");
+  const free = m.trayFree > 2 ? `<div class="unused" style="height:${m.trayFree - 4}px;margin-top:4px">${Math.round(m.trayFree)} pt unused</div>` : "";
+  return `<div class="tiles">${tiles}</div>
+    <div class="actions"><b>${ICON.airdrop}</b><b>${ICON.share}</b><b>${ICON.remove}</b><b>${ICON.clear}</b></div>${free}`;
+}
+function clipHTML(m) {
+  const rows = CLIPS.map(([k, s]) => `<div class="clip">${k === "img" ? `<span class="thumb"></span><span class="s">Image</span>` : `<span class="s">${s}</span>`}</div>`).join("");
+  return `<div class="search"><div class="field">Search</div><div class="btn">Clear</div></div>
+    <div class="clips" style="height:${m.areaH - CLIP.search - CLIP.after}px">${rows}</div>`;
+}
+
+function stage(opt) {
+  const S = SCREENS[state.screen], m = metrics(S, opt.d);
+  const { w, h, rowH, areaW, areaH } = m, W = w + 2 * G.shoulder;
+  const rowLead = (w - S.housing) / 2 + S.housing;
+  const tabs = ["home", "notes", "tray", "clip"];
+  let x = rowLead + G.inset;
+  const tabHTML = tabs.map(t => {
+    const el = `<div class="tab ${t === state.tab ? "sel" : ""}" style="left:${G.shoulder + x}px;top:${(rowH - G.item.h - 4) / 2}px">${ICON[t]}</div>`;
+    x += G.item.w + G.spacing; return el;
+  }).join("") + `<div class="tab" style="left:${G.shoulder + w - G.inset - G.item.w}px;top:${(rowH - G.item.h - 4) / 2}px">${ICON.gear}</div>`;
+  const body = { home: homeHTML, notes: notesHTML, tray: trayHTML, clip: clipHTML }[state.tab](m);
+  const cal = Math.round(areaW * state.calw), np = areaW - cal - G.gap;
+  const extra = state.tab === "home"
+    ? `cards ${np} · ${cal} × ${areaH} pt · artwork ${m.art} pt · ${m.calRows} calendar rows`
+    : state.tab === "clip" ? `${Math.floor(m.clipRows)} full rows (${m.clipRows.toFixed(1)})`
+    : state.tab === "notes" ? `about ${m.noteLines} lines` : `${Math.round(m.trayFree)} pt below the actions`;
+  const dims = !state.dims ? "" : `
+    <div class="dims" style="left:${G.shoulder + G.side}px;top:${rowH - 12}px">module ${areaW} × ${areaH}</div>
+    <div class="dims" style="left:${G.shoulder + 6}px;top:${h + 6}px">open shape ${w} × ${h} pt</div>
+    <div class="dims" style="left:${G.shoulder + 6}px;top:${h + 20}px">${extra}</div>`;
+  const menuW = Math.max(W + 360, 1000);
+  const notch = `<div class="menubar" style="left:${-menuW / 2}px;width:${menuW}px;height:${S.closedH}px"><span> File  Edit  View</span><span>Mon 9 Nov 09:41</span></div>
+    <div class="notch" style="left:${-W / 2}px;width:${W}px;height:${h}px">
+      <svg class="shape" width="${W}" height="${h}" viewBox="0 0 ${W} ${h}"><path d="${shapePath(w, h)}" fill="#000"/></svg>
+      <div class="housing" style="left:${G.shoulder + (w - S.housing) / 2}px;width:${S.housing}px;height:${S.closedH}px"><div class="cam"></div></div>
+      ${tabHTML}
+      <div class="area" style="left:${G.shoulder + G.side}px;top:${rowH}px;width:${areaW}px;height:${areaH}px">${body}</div>
+      ${dims}
+    </div>`;
+  const z = state.zoom, stageH = (200 + 40) * z;   // all four stages share the tallest option's height, so they line up
+  return `<section class="option ${opt.ref ? "ref" : ""}">
+    <header><h2>${opt.title}</h2>${opt.rec ? `<span class="badge">Recommended</span>` : ""}<span class="facts">${facts(m)}</span></header>
+    <div class="stage-wrap"><div class="stage" style="height:${stageH}px;min-width:${(W + 40) * z}px">
+      <div class="scaler" style="transform:scale(${z})">${notch}</div></div></div>
+  </section>`;
+}
+
+function facts(m) {
+  return `${m.areaW} × ${m.areaH} pt module area · artwork ${m.art} pt${m.time ? " + time" : ", no time"} · Calendar ${m.calRows} rows · Clipboard ${Math.floor(m.clipRows)} rows · Notes ~${m.noteLines} lines`;
+}
+
+function summary() {
+  const cols = OPTIONS;
+  const head = `<tr><th></th>${cols.map(o => `<th>${o.title.replace(": ", "<br>")}</th>`).join("")}</tr>`;
+  const line = (label, f, best) => `<tr><td>${label}</td>${cols.map(o => {
+    const v = f(o); return `<td class="${best && best(o) ? "best" : ""}">${v}</td>`; }).join("")}</tr>`;
+  const air = o => metrics(SCREENS.air, o.d), mbp = o => metrics(SCREENS.mbp, o.d);
+  return head +
+    line("Module area, Air", o => `${air(o).areaW} × ${air(o).areaH}`) +
+    line("Now Playing artwork, Air", o => `${air(o).art} pt${o.d ? " + time" : ""}`) +
+    line("Calendar rows, Air", o => air(o).calRows, o => o.d && air(o).calRows >= 5) +
+    line("Calendar rows, 14-inch MBP", o => mbp(o).calRows, o => o.d && mbp(o).calRows >= 5) +
+    line("Clipboard full rows, Air", o => Math.floor(air(o).clipRows), o => o.d && air(o).clipRows >= 5) +
+    line("Clipboard full rows, 14-inch MBP", o => Math.floor(mbp(o).clipRows), o => o.d && mbp(o).clipRows >= 5) +
+    line("Notes lines, Air", o => `~${air(o).noteLines}`) +
+    line("Tray: empty below actions, Air", o => `${Math.round(air(o).trayFree)} pt`);
+}
+
+function render() {
+  document.getElementById("options").innerHTML = OPTIONS.map(stage).join("");
+  document.getElementById("summary").innerHTML = summary();
+  document.getElementById("rec").textContent =
+    "On the Air, +40 is the smallest height that reaches 5 calendar rows and 5 clipboard rows, with 80 pt artwork and the time back. " +
+    "+30 stops at 4 rows. +50 adds 10 pt that the Air spends only on artwork (90 pt) and empty tray space; its one gain is that a " +
+    "14-inch MacBook Pro, whose taller notch row (about 38 pt) costs 6 pt, also reaches 5 rows. If that Mac matters as much as the Air, pick +50.";
+}
+
+function bind(id, key, parse = v => v) {
+  document.getElementById(id).addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    for (const o of e.currentTarget.querySelectorAll("button")) o.setAttribute("aria-pressed", String(o === b));
+    state[key] = parse(b.dataset.v); render();
+  });
+}
+bind("tab", "tab"); bind("screen", "screen"); bind("calw", "calw", Number); bind("zoom", "zoom", Number); bind("dims", "dims", v => v === "on");
+render();
+</script>
+</body>
+</html>

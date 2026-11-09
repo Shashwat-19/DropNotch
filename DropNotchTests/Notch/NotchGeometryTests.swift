@@ -388,6 +388,15 @@ final class NotchGeometryTests: XCTestCase {
         }
     }
 
+    /// One open height for every tab (D16, D29), 190 pt since D46, hanging from the screen's top edge.
+    func testOpenHeightIs190OnAnAirLikeScreenAndWithoutANotch() {
+        let side = (air.width - 208) / 2
+        for geometry in [notched(air, left: side, right: side), plain(air)] {
+            XCTAssertEqual(geometry.openFrame.height, 190, "notch: \(geometry.hasNotch)")
+            XCTAssertEqual(geometry.openFrame.maxY, air.maxY, "notch: \(geometry.hasNotch)")
+        }
+    }
+
     func testPillIsNotWidenedForTheTopRow() {
         let geometry = plain(air)
         XCTAssertEqual(geometry.openFrame.width, NotchGeometry.openSize.width)

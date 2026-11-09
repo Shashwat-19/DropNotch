@@ -9,11 +9,12 @@ enum CompactSlot {
 enum HomeCardSize {
     case wide, medium, narrow
 
-    /// Share of the row's width, from the approved mock-up (docs/mockups/home-v0.2.html); nil for wide.
+    /// Share of the row's width; nil for wide. Medium is 40 % so the Calendar card's titles fit beside Now Playing
+    /// (D46, docs/mockups/home-layout-v0.2.html); narrow is from the first mock-up (D42).
     var share: CGFloat? {
         switch self {
         case .wide: nil
-        case .medium: 0.29
+        case .medium: 0.4
         case .narrow: 0.215
         }
     }
@@ -40,6 +41,8 @@ protocol NotchModule: AnyObject {
     var hasCompactContent: Bool { get }
     /// Non-nil: the module's `expandedView()` is a card on the Home tab, and it has no tab of its own (D42).
     var homeCard: HomeCardSize? { get }
+    /// Whether the module is on before the user has set it either way (D46). A saved setting always wins.
+    var isEnabledByDefault: Bool { get }
 
     func compactView(slot: CompactSlot) -> AnyView
     func expandedView() -> AnyView
@@ -54,4 +57,5 @@ protocol NotchModule: AnyObject {
 extension NotchModule {
     var hasCompactView: Bool { false }
     var homeCard: HomeCardSize? { nil }
+    var isEnabledByDefault: Bool { true }
 }

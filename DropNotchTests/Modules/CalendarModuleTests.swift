@@ -98,6 +98,10 @@ final class CalendarModuleTests: XCTestCase {
         XCTAssertFalse(module.hasCompactContent)
     }
 
+    func testIsOnByDefault() {
+        XCTAssertTrue(makeModule(FakeSource(access: .notDetermined)).isEnabledByDefault)
+    }
+
     // MARK: Access
 
     func testStartNeverPromptsAndLoadsNothingWhileUndecided() async {

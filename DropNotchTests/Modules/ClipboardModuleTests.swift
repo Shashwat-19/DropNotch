@@ -119,6 +119,10 @@ final class ClipboardModuleTests: XCTestCase {
 
     // 1. Consent first.
 
+    func testIsOnByDefault() {
+        XCTAssertTrue(module.isEnabledByDefault)
+    }
+
     func testNothingIsReadBeforeTurnOnAndIsOnPersists() {
         XCTAssertFalse(module.isOn)
         pasteboard.copy("before")
