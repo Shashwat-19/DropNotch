@@ -26,7 +26,9 @@ final class ModuleRegistry {
     init(modules: [any NotchModule], defaults: UserDefaults = .standard) {
         precondition(Set(modules.map(\.id)).count == modules.count, "Module ids must be unique")
         // Every tab plus the Settings button must fit right of the camera housing (D35), or the row would spill under it.
-        assert(modules.count + 1 <= NotchGeometry.topRowMaxItems, "Raise NotchGeometry.topRowMaxItems for another module")
+        // Home cards have no tab (D42).
+        assert(modules.filter { $0.homeCard == nil }.count + 1 <= NotchGeometry.topRowMaxItems,
+               "Raise NotchGeometry.topRowMaxItems for another module")
         self.modules = modules
         self.defaults = defaults
         // A module with no saved flag is on.
@@ -37,20 +39,26 @@ final class ModuleRegistry {
         // Unsaved, Now Playing fills both sides: artwork left, bars right (D28). Saved as "", the slot is empty.
         // Only a module with a compact view, as Settings offers: any other id would leave its picker blank.
         func slot(_ key: String) -> String? {
-            guard let saved = defaults.string(forKey: key) else { return ids.first }
+            guard let saved = defaults.string(forKey: key) else { return modules.first(where: \.hasCompactView)?.id }
             return modules.contains { $0.id == saved && $0.hasCompactView } ? saved : nil
         }
         compactLeftID = slot(Self.compactLeftKey)
         compactRightID = slot(Self.compactRightKey)
-        let saved = (defaults.stringArray(forKey: Self.tabOrderKey) ?? []).filter(ids.contains)
         var seen = Set<String>()
-        let order = (saved + ids).filter { seen.insert($0).inserted }
+        var order = (defaults.stringArray(forKey: Self.tabOrderKey) ?? []).filter { ids.contains($0) && seen.insert($0).inserted }
+        // A module added since the order was saved goes in at its default place, so Home is first for v0.1 users (D42).
+        for (index, id) in ids.enumerated() where !seen.contains(id) { order.insert(id, at: min(index, order.count)) }
         // Modules that are off sit below those that are on (D36); an order saved before that is sorted here.
         tabOrder = order.filter(enabled.contains) + order.filter { !enabled.contains($0) }
     }
 
-    /// Modules shown as tabs in the open notch, in `tabOrder`.
-    var expandedModules: [any NotchModule] {
+    /// Modules shown as tabs in the open notch, in `tabOrder`. Home cards have no tab (D42).
+    var expandedModules: [any NotchModule] { enabledModules.filter { $0.homeCard == nil } }
+
+    /// Cards on the Home tab, left to right (D42).
+    var homeCards: [any NotchModule] { enabledModules.filter { $0.homeCard != nil } }
+
+    private var enabledModules: [any NotchModule] {
         tabOrder.compactMap { id in enabledIDs.contains(id) ? modules.first { $0.id == id } : nil }
     }
 
@@ -104,12 +112,21 @@ final class ModuleRegistry {
         if enabled { module.start() } else { module.stop() }
     }
 
-    /// Moves a module's tab one place earlier (-1) or later (+1) among the modules that are on; nothing at the ends,
-    /// and nothing for a module that is off (D36).
+    /// Moves a module one place earlier (-1) or later (+1) among the modules that are on and of its own kind, tab or
+    /// Home card (D42); nothing at the ends, and nothing for a module that is off (D36).
     func moveTab(_ id: String, by offset: Int) {
-        guard let index = tabOrder.firstIndex(of: id), tabOrder.indices.contains(index + offset),
-              enabledIDs.contains(id), enabledIDs.contains(tabOrder[index + offset]) else { return }
-        tabOrder.swapAt(index, index + offset)
+        guard let module = modules.first(where: { $0.id == id }), enabledIDs.contains(id),
+              let index = tabOrder.firstIndex(of: id) else { return }
+        let isCard = module.homeCard != nil
+        var target = index + offset
+        // Skips modules of the other kind; modules that are off sit after every one that is on, so stop at the first.
+        while tabOrder.indices.contains(target), enabledIDs.contains(tabOrder[target]) {
+            if (modules.first { $0.id == tabOrder[target] }?.homeCard != nil) == isCard {
+                tabOrder.swapAt(index, target)
+                return
+            }
+            target += offset
+        }
     }
 
     private static func key(_ id: String) -> String { "module.\(id).enabled" }

@@ -274,10 +274,10 @@ final class ModuleRegistryTests: XCTestCase {
         XCTAssertNil(registry.compactRightID)
     }
 
-    func testSavedTabOrderDropsUnknownIDsAndAppendsNewModules() {
+    func testSavedTabOrderDropsUnknownIDsAndInsertsNewModulesAtTheirDefaultIndex() {
         let defaults = makeDefaults()
         defaults.set(["c", "gone", "a", "c"], forKey: "layout.tabOrder")
-        XCTAssertEqual(registry(["a", "b", "c", "d"], defaults).tabOrder, ["c", "a", "b", "d"])
+        XCTAssertEqual(registry(["a", "b", "c", "d"], defaults).tabOrder, ["c", "b", "a", "d"])
     }
 
     func testMoveTabSwapsWithItsNeighbourAndSaves() {
