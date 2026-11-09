@@ -1054,10 +1054,10 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 **Decision:**
 - Public IOKit only: `IOPSCopyPowerSourcesInfo`, `IOPSCopyPowerSourcesList`, `IOPSGetPowerSourceDescription`, and `IOPSNotificationCreateRunLoopSource` for changes, so no timer. Only the `InternalBattery` source is read; UPS sources are ignored. Behind `BatterySource` in Services/.
 - A Mac without an internal battery at launch doesn't register the module: no card and no Settings row.
-- A ring of about 60 pt (SwiftUI `Gauge` with a small custom style, so VoiceOver gets the value) with the percentage in the middle. Charging shows a bolt and "Charging"; on power but not charging, "On power". Below 20 % the ring turns a low colour; the percentage is always shown, so the state never rests on colour alone (L6).
+- A ring of about 60 pt (two `Circle` strokes, the second trimmed to the percentage) with the percentage in the middle. VoiceOver reads the card as one element: "Battery, 82%, Charging". Charging shows a bolt and "Charging"; on power but not charging, "On power". Below 20 % the ring turns a low colour; the percentage is always shown, so the state never rests on colour alone (L6).
 - AirPods and other Bluetooth headphones are deferred (Q6). Evidence (dependency-manager, 2026-11-09): public `IOPSCopyPowerSourcesInfo` returned only the internal battery while `pmset -g accps` listed the AirPods, so pmset uses a private path; IOBluetooth's public headers have only the hands-free 0–5 indicator; a CoreBluetooth Battery Service route is unverified; `system_profiler SPBluetoothDataType` works but its output is undocumented and it needs polling (against the energy rule).
 
-**Alternatives:** `Gauge` with `.accessoryCircularCapacity` (not chosen: its size on macOS is unchecked); polling system_profiler or private IOBluetooth keys for headphones (rejected, Q6).
+**Alternatives:** `Gauge` with `.accessoryCircularCapacity` (not chosen: its size on macOS is unchecked); `Gauge` with a custom style (not chosen in the build: the combined accessibility element already gives VoiceOver the value, so it added nothing); polling system_profiler or private IOBluetooth keys for headphones (rejected, Q6).
 
 ---
 
