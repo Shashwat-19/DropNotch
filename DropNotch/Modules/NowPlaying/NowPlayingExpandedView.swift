@@ -19,8 +19,13 @@ struct NowPlayingExpandedView: View {
             let text = displayedText ?? TrackText(info)
             VStack(spacing: NotchStyle.tightSpacing) {
                 HStack(alignment: .top, spacing: 10) {
-                    // 54 pt: the card's 86 pt of height less the 28 pt control row and the gap (D42).
-                    NowPlayingArtworkView(artwork: info.artwork, player: info.player, size: 54)
+                    // Whatever height the control row leaves, up to 54 pt: 54 on the Air's 86 pt card, less under a
+                    // taller notch (37.5 pt on a 14" MacBook Pro, D29), so the card's padding is never eaten (D42).
+                    GeometryReader { proxy in
+                        NowPlayingArtworkView(artwork: info.artwork, player: info.player, size: proxy.size.height)
+                    }
+                    .aspectRatio(1, contentMode: .fit)
+                    .frame(maxHeight: 54)
                     VStack(alignment: .leading, spacing: 2) {
                         // Verbatim (a String, not a literal): track names are never looked up for translation.
                         Text(text.title)

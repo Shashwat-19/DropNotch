@@ -19,7 +19,7 @@ struct ModulesSettingsView: View {
             } header: {
                 Text("Home cards")
             } footer: {
-                Text("Cards show on the Home tab, left to right.").foregroundStyle(.secondary)
+                Text("Cards show on the Home tab, left to right. With Home off they're hidden; Now Playing still fills the closed notch.").foregroundStyle(.secondary)
             }
             Section {
                 slotPicker("Left of the notch", selection: $registry.compactLeftID)

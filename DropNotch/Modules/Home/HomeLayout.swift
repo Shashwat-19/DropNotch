@@ -5,6 +5,7 @@ enum HomeLayout {
     /// Medium and narrow cards take their share of `total`; wide cards split what is left. Without a wide card the
     /// others share the row in proportion to their shares. Whole points that add up to the row exactly.
     static func widths(_ sizes: [HomeCardSize], total: CGFloat, spacing: CGFloat) -> [CGFloat] {
+        // `total` is never below 432 pt (the open frame's minimum, D35), far wider than the gaps, so no width is negative.
         guard !sizes.isEmpty else { return [] }
         let free = total - spacing * CGFloat(sizes.count - 1)
         let wideCount = CGFloat(sizes.filter { $0 == .wide }.count)

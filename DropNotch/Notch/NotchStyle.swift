@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Spacing, type and motion shared by every module's open content, so the tabs look and move alike (D37).
-/// Spacing is on a 4 pt grid. Text is `.subheadline` (11 pt) or larger; the note's editor uses `.body` for typing.
+/// Spacing is on a 4 pt grid. Text is `.subheadline` (11 pt) or larger; the note's editor uses `.body` for typing, and
+/// a Home card's title `.body` semibold (D42).
 /// Icons take the size of the font they sit in: `.body` for the top row and actions, `.title3` for Now Playing's
 /// controls, `.title2` for an empty state's symbol.
 enum NotchStyle {

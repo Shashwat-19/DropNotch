@@ -3,7 +3,8 @@ import SwiftUI
 /// The Home tab's cards in one row, left to right in the order set in Settings (D42). Each card is a module's
 /// `expandedView()` on a rounded card, sized by `HomeLayout`.
 struct HomeView: View {
-    /// The one module that reads the registry (D42); `NotchRootView` puts it in the environment.
+    /// The one module that reads the registry (D42); `NotchRootView` puts it in the environment. A host that
+    /// doesn't (a preview, say) traps here, as SwiftUI does for any missing `@Observable` environment object.
     @Environment(ModuleRegistry.self) private var registry
     @Environment(\.colorSchemeContrast) private var contrast
 

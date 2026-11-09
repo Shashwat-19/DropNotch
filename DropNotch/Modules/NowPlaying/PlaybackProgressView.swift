@@ -15,11 +15,11 @@ struct PlaybackProgressView: View {
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverOn
 
     var body: some View {
-        // The bar and the time text move on their own. Only for VoiceOver is the whole view redrawn, once a
-        // second while playing, so the spoken position is current; otherwise this timeline is paused.
+        // The bar moves on its own. Only for VoiceOver is the whole view redrawn, once a second while playing, so
+        // the spoken position is current; otherwise this timeline is paused.
         TimelineView(.animation(minimumInterval: 1, paused: !(voiceOverOn && info.isPlaying))) { _ in
             // Not `context.date`: while paused it stays at the timeline's first entry, so after any update the
-            // time text ran ahead by however long the view had been open [V: scratch probe, 2026-10-31].
+            // position ran ahead by however long the view had been open [V: scratch probe, 2026-10-31].
             content(now: Date())
         }
         .onChange(of: info.position) { seekTarget = nil }
