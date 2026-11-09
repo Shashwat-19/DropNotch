@@ -20,6 +20,10 @@ final class CalendarModule: NotchModule {
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let center: NotificationCenter
     @ObservationIgnored private var isRunning = false
+    /// A prompt is up: a second click on Allow mustn't ask again.
+    @ObservationIgnored private var isRequesting = false
+    /// Moves on at each `stop()`, so a fetch from before a stop and restart can't land after it.
+    @ObservationIgnored private var generation = 0
     /// The change, day and time-zone observers; running only while access is allowed.
     @ObservationIgnored private var observers: [Task<Void, Never>] = []
 
@@ -46,6 +50,7 @@ final class CalendarModule: NotchModule {
 
     func stop() {
         isRunning = false
+        generation += 1
         observers.forEach { $0.cancel() }
         observers = []
         events = []
@@ -60,7 +65,9 @@ final class CalendarModule: NotchModule {
 
     /// The card's Allow button, or the card turned on in Settings (D44). Prompts only while access is undecided.
     func requestAccess() async {
-        guard isRunning, access == .notDetermined else { return }
+        guard isRunning, access == .notDetermined, !isRequesting else { return }
+        isRequesting = true
+        defer { isRequesting = false }
         let result = await source.requestAccess()
         guard isRunning else { return }
         updateAccess(result)
@@ -71,9 +78,10 @@ final class CalendarModule: NotchModule {
         let calendar = Calendar.autoupdatingCurrent
         let start = calendar.startOfDay(for: Date())
         guard let end = calendar.date(byAdding: .day, value: 2, to: start) else { return }
+        let started = generation
         let fetched = await source.events(from: start, to: end)
-        // `stop()` or a revoked grant during the fetch.
-        guard isRunning, access == .allowed else { return }
+        // `stop()` (and perhaps a restart) or a revoked grant during the fetch.
+        guard isRunning, generation == started, access == .allowed else { return }
         events = fetched
         Logger.calendar.debug("Loaded \(fetched.count) events")
     }

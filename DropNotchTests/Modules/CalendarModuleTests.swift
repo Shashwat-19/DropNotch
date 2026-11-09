@@ -22,16 +22,22 @@ final class CalendarModuleTests: XCTestCase {
             (changes, changesContinuation) = AsyncStream.makeStream(of: Void.self)
         }
 
+        /// When set, `requestAccess()` waits until `release()`, like a prompt that is up.
+        var holdsRequest = false
+
         func requestAccess() async -> CalendarAccess {
             requests += 1
+            if holdsRequest { await withCheckedContinuation { pending.append($0) } }
             access = grant
             return grant
         }
 
         func events(from start: Date, to end: Date) async -> [CalendarEvent] {
             fetches += 1
+            // What the calendar held when the fetch began, so a late fetch can be told from a fresh one.
+            let result = events
             if suspends { await withCheckedContinuation { pending.append($0) } }
-            return events
+            return result
         }
 
         var isSuspended: Bool { !pending.isEmpty }
@@ -275,6 +281,42 @@ final class CalendarModuleTests: XCTestCase {
         source.release()
         await settle()
         XCTAssertEqual(module.events, [])
+    }
+
+    func testASecondAllowWhileThePromptIsUpDoesNotAskAgain() async {
+        let source = FakeSource(access: .notDetermined)
+        source.holdsRequest = true
+        let module = makeModule(source)
+        module.start()
+        let first = Task { await module.requestAccess() }
+        await waitUntil { source.isSuspended }
+        // In a task too, so a second prompt that is (wrongly) held fails the count instead of hanging the test.
+        let second = Task { await module.requestAccess() }
+        await settle()
+        XCTAssertEqual(source.requests, 1)
+        source.release()
+        await first.value
+        await second.value
+        XCTAssertEqual(module.access, .allowed)
+    }
+
+    func testAFetchFromBeforeAStopAndRestartDoesNotLandAfterIt() async {
+        let stale = CalendarEvent(id: "old", title: "Old", start: Date(timeIntervalSince1970: 0),
+                                  end: Date(timeIntervalSince1970: 60), isAllDay: false, colour: nil, isHidden: false)
+        let source = FakeSource(access: .allowed)
+        source.events = [stale]
+        source.suspends = true
+        let module = makeModule(source)
+        module.start()
+        await waitUntil { source.isSuspended }
+        module.stop()
+        source.suspends = false
+        source.events = [Self.sample]
+        module.start()
+        await waitUntil { module.events == [Self.sample] }
+        source.release()
+        await settle()
+        XCTAssertEqual(module.events, [Self.sample])
     }
 
     // MARK: Titles setting
