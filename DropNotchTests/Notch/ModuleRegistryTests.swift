@@ -383,6 +383,20 @@ final class ModuleRegistryTests: XCTestCase {
         XCTAssertEqual(registry.homeCards.map(\.id), ["c2", "c1"])
     }
 
+    /// v0.2's saved order had no Calendar; it goes in at its default index, between Now Playing and Battery (D44).
+    func testCalendarAddedToASavedV02OrderGoesInAtItsDefaultIndex() {
+        let defaults = makeDefaults()
+        defaults.set(["home", "now-playing", "battery", "notes", "file-tray", "clipboard"], forKey: "layout.tabOrder")
+        let registry = ModuleRegistry(modules: [
+            FakeModule("home"), FakeModule("now-playing", card: .wide), FakeModule("calendar", card: .medium),
+            FakeModule("battery", card: .narrow), FakeModule("notes"), FakeModule("file-tray"), FakeModule("clipboard"),
+        ], defaults: defaults)
+        XCTAssertEqual(registry.tabOrder,
+                       ["home", "now-playing", "calendar", "battery", "notes", "file-tray", "clipboard"])
+        XCTAssertEqual(registry.homeCards.map(\.id), ["now-playing", "calendar", "battery"])
+        XCTAssertEqual(registry.expandedModules.map(\.id), ["home", "notes", "file-tray", "clipboard"])
+    }
+
     func testDisabledCardsAreNeitherTabsNorHomeCards() {
         let registry = mixedRegistry(makeDefaults())
         registry.setEnabled("c1", false)

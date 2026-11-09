@@ -13,6 +13,8 @@ extension Logger {
     static let tray = Logger(subsystem: subsystem, category: "FileTray")
     /// Access states only: never clipboard content, types or counts of what was copied.
     static let clipboard = Logger(subsystem: subsystem, category: "Clipboard")
+    /// Access states, counts and error codes only: never titles, times or calendar names.
+    static let calendar = Logger(subsystem: subsystem, category: "Calendar")
     /// Failures only: never a reading.
     static let battery = Logger(subsystem: subsystem, category: "Battery")
     /// Error domains and codes only.
