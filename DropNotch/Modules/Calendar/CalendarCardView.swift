@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// The Calendar card (D44): the date and today's next events; a click opens Calendar. Before access is allowed it
+/// The Calendar card (D44): the date and your upcoming events; a click opens Calendar. Before access is allowed it
 /// shows the matching way to allow it.
 struct CalendarCardView: View {
     let module: CalendarModule
@@ -63,7 +63,7 @@ struct CalendarCardView: View {
                     header(now: now, hidden: upcoming.hiddenCount)
                         .padding(.bottom, NotchStyle.tightSpacing - Self.rowSpacing)
                     ForEach(Array(upcoming.rows.enumerated()), id: \.offset) { _, row in
-                        self.row(row).frame(height: Self.rowHeight)
+                        self.row(row, now: now).frame(height: Self.rowHeight)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -110,7 +110,7 @@ struct CalendarCardView: View {
     }
 
     @ViewBuilder
-    private func row(_ row: UpcomingEvents.Row) -> some View {
+    private func row(_ row: UpcomingEvents.Row, now: Date) -> some View {
         switch row {
         case .allDay(let events):
             line(events.first?.colour, label: Text("All day"),
@@ -120,7 +120,9 @@ struct CalendarCardView: View {
                 .accessibilityLabel(module.showsTitles ? Text("All day: \(events.map(\.title).joined(separator: ", "))")
                                                        : Text("\(events.count) all-day events"))
         case .event(let event):
-            line(event.colour, label: Text(event.start, format: Self.time),
+            let label = UpcomingEvents.startedBeforeToday(event, now: now, calendar: .autoupdatingCurrent)
+                ? Text("Now") : Text(event.start, format: Self.time)
+            line(event.colour, label: label,
                  title: module.showsTitles ? event.title : nil)
         case .noMoreToday:
             Text("No more events today").foregroundStyle(.secondary)

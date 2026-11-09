@@ -50,4 +50,9 @@ struct UpcomingEvents: Equatable {
             }
         }
     }
+
+    /// A timed event still running from an earlier day: the card shows "Now", not yesterday's start time (D44).
+    static func startedBeforeToday(_ event: CalendarEvent, now: Date, calendar: Calendar) -> Bool {
+        event.start < calendar.startOfDay(for: now)
+    }
 }

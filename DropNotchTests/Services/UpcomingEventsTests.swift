@@ -79,6 +79,16 @@ final class UpcomingEventsTests: XCTestCase {
         XCTAssertEqual(describe(result), ["overnight"])
     }
 
+    func testOnlyAnEventThatStartedBeforeTodayShowsNow() {
+        let overnight = event("overnight", date(2026, 11, 8, 22), today(14))
+        let morning = event("morning", today(0), today(14))
+        XCTAssertTrue(UpcomingEvents.startedBeforeToday(overnight, now: today(12), calendar: calendar))
+        XCTAssertFalse(UpcomingEvents.startedBeforeToday(morning, now: today(12), calendar: calendar),
+                       "midnight today is today")
+        XCTAssertFalse(UpcomingEvents.startedBeforeToday(overnight, now: date(2026, 11, 8, 23), calendar: calendar),
+                       "on the day it started it shows its time")
+    }
+
     func testHiddenEventsNeverAppearTodayOrTomorrow() {
         let result = upcoming([
             event("cancelled", today(14), today(15), hidden: true),
