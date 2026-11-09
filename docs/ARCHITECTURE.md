@@ -33,6 +33,7 @@ DropNotch/
     Clipboard/    ClipboardModule (poll, access states, history), ClipboardItem, ClipboardExpandedView (D7c, D33)
     Notes/        NotesModule (load and save), NotesExpandedView (D31)
     Battery/      BatteryModule, BatteryCardView: the narrow Home card (D43)
+    Calendar/     CalendarModule, CalendarCardView: the medium Home card (D44)
   Services/       one protocol + implementations per system dependency:
                   Now Playing (D21–D24): NowPlayingSource, NowPlayingInfo, NoNowPlayingSource,
                   MediaPlayer, PlayerNotificationParser, NowPlayingSelection, AppleEventOutcome,
@@ -40,6 +41,8 @@ DropNotch/
                   Artwork (D25, D26): NowPlayingArtwork, ArtworkLoading, ArtworkDownloader.
                   Clipboard (D33): Pasteboard (protocol, NSPasteboard conforms), PasteboardAccess.
                   Battery (D43): BatterySource, BatteryStatus, PowerSourceBatterySource (IOKit power sources).
+                  Calendar (D44): CalendarSource, CalendarAccess, CalendarEvent, EventKitCalendarSource (read only;
+                  the store lives in a private actor), UpcomingEvents (pure: what the card lists).
                   Planned: MediaRemote (v0.2), BluetoothBatteryProvider (deferred, D43), …
   Settings/       SettingsView with General, Modules, Privacy and About tabs (D34). Planned: per-module settings
   Support/        Logger categories, small shared helpers (FourCharCode+Code). Planned: file locations (section 5)
@@ -160,6 +163,8 @@ Target: zero wake-ups while idle, apart from the clipboard poll. Intervals below
 
 | What | Event source |
 |---|---|
+| Battery card (D43) | IOKit `IOPSNotificationCreateRunLoopSource` on the main run loop: one read per power-source change, none while nothing changes |
+| Calendar card (D44) | `EKEventStoreChanged`, `NSCalendarDayChanged` and `NSSystemTimeZoneDidChange`, observed only while access is allowed; one fetch of today and tomorrow per change |
 | Hover open/close | AppKit tracking area enter/exit on the notch panel |
 | Screen changes | `didChangeScreenParametersNotification` (+ 200 ms one-shot debounce) |
 | Now playing (Music, Spotify) | The player's distributed notification on track or state change [V: probe, docs/research/now-playing-probe-2026-10-25.md]; `NSWorkspace` launch and quit notifications. Adds no timers (D24) |
@@ -188,6 +193,7 @@ Target: zero wake-ups while idle, apart from the clipboard poll. Intervals below
 | Now-playing elapsed time (D26) | None since D42: the Now Playing card has no time text, so nothing ticks once a second | – | Removed with the v0.2 card; VoiceOver still reads the position on demand. |
 | Compact-slot grace (D28) | One-shot 2 s | Playback paused or stopped while the wings show, until it plays again | Keeps the closed shape from flapping on a quick pause or a Music burst, without keeping the menu bar blocked while paused. |
 | Decorative waveform (D28) | No app timer: Core Animation repeating animations, capped at 15 fps | Compact view visible **and** playing **and** display awake **and** not Low Power Mode **and** not Reduce Motion | Animation; the render server draws it, as the progress bar. Still bars otherwise. |
+| Calendar card event ends (D44) | No app timer: a SwiftUI `TimelineView(.explicit)` at the end times of today's remaining events | Card on screen (notch open on Home) | An event that ends while the notch is open drops off; closed, the next open recomputes the list anyway. |
 
 The Now Playing source adds no timers and no polling; the open view adds the two rows above (D26). Music's bursts of two states are not debounced; a one-shot 150 ms debounce would be added here only if device check 10 shows a flicker (D24).
 
@@ -197,4 +203,5 @@ Not allowed: any repeating timer while idle, a hover polling loop, a memory watc
 
 - `os.Logger(subsystem: "com.shashwat.DropNotch", category: "<Module>")` [V: CLAUDE.md]. Never log clipboard content, file names or track info. Dynamic strings and objects are redacted by default, but integers, floats and booleans are not [V: https://developer.apple.com/documentation/os/generating-log-messages-from-your-code], so mark anything sensitive `privacy: .private` explicitly.
 - One network request in the MVP: Spotify artwork, one HTTPS GET per track to `i.scdn.co` only, ephemeral session, no cookies or disk cache, never logged (D25). Lyrics, weather and updates are later features, and each one comes with privacy copy that says what it sends.
-- Each permission is requested when its feature is first enabled, never at launch. Now Playing is on by default (D21), so its Automation prompt comes on the first click on a control (D23).
+- Each permission is requested when its feature is first enabled, never at launch. Now Playing is on by default (D21), so its Automation prompt comes on the first click on a control (D23). The Calendar card is on by default too, so its prompt comes only from its Allow button or from turning it on in Settings (D44).
+- Calendar (D44): event titles, times and calendar names are never logged or saved; logs carry access states, counts and error codes. Titles live in memory and `stop()` clears them; Settings › Privacy › Show event titles off shows times only.
