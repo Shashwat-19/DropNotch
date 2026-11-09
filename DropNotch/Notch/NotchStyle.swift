@@ -13,6 +13,11 @@ enum NotchStyle {
     static let spacing: CGFloat = 8
     /// Within one block: a title and its subtitle, tiles in a row.
     static let tightSpacing: CGFloat = 4
+    /// Home cards (D42): corners, inner padding, the fill's white opacity, and the edge shown under Increase Contrast.
+    static let cardRadius: CGFloat = 14
+    static let cardPadding: CGFloat = 10
+    static let cardFill = 0.1
+    static let cardEdge = 0.35
     /// Open, close, the compact wings and tab switches all use this one spring (D37). No bounce: an overshoot past
     /// the open size would be cut flat by the panel's edges.
     static let spring = Animation.spring(duration: 0.25, bounce: 0)
