@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Now Playing in the open notch: artwork, title, artist, the progress bar and three controls (D22–D26).
+/// Now Playing as a Home card (D42): artwork beside the title and artist, then the progress bar and three controls
+/// (D22–D26) in one row.
 struct NowPlayingExpandedView: View {
     let module: NowPlayingModule
     @Environment(\.openURL) private var openURL
@@ -16,18 +17,22 @@ struct NowPlayingExpandedView: View {
     var body: some View {
         if let info = module.shown {
             let text = displayedText ?? TrackText(info)
-            VStack(spacing: NotchStyle.spacing) {
-                HStack(spacing: 12) {
-                    NowPlayingArtworkView(artwork: info.artwork, player: info.player, size: 56)
-                    VStack(alignment: .leading, spacing: NotchStyle.tightSpacing) {
+            VStack(spacing: NotchStyle.tightSpacing) {
+                HStack(alignment: .top, spacing: 10) {
+                    // 54 pt: the card's 86 pt of height less the 28 pt control row and the gap (D42).
+                    NowPlayingArtworkView(artwork: info.artwork, player: info.player, size: 54)
+                    VStack(alignment: .leading, spacing: 2) {
                         // Verbatim (a String, not a literal): track names are never looked up for translation.
                         Text(text.title)
-                            .font(.subheadline.weight(.semibold))
+                            // A card's title is one step larger than a tab's (D42).
+                            .font(.body.weight(.semibold))
                             .opacity(textOpacity)
                         if module.deniedPlayer == info.player {
                             Button(action: openAutomationSettings) {
                                 // Underlined as well as coloured, so it reads as a link without colour (L6).
                                 Text("Allow control of \(info.player.displayName) in System Settings").underline()
+                                    // Two lines: the card's text column is about 140 pt wide.
+                                    .lineLimit(2)
                                     // A 24 pt target (L7): it is the only way out of the denied state.
                                     .frame(minHeight: 24, alignment: .leading)
                                     .contentShape(Rectangle())
@@ -42,16 +47,21 @@ struct NowPlayingExpandedView: View {
                                 .foregroundStyle(.secondary)
                                 .opacity(textOpacity)
                         }
-                        // An ad can report a zero duration: no bar rather than a dead one.
-                        if let duration = info.duration, duration > 0, info.position != nil {
-                            PlaybackProgressView(info: info, duration: duration) { seconds in
-                                Task { await module.perform(.seek(to: seconds)) }
-                            }
-                        }
                     }
+                    .padding(.top, 2)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                controls(isPlaying: module.isPlaying)
+                HStack(spacing: NotchStyle.spacing) {
+                    // An ad can report a zero duration: no bar rather than a dead one.
+                    if let duration = info.duration, duration > 0, info.position != nil {
+                        PlaybackProgressView(info: info, duration: duration) { seconds in
+                            Task { await module.perform(.seek(to: seconds)) }
+                        }
+                    } else {
+                        Spacer(minLength: 0)
+                    }
+                    controls(isPlaying: module.isPlaying)
+                }
             }
             // Set explicitly: the panel turns key in the same turn as the open, before SwiftUI inserts this view,
             // and a hover-opened notch already has it, so `.defaultFocus` alone doesn't land (code-reviewer W1).
@@ -70,7 +80,7 @@ struct NowPlayingExpandedView: View {
     }
 
     private func controls(isPlaying: Bool) -> some View {
-        HStack(spacing: 24) {
+        HStack(spacing: 2) {
             control(.previous, "Previous track", systemImage: "backward.fill")
             control(.playPause, isPlaying ? "Pause" : "Play", systemImage: isPlaying ? "pause.fill" : "play.fill")
                 // Play morphs into pause; under Reduce Motion it only fades.
@@ -91,7 +101,7 @@ struct NowPlayingExpandedView: View {
                 .labelStyle(.iconOnly)
                 .font(.title3)
                 // At least the ~24 pt target L7 asks for; the whole highlight circle is clickable.
-                .frame(width: 32, height: 32)
+                .frame(width: 28, height: 28)
                 .contentShape(Circle())
         }
         .buttonStyle(NowPlayingControlStyle())

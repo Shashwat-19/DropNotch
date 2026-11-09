@@ -21,6 +21,8 @@ final class NowPlayingModule: NotchModule {
     /// a player change, a failed command, or `settleDelay` after an `.ok` reply the player never confirms.
     private(set) var pendingIsPlaying: Bool?
     let hasCompactView = true
+    /// A card on the Home tab rather than a tab of its own (D42).
+    let homeCard: HomeCardSize? = .wide
     /// The compact slots show (D28): while playing, and for `compactGrace` after it stops with a track loaded.
     private(set) var hasCompactContent = false
 

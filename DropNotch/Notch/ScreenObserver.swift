@@ -2,7 +2,7 @@ import AppKit
 
 /// Calls `onChange` once a burst of display-configuration changes has settled (200 ms one-shot
 /// debounce, ARCHITECTURE.md §9), and on screen sleep and wake: `onChange` closes the notch, which
-/// removes its open content (D19) and so stops the progress animation and elapsed time.
+/// removes its open content (D19) and so stops the progress animation.
 @MainActor
 final class ScreenObserver: NSObject {
     private let onChange: @MainActor () -> Void
