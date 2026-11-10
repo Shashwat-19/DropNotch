@@ -27,11 +27,12 @@ struct NotchGeometry: Equatable {
     static let topRowSpacing: CGFloat = 2
     /// Clear space between the camera housing and the first button, and after the last.
     static let topRowInset: CGFloat = 8
-    /// Four module tabs and the Settings button. A fifth module needs this raised, or the row would overflow.
-    static let topRowMaxItems = 5
-    /// Width the row needs right of the housing.
-    static var topRowWidth: CGFloat {
-        CGFloat(topRowMaxItems) * topRowItemSize.width + CGFloat(topRowMaxItems - 1) * topRowSpacing + 2 * topRowInset
+    /// The row is always wide enough for four module tabs and the Settings button; more tabs widen it (D45).
+    static let topRowMinItems = 5
+    /// Width the row needs right of the housing for `items` buttons, at least `topRowMinItems`.
+    static func topRowWidth(items: Int = topRowMinItems) -> CGFloat {
+        let items = max(items, topRowMinItems)
+        return CGFloat(items) * topRowItemSize.width + CGFloat(items - 1) * topRowSpacing + 2 * topRowInset
     }
 
     let hasNotch: Bool
@@ -49,8 +50,10 @@ struct NotchGeometry: Equatable {
     ///     `auxiliaryTopRightArea`, the menu-bar space either side of the notch (nil without one).
     ///   - menuBarHeight: `frame.maxY - visibleFrame.maxY`; 0 when the menu bar auto-hides.
     ///   - backingScale: `backingScaleFactor`, used to align edges to whole pixels.
+    ///   - topRowItems: the module tabs that are on plus the Settings button; the open shape widens past
+    ///     `topRowMinItems` (D45 Q5, D48: six items, such as five tabs and the gear, make it 596 pt on the Air).
     init(screenFrame: CGRect, safeAreaTop: CGFloat, auxLeftWidth: CGFloat?, auxRightWidth: CGFloat?,
-         menuBarHeight: CGFloat, backingScale: CGFloat) {
+         menuBarHeight: CGFloat, backingScale: CGFloat, topRowItems: Int = topRowMinItems) {
         let closed: CGRect
         if safeAreaTop > 0, let left = auxLeftWidth, let right = auxRightWidth {
             hasNotch = true
@@ -70,7 +73,7 @@ struct NotchGeometry: Equatable {
         // row right of the housing (D35): centred on the notch, so each side gets `topRowWidth`. A pill is ours to
         // draw over, so only a real notch is kept clear.
         let housing = hasNotch ? closed.width : 0
-        let open = CGSize(width: max(Self.openSize.width, compactPeek.width, housing + 2 * Self.topRowWidth),
+        let open = CGSize(width: max(Self.openSize.width, compactPeek.width, housing + 2 * Self.topRowWidth(items: topRowItems)),
                           height: max(Self.openSize.height, peek.height))
 
         closedFrame = Self.pixelAligned(closed, scale: backingScale)

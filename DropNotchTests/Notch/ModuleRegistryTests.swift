@@ -107,6 +107,14 @@ final class ModuleRegistryTests: XCTestCase {
         XCTAssertNil(registry.slotModule(for: .left))
     }
 
+    /// D45 Q5 dropped the tab limit: with Terminal and Clipboard on there are five tabs and the gear, and the open shape
+    /// widens instead (D48).
+    func testARegistryWithSixTabsInits() {
+        let ids = ["home", "notes", "file-tray", "clipboard", "terminal", "extra"]
+        let registry = ModuleRegistry(modules: ids.map { FakeModule($0) }, defaults: makeDefaults())
+        XCTAssertEqual(registry.expandedModules.map(\.id), ids)
+    }
+
     func testInitStartsAndStopsNothing() {
         let a = FakeModule("a"), b = FakeModule("b")
         _ = ModuleRegistry(modules: [a, b], defaults: makeDefaults())

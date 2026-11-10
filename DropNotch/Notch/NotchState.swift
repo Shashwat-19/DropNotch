@@ -27,6 +27,8 @@ final class NotchState {
     @ObservationIgnored private var changeCount = 0
     /// What the registry last reported; `displayedWings` follows it through `show` (D28).
     @ObservationIgnored private var wantedWings: Set<CompactSlot> = []
+    /// The tabs that are on plus Settings, which sets how wide the open shape is (D45).
+    @ObservationIgnored private var topRowItems = NotchGeometry.topRowMinItems
 
     /// Re-reads the screens and moves the panel. Called at launch and after each
     /// debounced screen change. Resets the hover state, because the old frames no longer
@@ -41,7 +43,7 @@ final class NotchState {
         syncKeyFocus()
 
         let screens = NSScreen.screens.compactMap { screen in
-            screen.displayID.map { (id: $0, screen: screen, geometry: NotchGeometry(screen: screen)) }
+            screen.displayID.map { (id: $0, screen: screen, geometry: NotchGeometry(screen: screen, topRowItems: topRowItems)) }
         }
         guard let id = ScreenObserver.chooseDisplay(screens.map { ($0.id, $0.geometry.hasNotch) }, on: .saved),
               let chosen = screens.first(where: { $0.id == id }) else {
@@ -105,6 +107,14 @@ final class NotchState {
         guard wings != wantedWings else { return }
         wantedWings = wings
         show(hover.phase)
+    }
+
+    /// Re-measures the open shape when a tab is turned on or off (D45). Like a screen change, it closes the notch;
+    /// tabs only change in Settings. Before the first `screensChanged()` it only stores the count.
+    func setTopRowItems(_ items: Int) {
+        guard items != topRowItems else { return }
+        topRowItems = items
+        if geometry != nil { screensChanged() }
     }
 
     private func startTimer(_ delay: Duration, then event: NotchHoverStateMachine.Event) {
@@ -180,12 +190,12 @@ private extension NSScreen {
 }
 
 private extension NotchGeometry {
-    init(screen: NSScreen) {
+    init(screen: NSScreen, topRowItems: Int) {
         self.init(screenFrame: screen.frame,
                   safeAreaTop: screen.safeAreaInsets.top,
                   auxLeftWidth: screen.auxiliaryTopLeftArea?.width,
                   auxRightWidth: screen.auxiliaryTopRightArea?.width,
                   menuBarHeight: screen.frame.maxY - screen.visibleFrame.maxY,
-                  backingScale: screen.backingScaleFactor)
+                  backingScale: screen.backingScaleFactor, topRowItems: topRowItems)
     }
 }
