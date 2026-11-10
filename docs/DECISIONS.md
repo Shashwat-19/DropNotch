@@ -806,6 +806,8 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 ## D30. Global hotkey opens the notch with keyboard focus (revises D16)
 
+**Revised in part 2026-11-10 (Shash, recorded in D48 and D49):** the pointer leaving now also closes a hotkey-opened notch after the normal exit debounce in every tab, however it was opened (hover, a click into a note or the terminal, ⌃⌥N), and clears its keyboard focus; only a drag in progress (a mouse button held) holds it open.
+
 **Date:** 2026-10-31 · **Status:** Accepted (Shash chose ⌃⌥N, 2026-10-31; closes carry-overs L1–L3)
 
 **Decision:**
@@ -822,6 +824,8 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 ---
 
 ## D31. Notes: one plain-text note in its own tab; tabs beside the camera housing
+
+**Revised in part 2026-11-10 (D48, D49):** a click into the note takes keyboard focus as before, but the pointer leaving now closes the notch.
 
 **Date:** 2026-10-31 · **Status:** Accepted (Shash chose tabs over side-by-side, 2026-10-31)
 
@@ -1155,7 +1159,7 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - The shell: `pw_shell` from the account record, used if it is absolute, listed in /etc/shells and an executable regular file, else /bin/zsh. argv0 is `-` plus its name (a login shell); it starts in the account's home folder with a fresh environment from an allow-list (TERM, COLORTERM, `TERM_PROGRAM=DropNotch`, HOME, USER, LOGNAME, SHELL, a base PATH the login shell extends, LANG, TMPDIR, SSH_AUTH_SOCK), never DropNotch's own. Descriptors 3 and up are made close-on-exec before the shell starts, and so is the pty master (design review M1).
 - Started only when the tab is opened on purpose: a click on the tab, its ⌘ number, or ⌃⌥N on it. Never on a hover-open, at launch or at relaunch (Shash, decision 3; review M4). The session keeps running while the notch is closed and is there when it reopens.
 - End Session, the shell exiting, turning the tab off and quitting all end the session: SIGHUP to the shell's process group and the foreground job's, then SIGKILL after 2 s (at quit: up to 1 s, before returning). Targets are only process groups above 1 in the shell's own session, never DropNotch's group or pid (M3). No confirmation in v0.2 (decision 8).
-- Keys: hover-opened, keys stay with the app in front and the caret is hollow (M6). A click in the terminal, or ⌃⌥N, focuses it: the caret is solid, the notch stays open when the pointer leaves, and Escape, arrows, ⌃C and Tab go to the shell. ⌘C, ⌘V and ⌘A copy, paste and select all; ⌘1… and ⌘, still switch tabs and open Settings; other ⌘ keys are swallowed (SwiftTerm would send ⌘Q to DropNotch's menu). A click outside or ⌃⌥N closes the notch.
+- Keys: hover-opened, keys stay with the app in front and the caret is hollow (M6). A click in the terminal, or ⌃⌥N, focuses it: the caret is solid, and Escape, arrows, ⌃C and Tab go to the shell. **Revised 2026-11-10 (Shash):** the pointer leaving closes the notch after the exit debounce even while the terminal has focus (it no longer keeps the notch open); the session keeps running, and secure keyboard entry turns off as the panel gives up key status. See D49's revision. ⌘C, ⌘V and ⌘A copy, paste and select all; ⌘1… and ⌘, still switch tabs and open Settings; other ⌘ keys are swallowed (SwiftTerm would send ⌘Q to DropNotch's menu). A click outside or ⌃⌥N closes the notch.
 - Secure keyboard entry is on while the terminal is first responder in the key panel and off whenever focus leaves: the notch closes, another tab, End Session, the shell exits, the module is turned off, quit, and on the crash paths DropNotch can catch (decision 5; review L1).
 - Programs in the terminal can neither read nor write the clipboard (OSC 52 refused both ways; decision 4, L2): DropNotch replaces SwiftTerm's `terminalDelegate` with its own, which answers each method explicitly. ⌘C and ⌘V work as usual; ⌘C with nothing selected leaves the clipboard alone.
 - Permissions: commands typed in the terminal run with DropNotch's permissions (Calendars full access, Desktop, Documents and Downloads, Automation), and anything they're allowed later stays allowed for DropNotch. Accepted, said plainly in Settings and the README, as VS Code and iTerm do (decision 2). The residual risk is accepted in writing: the shell's setup files and tools such as Homebrew's, which any app running as you can change, run with those permissions whenever a session starts, and jobs started with `nohup` or `disown` outlive the session and DropNotch. Avoiding it would need a private API (responsibility disclaim).
@@ -1196,3 +1200,10 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 **Review (2026-11-10):** test-writer added 6 tests (a pill, a wide notch, the canvas rule at Large, calendar steps, fonts) and found the tray's buttons didn't step up and a test read the real defaults (`NotchState(defaults:)` now); both fixed. code-reviewer: Approve with changes. W1 `scaled`'s comment gave the wrong ratio; W2 Large's height now derives from `NotchGeometry.openSize`; W3 device checks. S1–S8 applied (the empty states' buttons step up too); S9 (a switch during the 0.25 s close animation can clip the shrinking shape for a moment) noted.
 
 **Alternatives:** +30/+60 (no extra calendar row with the larger text); +50/+100 (47 % of the Air's width for little more); scaling the whole content with `scaleEffect` (blurry text, and it would scale the terminal's font and AppKit views); a size per tab (breaks D16/D29); larger text as a separate setting (Shash: always with Large).
+
+**Revision (Shash, 2026-11-10, after device checks 101–106): the pointer leaving always closes the notch.** Reported: the open notch stayed open after the pointer left, until a click in another app. Root cause (debugger): `NotchHoverStateMachine` ignored the exit debounce while `openedByKeyboard` was set (D30), and the hotkey or any click asking for focus (the terminal, a note, Clipboard's search) set it; only Escape, a click elsewhere or the hotkey cleared it, so a notch focused once in an open session (Home included, after ⌃⌥N or a tab switch) ignored the pointer. Now:
+- The exit debounce closes the notch whatever opened it, in every tab, and clears the keyboard focus; the panel hands key status back (`syncKeyFocus` → `returnKeyFocus`), which turns secure keyboard entry off (the terminal follows SwiftTerm's `hasFocus`, which needs the key window), and the terminal view leaves the window. The session keeps running.
+- The only exception is a drag: while a mouse button is held (a tray file dragged out, text being selected past the edge, the seek bar), `NotchState` restarts the 100 ms debounce instead of closing, so it re-checks only while a button is down. A file dragged onto the notch keeps the pointer inside, as before.
+- ⌃⌥N cancels a pending exit debounce when it opens, so a press just after the pointer left isn't undone 100 ms later. Opened by ⌃⌥N with the pointer elsewhere, the notch stays open until the pointer has passed through it, or Escape, ⌃⌥N or a click elsewhere.
+- Risk accepted: typing in the terminal or a note while the pointer drifts off closes the notch, and the rest of the keystrokes go to the app in front.
+

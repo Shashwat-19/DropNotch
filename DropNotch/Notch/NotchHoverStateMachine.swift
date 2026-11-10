@@ -12,11 +12,13 @@ struct NotchHoverStateMachine {
 
     enum Event: Hashable {
         case pointerEntered, pointerExited, openDelayElapsed, exitDebounceElapsed
-        /// The global shortcut: opens the notch with keyboard focus, or closes a notch it opened (D30).
+        /// The global shortcut: opens the notch with keyboard focus, or closes a notch it opened (D30). The pointer
+        /// leaving still closes it (D50).
         case hotkeyPressed
         /// Escape, or the panel lost keyboard focus. Closes only a notch the hotkey opened (D30).
         case dismissed
-        /// A click in a hover-opened note (D31): takes keyboard focus and, unlike the hotkey, never closes.
+        /// A click in a hover-opened note or terminal (D31, D48): takes keyboard focus and, unlike the hotkey, never
+        /// closes the notch itself. The pointer leaving still closes it (D50).
         case focusRequested
         /// The pointer moved inside the panel: screen x in points, event time in seconds.
         case pointerMoved(x: Double, time: Double)
@@ -38,7 +40,8 @@ struct NotchHoverStateMachine {
 
     private(set) var phase = Phase.closed
     private(set) var pointerInside = false
-    /// Opened by the hotkey: the panel holds keyboard focus and the pointer leaving doesn't close it (D30).
+    /// The panel holds keyboard focus: opened or focused by the hotkey, or a click asked for focus (D30, D31). Cleared
+    /// when the notch closes, including when the pointer leaves (D50).
     private(set) var openedByKeyboard = false
     /// The open delay ran out during peek while the pointer was briefly outside.
     private var openDue = false
@@ -84,7 +87,8 @@ struct NotchHoverStateMachine {
             openedByKeyboard.toggle()
             phase = openedByKeyboard ? .open : .closed
             openDue = false
-            return nil
+            // A press just after the pointer left mustn't be undone by that exit's debounce (D50).
+            return openedByKeyboard ? .cancelExitDebounce : nil
         case .focusRequested:
             openedByKeyboard = true
             phase = .open
@@ -96,10 +100,14 @@ struct NotchHoverStateMachine {
             phase = .closed
             return nil
         case .exitDebounceElapsed:
-            guard !pointerInside, !openedByKeyboard, phase != .closed else { return nil }
+            // The pointer leaving closes the notch however it was opened, keyboard focus included (D50; revises D30,
+            // D31 and D48). `NotchState` holds this event back while a mouse button is down, for drags.
+            guard !pointerInside, phase != .closed else { return nil }
             let wasPeek = phase == .peek
             phase = .closed
             openDue = false
+            // Otherwise the next hotkey press would toggle it off and do nothing.
+            openedByKeyboard = false
             return wasPeek ? .cancelOpenDelay : nil
         }
     }

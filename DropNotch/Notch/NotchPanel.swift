@@ -65,8 +65,8 @@ final class NotchPanel: NSPanel {
         frameRect
     }
 
-    /// True only while the hotkey holds the notch open (D30, revises D16). Hover never makes the panel key,
-    /// so typing in the app in front keeps working.
+    /// True only while the notch has keyboard focus: the hotkey, or a click asking for it (D30, D31, revises D16).
+    /// Hover never makes the panel key, so typing in the app in front keeps working; the pointer leaving gives it up.
     var acceptsKeyboard = false
     /// Escape, or keyboard focus moved elsewhere (a click in another app, or `returnKeyFocus()`).
     var onDismiss: (@MainActor () -> Void)?

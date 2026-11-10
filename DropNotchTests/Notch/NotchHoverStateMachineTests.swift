@@ -204,14 +204,14 @@ final class NotchHoverStateMachineTests: XCTestCase {
 
     func testHotkeyFromClosedOpensWithKeyboard() {
         var machine = Machine()
-        XCTAssertNil(machine.handle(.hotkeyPressed))
+        XCTAssertEqual(machine.handle(.hotkeyPressed), .cancelExitDebounce)
         XCTAssertEqual(machine.phase, .open)
         XCTAssertTrue(machine.openedByKeyboard)
     }
 
     func testHotkeyFromPeekOpensAndTheStaleOpenDelayDoesNothing() {
         var machine = driven([.pointerEntered])
-        XCTAssertNil(machine.handle(.hotkeyPressed))
+        XCTAssertEqual(machine.handle(.hotkeyPressed), .cancelExitDebounce)
         XCTAssertEqual(machine.phase, .open)
         XCTAssertTrue(machine.openedByKeyboard)
 
@@ -224,7 +224,7 @@ final class NotchHoverStateMachineTests: XCTestCase {
     // A hover-opened notch takes focus rather than closing under the pointer.
     func testHotkeyOnAHoverOpenedNotchKeepsItOpenAndTakesFocus() {
         var machine = opened
-        XCTAssertNil(machine.handle(.hotkeyPressed))
+        XCTAssertEqual(machine.handle(.hotkeyPressed), .cancelExitDebounce)
         XCTAssertEqual(machine.phase, .open)
         XCTAssertTrue(machine.openedByKeyboard)
     }
@@ -250,15 +250,62 @@ final class NotchHoverStateMachineTests: XCTestCase {
         }
     }
 
-    func testPointerLeavingAHotkeyOpenedNotchDoesNotCloseIt() {
-        for start in [Machine(), opened] {
+    /// D50 (revises D30): the pointer leaving closes a hotkey-opened notch too, and clears its keyboard focus.
+    func testPointerLeavingAHotkeyOpenedNotchClosesIt() {
+        for start in [driven([.pointerEntered]), opened] {
             var machine = start
             _ = machine.handle(.hotkeyPressed)
-            _ = machine.handle(.pointerExited)
+            XCTAssertEqual(machine.handle(.pointerExited), .startExitDebounce)
             XCTAssertNil(machine.handle(.exitDebounceElapsed))
-            XCTAssertEqual(machine.phase, .open)
-            XCTAssertTrue(machine.openedByKeyboard)
+            XCTAssertEqual(machine.phase, .closed)
+            XCTAssertFalse(machine.openedByKeyboard)
         }
+    }
+
+    /// D50: after a click into the terminal or a note, the pointer leaving closes the notch too.
+    func testPointerLeavingAfterAFocusRequestClosesIt() {
+        var machine = opened
+        _ = machine.handle(.focusRequested)
+        XCTAssertEqual(machine.handle(.pointerExited), .startExitDebounce)
+        XCTAssertNil(machine.handle(.exitDebounceElapsed))
+        XCTAssertEqual(machine.phase, .closed)
+        XCTAssertFalse(machine.openedByKeyboard)
+    }
+
+    /// After the pointer closed a keyboard-opened notch, the next press opens it with focus, not a press that does nothing.
+    func testTheHotkeyOpensAgainAfterThePointerClosedIt() {
+        var machine = opened
+        _ = machine.handle(.hotkeyPressed)
+        _ = machine.handle(.pointerExited)
+        _ = machine.handle(.exitDebounceElapsed)
+        XCTAssertEqual(machine.handle(.hotkeyPressed), .cancelExitDebounce)
+        XCTAssertEqual(machine.phase, .open)
+        XCTAssertTrue(machine.openedByKeyboard)
+    }
+
+    /// Back within the debounce: still open, still focused.
+    func testComingBackWithinTheDebounceKeepsFocus() {
+        var machine = opened
+        _ = machine.handle(.hotkeyPressed)
+        _ = machine.handle(.pointerExited)
+        XCTAssertEqual(machine.handle(.pointerEntered), .cancelExitDebounce)
+        XCTAssertNil(machine.handle(.exitDebounceElapsed))
+        XCTAssertEqual(machine.phase, .open)
+        XCTAssertTrue(machine.openedByKeyboard)
+    }
+
+    /// The hotkey with the pointer elsewhere: open until the pointer has come and gone, Escape or the hotkey.
+    func testAHotkeyOpenWithThePointerAwayStaysOpenUntilItPassesThrough() {
+        // Only a pointer exit starts the debounce, and the press cancels a pending one, so none can fire here.
+        var machine = Machine()
+        XCTAssertEqual(machine.handle(.hotkeyPressed), .cancelExitDebounce)
+        XCTAssertNil(machine.handle(.openDelayElapsed))
+        XCTAssertNil(machine.handle(.pointerMoved(x: 10, time: 1)))
+        XCTAssertEqual(machine.phase, .open, "the pointer was never inside")
+        _ = machine.handle(.pointerEntered)
+        _ = machine.handle(.pointerExited)
+        _ = machine.handle(.exitDebounceElapsed)
+        XCTAssertEqual(machine.phase, .closed)
     }
 
     func testDismissedClosesAHotkeyOpenedNotch() {
