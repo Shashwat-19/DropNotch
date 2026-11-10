@@ -1,7 +1,7 @@
 import XCTest
 @testable import DropNotch
 
-/// D50: a held mouse button (a drag) holds back the pointer-exit close. Without a panel, `send` does no window work.
+/// D49 revision: a held mouse button (a drag) holds back the pointer-exit close. Without a panel, `send` does no window work.
 @MainActor
 final class NotchStateDragTests: XCTestCase {
     override func tearDown() {

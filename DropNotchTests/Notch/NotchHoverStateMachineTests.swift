@@ -250,7 +250,24 @@ final class NotchHoverStateMachineTests: XCTestCase {
         }
     }
 
-    /// D50 (revises D30): the pointer leaving closes a hotkey-opened notch too, and clears its keyboard focus.
+    /// Shash (D48, D49): 1 s to come back while the notch has keyboard focus, so a typed password can't land in the
+    /// app in front because the pointer drifted; hover-only opens keep 0.1 s.
+    func testTheExitDelayIsLongerWithKeyboardFocus() {
+        var machine = opened
+        XCTAssertEqual(machine.exitDelay, .milliseconds(100))
+        _ = machine.handle(.focusRequested)
+        XCTAssertEqual(machine.exitDelay, .seconds(1))
+        XCTAssertEqual(machine.handle(.pointerExited), .startExitDebounce)
+        XCTAssertEqual(machine.handle(.pointerEntered), .cancelExitDebounce, "back in time: stays open")
+        XCTAssertEqual(machine.phase, .open)
+        _ = machine.handle(.pointerExited)
+        _ = machine.handle(.exitDebounceElapsed)
+        XCTAssertEqual(machine.phase, .closed)
+        XCTAssertEqual(machine.exitDelay, .milliseconds(100), "focus cleared with the close")
+        XCTAssertEqual(driven([.hotkeyPressed]).exitDelay, .seconds(1))
+    }
+
+    /// D49 revision (revises D30): the pointer leaving closes a hotkey-opened notch too, and clears its keyboard focus.
     func testPointerLeavingAHotkeyOpenedNotchClosesIt() {
         for start in [driven([.pointerEntered]), opened] {
             var machine = start
@@ -262,7 +279,7 @@ final class NotchHoverStateMachineTests: XCTestCase {
         }
     }
 
-    /// D50: after a click into the terminal or a note, the pointer leaving closes the notch too.
+    /// D49 revision: after a click into the terminal or a note, the pointer leaving closes the notch too.
     func testPointerLeavingAfterAFocusRequestClosesIt() {
         var machine = opened
         _ = machine.handle(.focusRequested)

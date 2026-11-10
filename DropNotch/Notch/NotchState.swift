@@ -96,10 +96,10 @@ final class NotchState {
     /// Called by the tracking area in `NotchHostingView` and by this class's own timers.
     func send(_ event: NotchHoverStateMachine.Event) {
         // A drag in progress (a tray file going out, text being selected past the edge, the seek bar) keeps the notch
-        // open: while a mouse button is down the exit debounce starts again instead of closing it (D50). Only then,
+        // open: while a mouse button is down the exit debounce starts again instead of closing it (D49 revision). Only then,
         // so no polling while idle (ARCHITECTURE §9).
         if event == .exitDebounceElapsed, Self.mouseButtonsDown() {
-            startTimer(NotchHoverStateMachine.exitDebounce, then: .exitDebounceElapsed)
+            startTimer(hover.exitDelay, then: .exitDebounceElapsed)
             return
         }
         // With no display the panel is ordered out; taking key focus would swallow typing into an invisible window.
@@ -115,7 +115,7 @@ final class NotchState {
         case .startOpenDelay?:
             startTimer(NotchHoverStateMachine.openDelay, then: .openDelayElapsed)
         case .startExitDebounce?:
-            startTimer(NotchHoverStateMachine.exitDebounce, then: .exitDebounceElapsed)
+            startTimer(hover.exitDelay, then: .exitDebounceElapsed)
         case .cancelOpenDelay?:
             cancelTimer(.openDelayElapsed)
         case .cancelExitDebounce?:
