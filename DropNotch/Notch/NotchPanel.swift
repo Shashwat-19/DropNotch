@@ -75,15 +75,37 @@ final class NotchPanel: NSPanel {
     override var canBecomeMain: Bool { false }
 
     /// Escape closes a hotkey-opened notch wherever focus is (D31). A text view would otherwise keep it: NSTextView
-    /// takes Escape for word completion. An input method that is composing text keeps Escape to cancel that.
+    /// takes Escape for word completion. An input method that is composing text keeps Escape to cancel that, and the
+    /// terminal keeps it for its programs, as it keeps ⌘C, ⌘V and ⌘A (D48). Its other ⌘ keys are dropped here too,
+    /// in case one gets past `performKeyEquivalent`: SwiftTerm's `keyDown` offers them to the app's menu.
     override func sendEvent(_ event: NSEvent) {
-        // 53 is kVK_Escape.
-        if event.type == .keyDown, event.keyCode == 53,
-           (firstResponder as? NSTextInputClient)?.hasMarkedText() != true {
-            onDismiss?()
-            return
-        }
+        if event.type == .keyDown, handle(route(event)) { return }
         super.sendEvent(event)
+    }
+
+    /// ⌘ keys reach the window here before the app's menu, so ⌘Q in the terminal can't quit DropNotch (D48).
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        let route = route(event)
+        return route != .dismiss && handle(route) || super.performKeyEquivalent(with: event)
+    }
+
+    private func route(_ event: NSEvent) -> NotchKeyRoute {
+        NotchKeyRoute.route(keyCode: event.keyCode, characters: event.charactersIgnoringModifiers,
+                            modifiers: event.modifierFlags, ownerFocused: firstResponder is NotchKeyOwner,
+                            hasMarkedText: (firstResponder as? NSTextInputClient)?.hasMarkedText() == true)
+    }
+
+    /// True when the key is dealt with and AppKit shouldn't see it.
+    private func handle(_ route: NotchKeyRoute) -> Bool {
+        switch route {
+        case .pass: return false
+        case .dismiss: onDismiss?()
+        case .copy: _ = firstResponder?.tryToPerform(#selector(NSText.copy(_:)), with: self)
+        case .paste: _ = firstResponder?.tryToPerform(#selector(NSText.paste(_:)), with: self)
+        case .selectAll: _ = firstResponder?.tryToPerform(#selector(NSResponder.selectAll(_:)), with: self)
+        case .swallow: break
+        }
+        return true
     }
 
     // ⌘. lands here; Escape is caught in `sendEvent` above (D31).
