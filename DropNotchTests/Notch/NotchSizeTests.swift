@@ -29,6 +29,12 @@ final class NotchSizeTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(large.openFrame.width - large.openTopRowLeading, NotchGeometry.topRowWidth(items: 6))
     }
 
+    /// Standard is the geometry's own minimum height (code-reviewer W2): one number, not two.
+    func testStandardHeightIsTheGeometrysOpenSize() {
+        XCTAssertEqual(NotchSize.standard.openHeight, NotchGeometry.openSize.height)
+        XCTAssertEqual(NotchSize.large.openHeight, NotchGeometry.openSize.height + 40)
+    }
+
     func testScaledIsOneTextStepUp() {
         XCTAssertEqual(NotchSize.standard.scaled(28), 28)
         XCTAssertEqual(NotchSize.large.scaled(28), 32)

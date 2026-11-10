@@ -24,7 +24,7 @@ DropNotch is an open-source macOS utility. The notch opens when you hover over i
 - **Clipboard history:** off until you turn it on. Keeps the last 25 text, link and image items, with search; click an item or press Return to copy it back.
 - **Terminal:** off until you turn it on. Your login shell in the notch, like Terminal.app: it starts when you open the tab, keeps running while the notch is closed, and ends with End Session. Click in it (or press ⌃⌥N) to type; font size and scrollback are in Settings › Terminal.
 - **Hotkey:** ⌃⌥N opens and closes the notch with keyboard focus, and can be changed in Settings. While the notch has keyboard focus, ⌘1, ⌘2… switch tabs and ⌘, opens Settings. In Now Playing, Tray and Clipboard, Tab moves between controls and Space or Return presses them. The arrow keys also step through Now Playing's controls and the tray's files and buttons (only Tab reaches Clear All), and ↑/↓ choose a clipboard item.
-- **Notch size:** Standard, or Large in Settings › General: taller and wider, with larger text, artwork and rows on every tab.
+- **Notch size:** Standard, or Large in Settings › General: taller and wider, with larger text, artwork and controls on every tab (the terminal keeps its own font size and gets more rows and columns).
 - **Customisable modules:** in Settings, turn modules on or off, reorder the tabs, choose what fills each side of the closed notch, set launch at login, and choose the built-in or main display.
 
 ## Install

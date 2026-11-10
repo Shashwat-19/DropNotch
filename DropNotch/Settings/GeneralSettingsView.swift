@@ -3,7 +3,7 @@ import os
 import ServiceManagement
 import SwiftUI
 
-/// Launch at login, the hotkey and the notch's display (D30, D34).
+/// Launch at login, the notch size, the hotkey and the notch's display (D30, D34, D49).
 struct GeneralSettingsView: View {
     let notchState: NotchState
 
@@ -36,7 +36,7 @@ struct GeneralSettingsView: View {
                     Text("Large").tag(NotchSize.large)
                 }
             } footer: {
-                Text("Large is taller and wider, with larger text, for every tab.").foregroundStyle(.secondary)
+                Text("Large is taller and wider, with larger text and controls on every tab. The terminal keeps its own font size.").foregroundStyle(.secondary)
             }
             Section {
                 KeyboardShortcuts.Recorder("Open and close the notch", name: .toggleNotch)

@@ -12,6 +12,7 @@ struct CalendarCardView: View {
     /// Fixed heights, so the number of rows that fit can be worked out from the card's height. The header is the
     /// weekday line over the 30 pt date (D46); Large is one step up: 16, 36 and 16 pt rows (D49).
     private static func weekdayHeight(_ size: NotchSize) -> CGFloat { size.scaled(14) }
+    // 36, the mock-up's pick, not `scaled(30)` (35).
     private static func dateHeight(_ size: NotchSize) -> CGFloat { size == .large ? 36 : 30 }
     private static func rowHeight(_ size: NotchSize) -> CGFloat { size.scaled(14) }
     private static let rowSpacing: CGFloat = 2

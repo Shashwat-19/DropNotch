@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Settings › General › Notch size (D49). Each is one fixed open size for every tab (D16, D29); it changes only from
 /// Settings. Large is 40 pt taller and 80 pt wider than Standard, with text and controls one step up.
-enum NotchSize: String, CaseIterable {
+enum NotchSize: String {
     case standard, large
 
     static let key = "notch.size"
@@ -12,14 +12,14 @@ enum NotchSize: String, CaseIterable {
         defaults.string(forKey: key).flatMap(NotchSize.init(rawValue:)) ?? .standard
     }
 
-    /// The open shape's height (D46: 190 pt).
-    var openHeight: CGFloat { self == .large ? 230 : 190 }
+    /// The open shape's height: Standard is `NotchGeometry.openSize` (190 pt, D46), Large 40 pt more.
+    var openHeight: CGFloat { NotchGeometry.openSize.height + (self == .large ? 40 : 0) }
     /// Added to the width the top row needs, whatever tabs are on: 676 pt with six top-row items on the Air, 616 with
     /// five or fewer.
     var addedWidth: CGFloat { self == .large ? 80 : 0 }
 
-    /// A fixed size in the notch (a row, a control) for this size: Large is one text step up, 13/11 rounded to whole
-    /// points, so 14 → 16, 24 → 28, 28 → 32 (docs/mockups/notch-size-v0.2.html).
+    /// A fixed size in the notch (a row, a control) for this size: Large is one text step up, body's 13 → 15, so the
+    /// ratio 15/13, rounded to whole points: 14 → 16, 24 → 28, 28 → 32 (docs/mockups/notch-size-v0.2.html).
     func scaled(_ standard: CGFloat) -> CGFloat {
         self == .large ? (standard * 15 / 13).rounded() : standard
     }

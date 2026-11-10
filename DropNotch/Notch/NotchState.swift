@@ -32,7 +32,7 @@ final class NotchState {
     @ObservationIgnored private var hover = NotchHoverStateMachine()
     /// One timer per kind, keyed by the event it delivers (open delay, exit debounce).
     @ObservationIgnored private var timers: [NotchHoverStateMachine.Event: Task<Void, Never>] = [:]
-    /// Bumped on every phase, compact and screen change, so a close animation's completion
+    /// Bumped on every phase, compact, screen and size change, so a close animation's completion
     /// can tell whether anything happened after it started (D19).
     @ObservationIgnored private var changeCount = 0
     /// What the registry last reported; `displayedWings` follows it through `show` (D28).
@@ -71,7 +71,11 @@ final class NotchState {
         guard size != notchSize else { return }
         notchSize = size
         defaults.set(size.rawValue, forKey: NotchSize.key)
-        guard geometry != nil, let chosen = chosenDisplay() else { return screensChanged() }
+        // No geometry yet (before launch finishes), or the display has gone: a full screen read instead.
+        guard geometry != nil, let chosen = chosenDisplay() else {
+            screensChanged()
+            return
+        }
         changeCount += 1
         geometry = chosen.geometry
         setPanelFrame(chosen.geometry.panelFrame(for: displayedPhase, wings: displayedWings), reason: "notch size")

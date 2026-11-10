@@ -27,7 +27,9 @@ struct NotchEmptyState<Action: View>: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .foregroundStyle(.secondary)
+            // Its button steps up with the notch size too (D49).
             action
+                .font(.notch(.body, size))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

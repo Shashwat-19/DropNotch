@@ -470,7 +470,15 @@ Device checks (MacBook Air, **Release build** of `feat/terminal`; Clipboard on; 
 ### Branch 4c: `feat/notch-size` (D49)
 Settings › General › Notch size: Standard or Large (+40 pt high, +80 pt wide, text one step up), picked by Shash from docs/mockups/notch-size-v0.2.html.
 
-**Status (2026-11-10):** built. 590 tests, 0 failures. Next: test-writer, code-reviewer, Release build, device checks.
+**Status (2026-11-10):** built. test-writer: 6 tests, two gaps fixed. code-reviewer: Approve with changes (W1–W3, S1–S8 applied). 597 tests, 0 failures. Release build running for the checks below.
+
+Device checks (MacBook Air, **Release build** of `feat/notch-size`; Clipboard and Terminal on):
+101. **Large.** Settings › General › Notch size › Large. Open the notch: about 80 pt wider and 40 pt taller (676 × 230), the tabs clear of the housing; turn Clipboard off: 616 pt wide. Home: 6 calendar rows, artwork about 124 pt, larger title, time and controls. Go through every tab (Notes, Tray with its buttons, Clipboard, Terminal; Battery on, if you like): larger text, nothing clipped by the rounded corners. Quit and relaunch: still Large.
+102. **Switch while open, with music playing.** Play a track. Open Settings › General, then hover-open the notch on Home and leave the pointer resting on it. With the keyboard, switch the size both ways (Tab to Notch size, then the arrow keys): the notch stays open and redraws at the new size each time; the track keeps playing, the bar and time keep moving, and play/pause and seek still work.
+103. **Switch with a terminal session running.** In the Terminal tab, run `stty size` (11 80 at Standard, 11 pt font), then `top`. Switch to Large with the notch open (as in 102) or closed: `top` redraws to the larger grid without a restart; quit it and `stty size` shows 14 92. Switch back: 11 80. The session keeps running throughout.
+104. **Switch while closed.** With music playing (the wings showing), switch the size: the closed notch and its wings don't change. Hover-open: it opens at the new size; hover out closes it as before.
+105. **Keyboard at Large.** ⌃⌥N opens Home with play/pause focused; Tab moves through the controls and the focus rings aren't clipped; ⌘1… switch tabs; Escape closes.
+106. **Standard unchanged.** Switch back to Standard: every tab looks exactly as before this branch (596 × 190 with six top-row items, 5 calendar rows).
 
 ### Branch 5: `release/v0.2.0`
 README (permissions: two entitlements, Calendars; features; roadmap), ARCHITECTURE, FEATURE_MATRIX, RISKS via docs-writer; performance-optimizer; accessibility-auditor; dependency-manager; changelog-agent; MARKETING_VERSION 0.2.0; DMG.
