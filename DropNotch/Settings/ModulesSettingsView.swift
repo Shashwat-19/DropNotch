@@ -4,6 +4,8 @@ import SwiftUI
 struct ModulesSettingsView: View {
     @Bindable var registry: ModuleRegistry
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Terminal waits for its permissions notice the first time it is turned on (D48).
+    @State private var confirmsTerminal = false
 
     var body: some View {
         Form {
@@ -31,6 +33,10 @@ struct ModulesSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .terminalNotice(isPresented: $confirmsTerminal) {
+            guard let terminal = registry.modules.first(where: { $0 is TerminalModule }) else { return }
+            withAnimation(reduceMotion ? nil : .default) { registry.setEnabled(terminal.id, true) }
+        }
     }
 
     /// One section's modules in `tabOrder`: the tabs, or the Home cards (D42). The arrows move within the section.
@@ -48,6 +54,10 @@ struct ModulesSettingsView: View {
         let isOn = registry.enabledIDs.contains(module.id)
         return HStack {
             Toggle(isOn: Binding(get: { isOn }, set: { on in
+                if on, module is TerminalModule, TerminalNotice.needsConfirmation() {
+                    confirmsTerminal = true
+                    return
+                }
                 withAnimation(reduceMotion ? nil : .default) { registry.setEnabled(module.id, on) }
                 // Turning Calendar on is the other place its prompt may appear, besides the card's Allow button (D44).
                 if on, let calendar = module as? CalendarModule { Task { await calendar.requestAccess() } }

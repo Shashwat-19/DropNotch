@@ -23,14 +23,16 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>DropNotch shows the current track, its artwork and progress from Music and Spotify, and sends play, pause, skip and seek commands when you use the controls in the notch.</string>
+	<string>DropNotch uses this to show what's playing in Music and Spotify and to send play, pause, skip and seek from the notch. If you're using DropNotch's Terminal tab, a command you ran there may be the one asking: commands there use DropNotch's access.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>DropNotch shows your upcoming events in the notch. It only reads your calendars: it never adds, changes or deletes events, and nothing leaves your Mac.</string>
+	<string>DropNotch shows your upcoming events on the Home tab; the Calendar card only reads them. Commands you run in DropNotch's Terminal tab get this access too, and they can add, change or delete events. Nothing leaves your Mac unless a command you run sends it.</string>
 	<key>NSDesktopFolderUsageDescription</key>
-	<string>DropNotch keeps a link to files you drop on the notch, so they stay in the tray.</string>
+	<string>DropNotch uses this to keep files you drop on the notch in the tray. If you're using DropNotch's Terminal tab, a command you ran there may be the one asking: commands there use DropNotch's access.</string>
 	<key>NSDocumentsFolderUsageDescription</key>
-	<string>DropNotch keeps a link to files you drop on the notch, so they stay in the tray.</string>
+	<string>DropNotch uses this to keep files you drop on the notch in the tray. If you're using DropNotch's Terminal tab, a command you ran there may be the one asking: commands there use DropNotch's access.</string>
 	<key>NSDownloadsFolderUsageDescription</key>
-	<string>DropNotch keeps a link to files you drop on the notch, so they stay in the tray.</string>
+	<string>DropNotch uses this to keep files you drop on the notch in the tray. If you're using DropNotch's Terminal tab, a command you ran there may be the one asking: commands there use DropNotch's access.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>A command you ran in DropNotch's Terminal tab wants to find or connect to devices on your local network. DropNotch itself never uses your local network.</string>
 </dict>
 </plist>
