@@ -436,7 +436,7 @@ Device checks (Release build of `feat/home-layout`, the same one as 84–89):
 Built and reviewed (2026-11-10), then set aside by Shash (2026-11-10) for a real terminal in the notch: the branch stays as it is, unmerged. Only its D47 commit (Application Support folder 0700) was cherry-picked to main (755961f).
 
 ### Branch 4b: `feat/terminal` (D48; SwiftTerm; security-auditor; Release build)
-**Status (2026-11-10):** planned, waiting for Shash's decisions and the security-auditor's design review. Mock-up: docs/mockups/terminal-v0.2.html (Layout A: "zsh" and End Session in the strip left of the housing; SF Mono 11 pt gives 71 × 11 at 536 pt, 80 × 11 at 596 pt).
+**Status (2026-11-10):** decisions 1–8 made by Shash (D48). Built through step 12 (SwiftTerm, width, key routing, top-row accessory, LoginShell, session, module, Settings › Terminal, README); 561 tests, 0 failures. Stopped to show Shash the six usage strings and the one-time notice before building them in; then test-writer, code-reviewer, security-auditor, Release build, device checks. Mock-up: docs/mockups/terminal-v0.2.html (Layout A: "zsh" and End Session in the strip left of the housing; SF Mono 11 pt gives 71 × 11 at 536 pt, 80 × 11 at 596 pt).
 
 Dependency (dependency-manager, 2026-11-10): SwiftTerm `exactVersion: 1.99.3` (MIT; pre-2.0). Its library target runs a build-tool plugin, so `xcodebuild` needs `-skipPackagePluginValidation` and Xcode needs "Trust & Enable" once; PR #808's Xcode 27 failure didn't reproduce on 27.1 [V: probe]. `LocalProcessTerminalView.clipboardRead` hands the clipboard to any program in the terminal (OSC 52), so the plan replaces its `terminalDelegate`.
 
