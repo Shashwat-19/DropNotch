@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notch Size Options</title>
+<!--
+  DropNotch feat/notch-size mock-up: Settings › General › Notch size, Standard (today) or Large.
+  Not app code: a planning aid only. Standard comes from NotchGeometry.swift, NotchStyle.swift, HomeLayout.swift,
+  CalendarCardView.swift, NowPlayingExpandedView.swift, ClipboardExpandedView.swift and SwiftTermSession.swift
+  (main 0b9696e, 2026-11-10):
+    open height 190; open width max(480, housing + 2 × top-row width), 596 pt on the Air with six top-row items
+    (Home, Notes, Tray, Clipboard, Terminal and Settings); top row = max(closed height 32, 24 + 4); side margins 24,
+    bottom 12; Home cards: padding 10, gap 8, Calendar 40 % (D46); Calendar: weekday 14 over a 30 pt date, rows
+    14 + 2 after 4; Now Playing: artwork = card content − 4 − 28 (bar and controls) − 5 (time line under the bar);
+    Clipboard: 22 pt search + 4, then 24 pt rows; Terminal: SF Mono 11 pt, cell 6.8 × 13 pt (Core Text, measured).
+  Large adds the chosen height and width to the open shape, and (unless switched off) one text step: 11 → 13, 13 → 15,
+  the date 30 → 36, rows and controls in proportion. 1 CSS px = 1 pt at 1×. The housing is approximate: 208 × 32 pt.
+-->
+<style>
+  :root { --page: #e9e9ee; --ink: #1d1d1f; --muted: #6e6e73; --panel: #ffffff; --line: #d2d2d7; --accent: #0a84ff;
+          --menubar: rgba(246,246,246,.72); --menuink: #1d1d1f; --good: #1f8f3a; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --page: #111113; --ink: #f5f5f7; --muted: #a1a1a6; --panel: #1c1c1e;
+      --line: #38383a; --menubar: rgba(30,30,30,.6); --menuink: #f5f5f7; --good: #30d158; }
+  }
+  :root[data-theme="dark"] { --page: #111113; --ink: #f5f5f7; --muted: #a1a1a6; --panel: #1c1c1e; --line: #38383a;
+    --menubar: rgba(30,30,30,.6); --menuink: #f5f5f7; --good: #30d158; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink);
+         font: 14px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif; }
+  main { max-width: 1400px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 24px 0 8px; }
+  p.lead { color: var(--muted); margin: 0 0 16px; max-width: 84ch; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: flex-end; margin-bottom: 16px;
+              position: sticky; top: 0; z-index: 2; background: var(--page); padding: 8px 0; }
+  .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; background: var(--panel); color: var(--ink); padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .label { font-size: 12px; color: var(--muted); }
+  .option { margin: 0 0 20px; }
+  .option header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 6px; }
+  .option header .facts { font-size: 13px; color: var(--muted); }
+  .badge { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 10px; background: var(--accent); color: #fff; }
+  .stage-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--line); }
+  .stage { position: relative; min-width: 100%; background: linear-gradient(160deg, #4b6cb7, #182848); overflow: hidden; }
+  .scaler { position: absolute; left: 50%; top: 0; transform-origin: top center; }
+  .menubar { position: absolute; top: 0; background: var(--menubar); backdrop-filter: blur(20px); color: var(--menuink);
+             font-size: 13px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; }
+  .notch { position: absolute; top: 0; color: #fff; font-family: -apple-system, "SF Pro Text", sans-serif; }
+  .notch svg.shape { position: absolute; left: 0; top: 0; }
+  .housing { position: absolute; top: 0; border: 1px dashed rgba(255,255,255,.22); border-top: 0; border-radius: 0 0 10px 10px; }
+  .housing .cam { position: absolute; left: 50%; top: 11px; width: 9px; height: 9px; margin-left: -4.5px; border-radius: 50%;
+                  background: #0c0c12; box-shadow: inset 0 0 0 2px #1a1a26; }
+  .tab { position: absolute; width: 28px; height: 24px; display: grid; place-items: center; color: rgba(255,255,255,.5); }
+  .tab svg { width: 15px; height: 15px; }
+  .tab.sel { color: #fff; }
+  .tab.sel::after { content: ""; position: absolute; left: 12px; top: 24px; width: 4px; height: 4px; border-radius: 50%; background: #fff; }
+  .lefts { position: absolute; display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,.55); white-space: nowrap; }
+  .pill { color: #fff; background: rgba(255,255,255,.14); border-radius: 6px; padding: 2px 7px; }
+  .area { position: absolute; overflow: hidden; }
+  .cards { display: flex; gap: 8px; height: 100%; }
+  .card { background: rgba(255,255,255,.1); border-radius: 14px; padding: 10px; overflow: hidden; flex: none; }
+  .np { display: flex; flex-direction: column; justify-content: space-between; }
+  .np-top { display: flex; gap: 10px; min-height: 0; }
+  .art { border-radius: 10px; flex: none; background: linear-gradient(135deg, #ff9a5a, #c2366c 55%, #3a1c71); }
+  .np-text { min-width: 0; padding-top: 2px; }
+  .np-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .np-artist { color: rgba(255,255,255,.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .np-bottom { display: flex; align-items: flex-start; gap: 8px; }
+  .np-bar { flex: 1; min-width: 0; }
+  .bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,.2); position: relative; }
+  .bar i { position: absolute; inset: 0 62% 0 0; border-radius: 2px; background: #fff; }
+  .times { display: flex; justify-content: space-between; color: rgba(255,255,255,.55); font-variant-numeric: tabular-nums; }
+  .ctl { display: flex; gap: 2px; flex: none; }
+  .ctl b { display: grid; place-items: center; }
+  .ctl svg { fill: #fff; }
+  .cal-day { font-weight: 700; color: #ff453a; text-transform: uppercase; letter-spacing: .03em; display: flex; justify-content: space-between; }
+  .cal-day span { color: rgba(255,255,255,.55); font-weight: 400; letter-spacing: 0; }
+  .cal-date { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ev { display: flex; gap: 6px; }
+  .ev::before { content: ""; width: 3px; border-radius: 2px; background: var(--c, #0a84ff); flex: none; }
+  .ev .t { color: rgba(255,255,255,.55); font-variant-numeric: tabular-nums; flex: none; }
+  .ev .n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .search { display: flex; gap: 8px; margin-bottom: 4px; }
+  .field { flex: 1; border-radius: 6px; background: rgba(255,255,255,.1); padding: 0 8px; color: rgba(255,255,255,.45); }
+  .btn { padding: 0 10px; border-radius: 6px; background: rgba(255,255,255,.16); }
+  .clip { display: flex; align-items: center; gap: 8px; padding: 0 6px; border-radius: 5px; }
+  .clip:first-child { background: rgba(255,255,255,.1); }
+  .clip .s { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .thumb { width: 32px; height: 20px; border-radius: 3px; background: linear-gradient(135deg, #5ac8fa, #34c759); flex: none; }
+  .term { font-family: ui-monospace, "SF Mono", Menlo, monospace; color: #e6e6e6; white-space: pre; overflow: hidden; }
+  .term .line { overflow: hidden; }
+  .term .p { color: #7ee787; } .term .d { color: #79c0ff; } .term .m { color: #f2cc60; }
+  .cursor { display: inline-block; background: #e6e6e6; vertical-align: top; }
+  .dims { position: absolute; font: 11px/1 ui-monospace, Menlo, monospace; color: #ffd60a; white-space: nowrap; }
+  table { border-collapse: collapse; font-size: 13px; margin: 8px 0 16px; min-width: 760px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 6px 10px; text-align: left; white-space: nowrap; }
+  th { font-weight: 600; }
+  tr.sel td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  tr.std td { color: var(--muted); }
+  .table-wrap { overflow-x: auto; }
+  .notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+  .note { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .note h3 { margin: 0 0 4px; font-size: 14px; }
+  .note p, .note li { margin: 0; color: var(--muted); font-size: 13px; }
+  .note ul { margin: 0; padding-left: 18px; }
+  code { font: 12px ui-monospace, Menlo, monospace; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Notch size: Standard or Large</h1>
+  <p class="lead">Settings › General › Notch size. Each size is one fixed open size for every tab (D16, D29 still hold); it
+    changes only from Settings. Standard is today's 596 × 190 pt on the Air (six top-row items). Choose Large's extra height and
+    width below; each tab is drawn at Standard, then at Large. Large also takes one text step up, so the artwork, type,
+    calendar rows and controls grow with the space; switch that off to see more space with today's type.</p>
+
+  <div class="controls">
+    <div><div class="label">Large: extra height</div><div class="seg" id="dh"></div></div>
+    <div><div class="label">Large: extra width</div><div class="seg" id="dw"></div></div>
+    <div><div class="label">Large text</div><div class="seg" id="type"></div></div>
+    <div><div class="label">Tabs</div><div class="seg" id="tabs"></div></div>
+    <div><div class="label">Zoom</div><div class="seg" id="zoom"></div></div>
+    <div><div class="label">Measurements</div><div class="seg" id="dims"></div></div>
+  </div>
+
+  <div id="stages"></div>
+
+  <h2>All nine Large options on the Air</h2>
+  <div class="table-wrap"><table id="table"></table></div>
+
+  <div class="notes">
+    <div class="note"><h3>Recommendation: +40 height, +80 width, one text step up</h3>
+      <p id="rec"></p></div>
+    <div class="note"><h3>How each tab uses the space</h3>
+      <ul>
+        <li>Now Playing: the artwork takes the height the bar row leaves; title, artist, time and controls one step larger.</li>
+        <li>Calendar: 40 % of the row as now; weekday and date larger, rows of 16 + 2 pt instead of 14 + 2.</li>
+        <li>Clipboard: a taller search field and 28 pt rows at 13 pt text.</li>
+        <li>Terminal: more rows and columns at your Settings › Terminal font size (11 pt here); the font doesn't change with the notch size.</li>
+        <li>Notes and Tray (not drawn): Notes gets more lines at a larger size; the tray's tiles could grow to 84 × 78 pt.</li>
+      </ul></div>
+    <div class="note"><h3>Not in the picture</h3>
+      <ul>
+        <li>Large widens past what the tabs need; with fewer tabs on, Standard stays 536 pt and Large adds the same amount to it.</li>
+        <li>A larger open notch covers more of the window under it while open; hover-out (D18) is unchanged.</li>
+        <li>14-inch MacBook Pro and Larger Text: checked on a device after the pick.</li>
+      </ul></div>
+  </div>
+</main>
+
+<script>
+// Standard, from the Swift constants listed in the header comment.
+const G = { h: 190, item: { w: 28, h: 24 }, spacing: 2, inset: 8, shoulder: 10, bottomR: 18, side: 24, bottom: 12,
+            gap: 8, pad: 10, housing: 208, closedH: 32, calShare: 0.4, cell: [6.8, 13], termFont: 11 };
+const rowWidth = n => Math.max(n, 5) * G.item.w + (Math.max(n, 5) - 1) * G.spacing + 2 * G.inset;
+// One text step: Standard, then Large.
+const TYPE = {
+  std:   { sub: 11, body: 13, day: 14, date: 30, row: 14, ctl: 28, icon: 15, time: 5, search: 22, clip: 24 },
+  large: { sub: 13, body: 15, day: 16, date: 36, row: 16, ctl: 32, icon: 17, time: 6, search: 26, clip: 28 }
+};
+const EVENTS = [["9:30", "Stand-up", "#0a84ff"], ["11:00", "Design review: notch size", "#ff9f0a"], ["13:00", "Lunch with Priya", "#30d158"],
+                ["15:30", "1:1", "#bf5af2"], ["17:00", "Release v0.2 checklist", "#ff453a"], ["18:30", "Run club", "#64d2ff"],
+                ["20:00", "Call home", "#ffd60a"]];
+const CLIPS = ["https://developer.apple.com/documentation/eventkit", "Thanks, that works for me. Let's go with Thursday.",
+               "img", "xcodebuild -scheme DropNotch -destination 'platform=macOS' -skipPackagePluginValidation build test",
+               "SF Mono 11 pt gives 80 × 11 at 596 pt", "rgba(255, 255, 255, 0.14)", "Release notes draft", "#0a84ff",
+               "~/Library/Application Support/DropNotch"];
+const P = '<span class="p">you@MacBook-Air</span> <span class="d">DropNotch</span> % ';
+const TERM = ['Last login: Tue Nov 10 14:20:07 on ttys004', P + 'git switch -c feat/notch-size',
+  "Switched to a new branch 'feat/notch-size'", P + 'git log --oneline -3',
+  '<span class="m">0b9696e</span> Merge branch \'feat/terminal\'', '<span class="m">a2039d6</span> fix: security-auditor changes for the terminal (D48)',
+  '<span class="m">5b9ff27</span> fix: code-reviewer changes for the terminal (D48)', P + 'ls docs/mockups',
+  'home-layout-v0.2.html  home-v0.2.html  notch-size-v0.2.html  terminal-v0.2.html', P + 'brew --version', 'Homebrew 4.6.3',
+  P + 'stty size', 'ROWS COLS', P + 'CURSOR'];
+const ICON = {
+  home: '<svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.6"/><rect x="9" y="1" width="6" height="6" rx="1.6"/><rect x="1" y="9" width="6" height="6" rx="1.6"/><rect x="9" y="9" width="6" height="6" rx="1.6"/></svg>',
+  notes: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="1.5" width="11" height="13" rx="2"/><path d="M5 5.5h6M5 8.5h6M5 11.5h3.5"/></svg>',
+  tray: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1.5 9.5l2-6.5h9l2 6.5v4h-13z"/><path d="M1.5 9.5h4l1 1.5h3l1-1.5h4"/></svg>',
+  clip: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2.5" width="10" height="12" rx="2"/><rect x="5.5" y="1" width="5" height="3" rx="1" fill="currentColor"/></svg>',
+  term: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="2.5" width="13" height="11" rx="2"/><path d="M4.5 6l2 2-2 2M8 10.5h3.5"/></svg>',
+  gear: '<svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="5.2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-dasharray="2.2 1.6"/><circle cx="8" cy="8" r="2"/></svg>'
+};
+const PLAY = {
+  prev: '<svg viewBox="0 0 16 16"><path d="M3 3h2v10H3zM14 3v10L6 8z"/></svg>',
+  pause: '<svg viewBox="0 0 16 16"><rect x="3.5" y="2.5" width="3.2" height="11" rx="1"/><rect x="9.3" y="2.5" width="3.2" height="11" rx="1"/></svg>',
+  next: '<svg viewBox="0 0 16 16"><path d="M11 3h2v10h-2zM2 3v10l8-5z"/></svg>'
+};
+const state = { dh: 40, dw: 80, type: "large", tabs: ["home", "term", "clip"], zoom: 1, dims: true };
+
+function shapePath(w, h) {
+  const s = G.shoulder, r = G.bottomR, W = w + 2 * s;
+  return `M0 0 H${W} Q${W - s} 0 ${W - s} ${s} V${h - r} Q${W - s} ${h} ${W - s - r} ${h} H${s + r} Q${s} ${h} ${s} ${h - r} V${s} Q${s} 0 0 0 Z`;
+}
+
+/// Every number a size gives the tabs. `dh`, `dw` = 0 is Standard.
+function metrics(dh, dw, large) {
+  const T = TYPE[large ? "large" : "std"];
+  const h = G.h + dh, w = Math.max(480, G.housing + 2 * rowWidth(6)) + dw;
+  const rowH = Math.max(G.closedH, G.item.h + 4);
+  const areaW = w - 2 * G.side, areaH = h - rowH - G.bottom, content = areaH - 2 * G.pad;
+  const cal = Math.round(areaW * G.calShare), np = areaW - cal - G.gap;
+  const art = content - 4 - T.ctl - T.time;
+  const head = T.day + T.date;
+  const calRows = Math.max(1, Math.floor((content - head - 4 + 2) / (T.row + 2)));
+  const clipRows = (areaH - T.search - 4) / T.clip;
+  const cols = Math.floor(areaW / G.cell[0]), termRows = Math.floor(areaH / G.cell[1]);
+  // Room for an event title on the Calendar card: card − padding − bar − gaps − a "13:00" time.
+  const titleRoom = cal - 2 * G.pad - 3 - 12 - Math.round(T.sub * 2.6);
+  return { T, h, w, rowH, areaW, areaH, content, cal, np, art, calRows, clipRows, cols, termRows, titleRoom };
+}
+
+function homeHTML(m) {
+  const T = m.T;
+  const rows = EVENTS.slice(0, m.calRows).map(([t, n, c]) =>
+    `<div class="ev" style="--c:${c};font-size:${T.sub}px;line-height:${T.row}px;height:${T.row}px;margin-top:2px"><span class="t">${t}</span><span class="n">${n}</span></div>`).join("");
+  const more = EVENTS.length - m.calRows;
+  const ctl = (k, svg) => `<b class="${k}" style="width:${T.ctl}px;height:${T.ctl}px"><svg style="width:${T.icon}px;height:${T.icon}px">${svg.replace(/^<svg[^>]*>|<\/svg>$/g, "")}</svg></b>`;
+  return `<div class="cards">
+    <div class="card np" style="width:${m.np}px">
+      <div class="np-top"><div class="art" style="width:${m.art}px;height:${m.art}px"></div>
+        <div class="np-text"><div class="np-title" style="font-size:${T.body}px">Midnight City</div>
+        <div class="np-artist" style="font-size:${T.sub}px">M83 · Hurry Up, We're Dreaming</div></div></div>
+      <div class="np-bottom"><div class="np-bar"><div class="bar" style="margin-top:${T.ctl / 2 - 2}px"><i></i></div>
+        <div class="times" style="font-size:${T.sub}px;margin-top:${T.ctl / 2 - 8}px"><span>1:42</span><span>4:03</span></div></div>
+        <div class="ctl">${ctl("", PLAY.prev)}${ctl("pp", PLAY.pause)}${ctl("", PLAY.next)}</div></div>
+    </div>
+    <div class="card" style="width:${m.cal}px">
+      <div class="cal-day" style="font-size:${T.sub}px;line-height:${T.day}px;height:${T.day}px">Tuesday${more > 0 ? `<span>+${more}</span>` : ""}</div>
+      <div class="cal-date" style="font-size:${T.date}px;line-height:${T.date}px;height:${T.date}px;margin-bottom:2px">10</div>
+      ${rows}
+    </div></div>`;
+}
+
+function clipHTML(m) {
+  const T = m.T;
+  const rows = CLIPS.map(s => `<div class="clip" style="height:${T.clip}px;font-size:${T.sub}px">${s === "img" ? `<span class="thumb"></span><span class="s">Image</span>` : `<span class="s">${s}</span>`}</div>`).join("");
+  return `<div class="search" style="height:${T.search}px;font-size:${T.sub}px;line-height:${T.search}px"><div class="field">Search clipboard</div><div class="btn">Clear</div></div><div>${rows}</div>`;
+}
+
+function termHTML(m) {
+  const [cw, ch] = G.cell;
+  const lines = TERM.slice(-m.termRows).map(l => l.replace("ROWS COLS", `${m.termRows} ${m.cols}`)
+    .replace("CURSOR", `<span class="cursor" style="width:${cw}px;height:${ch}px"></span>`));
+  return `<div class="term" style="font-size:${G.termFont}px">${lines.map(l => `<div class="line" style="height:${ch}px;line-height:${ch}px">${l}</div>`).join("")}</div>`;
+}
+
+function stage(tab, large) {
+  const m = metrics(large ? state.dh : 0, large ? state.dw : 0, large && state.type === "large");
+  const { w, h, rowH, areaW, areaH } = m, W = w + 2 * G.shoulder;
+  const rowLead = (w - G.housing) / 2 + G.housing, ty = (rowH - G.item.h - 4) / 2;
+  let x = rowLead + G.inset;
+  const tabHTML = ["home", "notes", "tray", "clip", "term"].map(t => {
+    const el = `<div class="tab ${t === tab ? "sel" : ""}" style="left:${G.shoulder + x}px;top:${ty}px">${ICON[t]}</div>`;
+    x += G.item.w + G.spacing; return el;
+  }).join("") + `<div class="tab" style="left:${G.shoulder + w - G.inset - G.item.w}px;top:${ty}px">${ICON.gear}</div>`;
+  const lefts = tab === "term" ? `<div class="lefts" style="left:${G.shoulder + G.side}px;top:${ty}px;height:${G.item.h}px;font-size:${m.T.sub}px">zsh<span class="pill">End Session</span></div>` : "";
+  const body = { home: homeHTML, clip: clipHTML, term: termHTML }[tab](m);
+  const facts = { home: `artwork ${m.art} pt · ${m.calRows} calendar rows · titles about ${m.titleRoom} pt`,
+                  clip: `${Math.floor(m.clipRows)} full rows (${m.clipRows.toFixed(1)}) at ${m.T.sub} pt`,
+                  term: `${m.cols} × ${m.termRows} at ${G.termFont} pt` }[tab];
+  const dims = !state.dims ? "" : `<div class="dims" style="left:${G.shoulder + 6}px;top:${h + 6}px">${w} × ${h} pt · module ${areaW} × ${areaH} · ${facts}</div>`;
+  const menuW = Math.max(W + 360, 1100);
+  const notch = `<div class="menubar" style="left:${-menuW / 2}px;width:${menuW}px;height:${G.closedH}px"><span> File  Edit  View</span><span>Tue 10 Nov 14:21</span></div>
+    <div class="notch" style="left:${-W / 2}px;width:${W}px;height:${h}px">
+      <svg class="shape" width="${W}" height="${h}" viewBox="0 0 ${W} ${h}"><path d="${shapePath(w, h)}" fill="#000"/></svg>
+      <div class="housing" style="left:${G.shoulder + (w - G.housing) / 2}px;width:${G.housing}px;height:${G.closedH}px"><div class="cam"></div></div>
+      ${lefts}${tabHTML}
+      <div class="area" style="left:${G.shoulder + G.side}px;top:${rowH}px;width:${areaW}px;height:${areaH}px">${body}</div>
+      ${dims}</div>`;
+  const name = { home: "Home", clip: "Clipboard", term: "Terminal" }[tab];
+  const title = large ? `${name}: Large (+${state.dh} height, +${state.dw} width${state.type === "large" ? ", text one step up" : ", today's text"})` : `${name}: Standard (today)`;
+  const z = state.zoom, tallest = G.h + 50 + 30;
+  return `<section class="option"><header><h2>${title}</h2>${large ? '<span class="badge">Large</span>' : ""}<span class="facts">${facts}</span></header>
+    <div class="stage-wrap"><div class="stage" style="height:${tallest * z}px;min-width:${(G.housing + 2 * rowWidth(6) + 100 + 2 * G.shoulder + 40) * z}px">
+      <div class="scaler" style="transform:scale(${z})">${notch}</div></div></div></section>`;
+}
+
+function table() {
+  const head = `<tr><th>Size</th><th>Open shape</th><th>Share of the Air's width</th><th>Artwork</th><th>Calendar rows</th><th>Calendar title room</th><th>Clipboard rows</th><th>Terminal at 11 pt</th></tr>`;
+  const row = (dh, dw, large, cls) => {
+    const m = metrics(dh, dw, large);
+    const name = dh === 0 ? "Standard" : `Large +${dh} / +${dw}`;
+    return `<tr class="${cls}"><td>${name}</td><td>${m.w} × ${m.h}</td><td>${Math.round(m.w / 1470 * 100)} %</td><td>${m.art} pt</td><td>${m.calRows}</td><td>${m.titleRoom} pt</td><td>${Math.floor(m.clipRows)}</td><td>${m.cols} × ${m.termRows}</td></tr>`;
+  };
+  let rows = row(0, 0, false, "std");
+  for (const dh of [30, 40, 50]) for (const dw of [60, 80, 100]) {
+    rows += row(dh, dw, state.type === "large", dh === state.dh && dw === state.dw ? "sel" : "");
+  }
+  document.getElementById("table").innerHTML = head + rows;
+  const s = metrics(0, 0, false), r = metrics(40, 80, true);
+  document.getElementById("rec").textContent =
+    `${r.w} × ${r.h} pt: the artwork goes from ${s.art} to ${r.art} pt, the calendar from ${s.calRows} to ${r.calRows} rows with larger text, ` +
+    `Clipboard keeps ${Math.floor(r.clipRows)} rows at 13 pt, and the terminal goes from ${s.cols} × ${s.termRows} to ${r.cols} × ${r.termRows}. ` +
+    `It takes ${Math.round(r.w / 1470 * 100)} % of the Air's width (Standard ${Math.round(s.w / 1470 * 100)} %). +50 / +100 adds little more for the space it covers; +30 / +60 doesn't add a calendar row with the larger text.`;
+}
+
+function seg(id, options, key) {
+  const el = document.getElementById(id);
+  const pressed = v => Array.isArray(state[key]) ? state[key].includes(v) : state[key] === v;
+  el.innerHTML = options.map(([v, l]) => `<button aria-pressed="${pressed(v)}" data-v="${v}">${l}</button>`).join("");
+  el.onclick = e => {
+    const b = e.target.closest("button"); if (!b) return;
+    const v = options.find(([o]) => String(o) === b.dataset.v)[0];
+    if (Array.isArray(state[key])) {
+      state[key] = state[key].includes(v) ? state[key].filter(x => x !== v) : [...state[key], v];
+      if (!state[key].length) state[key] = [v];
+    } else state[key] = v;
+    render();
+  };
+}
+
+function render() {
+  seg("dh", [[30, "+30 pt"], [40, "+40 pt"], [50, "+50 pt"]], "dh");
+  seg("dw", [[60, "+60 pt"], [80, "+80 pt"], [100, "+100 pt"]], "dw");
+  seg("type", [["large", "One step up"], ["same", "Today's"]], "type");
+  seg("tabs", [["home", "Home"], ["term", "Terminal"], ["clip", "Clipboard"]], "tabs");
+  seg("zoom", [[1, "1×"], [1.5, "1.5×"]], "zoom");
+  seg("dims", [[true, "Show"], [false, "Hide"]], "dims");
+  document.getElementById("stages").innerHTML = ["home", "term", "clip"].filter(t => state.tabs.includes(t))
+    .map(t => stage(t, false) + stage(t, true)).join("");
+  table();
+}
+render();
+</script>
+</body>
+</html>
