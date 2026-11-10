@@ -28,6 +28,9 @@ final class TerminalModule: NotchModule {
     @ObservationIgnored private let makeShell: () -> LoginShell
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var isRunning = false
+    /// Sessions ended in the last few seconds, still waiting for their SIGKILL step: quitting or turning the tab off
+    /// then finishes them at once instead of losing the step (code-reviewer S1).
+    @ObservationIgnored private var ending: [any TerminalSession] = []
 
     init(makeSession: @escaping @MainActor (CGFloat, Int) -> any TerminalSession,
          makeShell: @escaping () -> LoginShell = LoginShell.current, defaults: UserDefaults = .standard) {
@@ -52,6 +55,8 @@ final class TerminalModule: NotchModule {
     /// The tab turned off, or DropNotch quitting: the session and everything started in it end before this returns.
     func stop() {
         isRunning = false
+        ending.forEach { $0.hangUpAndWait() }
+        ending = []
         session?.hangUpAndWait()
         drop()
         state = .notStarted
@@ -90,6 +95,11 @@ final class TerminalModule: NotchModule {
     func endSession() {
         guard let session else { return }
         session.hangUp()
+        ending.append(session)
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(3))
+            self?.ending.removeAll { $0 === session }
+        }
         drop()
         state = .ended
     }

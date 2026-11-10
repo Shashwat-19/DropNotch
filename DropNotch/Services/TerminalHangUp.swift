@@ -16,12 +16,20 @@ enum TerminalHangUp {
         return groups
     }
 
-    /// Sends `signal` to each target still in the shell's session.
+    /// Sends `signal` to each target still in the shell's session. A job keeps its session id after the shell has
+    /// gone, so a foreground group read at hang-up time can still be killed later (code-reviewer W1).
+    /// - Parameter foregroundGroups: every foreground group read so far; the shell's own pty is gone once it exits.
     /// - Returns: how many groups were signalled.
     @discardableResult
-    static func send(_ signal: Int32, shellPid: pid_t, foregroundGroup: pid_t) -> Int {
-        targets(shellPid: shellPid, foregroundGroup: foregroundGroup, ownGroup: getpgrp(), ownPid: getpid())
-            .filter { getsid($0) == shellPid && killpg($0, signal) == 0 }
-            .count
+    static func send(_ signal: Int32, shellPid: pid_t, foregroundGroups: [pid_t]) -> Int {
+        let own = (group: getpgrp(), pid: getpid())
+        var groups: [pid_t] = []
+        for foreground in foregroundGroups.isEmpty ? [-1] : foregroundGroups {
+            for group in targets(shellPid: shellPid, foregroundGroup: foreground, ownGroup: own.group, ownPid: own.pid)
+                where !groups.contains(group) {
+                groups.append(group)
+            }
+        }
+        return groups.filter { getsid($0) == shellPid && killpg($0, signal) == 0 }.count
     }
 }

@@ -13,7 +13,13 @@ final class SwiftTermSession: TerminalSession {
     private let processEvents: ProcessEvents
     private var fontSize: CGFloat
     private var scrollback: Int
+    /// Read once the shell has started: SwiftTerm's `shellPid` drops to 0 as the process is torn down.
+    private var shellPid: pid_t = 0
+    /// Every foreground group seen at hang-up, kept for the kill.
+    private var foregroundGroups: [pid_t] = []
     private var isRunning = false
+    private var hungUp = false
+    private var killed = false
 
     var view: NSView { terminal }
     var onExit: (() -> Void)?
@@ -54,6 +60,7 @@ final class SwiftTermSession: TerminalSession {
         // The pty master stays in DropNotch; the next session's shell mustn't inherit it (design review M1).
         let master = terminal.process.childfd
         if master >= 0 { _ = fcntl(master, F_SETFD, FD_CLOEXEC) }
+        shellPid = terminal.process.shellPid
         isRunning = true
         Logger.terminal.info("Session started")
     }
@@ -74,30 +81,52 @@ final class SwiftTermSession: TerminalSession {
     }
 
     func hangUp() {
-        guard isRunning else { return }
-        terminal.endSecureInput()
-        let shell = terminal.process.shellPid
-        let signalled = TerminalHangUp.send(SIGHUP, shellPid: shell, foregroundGroup: foregroundGroup())
-        Logger.terminal.info("Session hung up: \(signalled) groups")
+        guard sendHangUp() else { return }
         // Keeps the session for 2 s, so the foreground group can be read again: a program may have started since.
         Task { [self] in
             try? await Task.sleep(for: .seconds(2))
-            let killed = TerminalHangUp.send(SIGKILL, shellPid: shell, foregroundGroup: foregroundGroup())
-            if killed > 0 { Logger.terminal.notice("Session killed after the hang-up: \(killed) groups") }
+            killRemaining()
         }
     }
 
     // shortcut: blocks the main thread for up to 1 s at quit or when the tab is turned off; a shell normally goes
     // at once on SIGHUP. Upgrade if a slow-exiting program makes quitting feel stuck.
     func hangUpAndWait() {
-        guard isRunning else { return }
-        terminal.endSecureInput()
-        let shell = terminal.process.shellPid
-        TerminalHangUp.send(SIGHUP, shellPid: shell, foregroundGroup: foregroundGroup())
+        guard shellPid > 1, !killed else { return }
+        sendHangUp()
         let deadline = Date.now.addingTimeInterval(1)
-        while getsid(shell) == shell, Date.now < deadline { usleep(20_000) }
-        TerminalHangUp.send(SIGKILL, shellPid: shell, foregroundGroup: foregroundGroup())
-        isRunning = false
+        while Date.now < deadline, ([shellPid] + foregroundGroups).contains(where: { getsid($0) == shellPid }) {
+            usleep(20_000)
+        }
+        killRemaining()
+    }
+
+    /// SIGHUP once to the shell's group and its foreground job's. False if there is no shell, or it was sent before.
+    @discardableResult
+    private func sendHangUp() -> Bool {
+        guard shellPid > 1, !hungUp else { return false }
+        hungUp = true
+        terminal.endSecureInput()
+        rememberForegroundGroup()
+        let signalled = TerminalHangUp.send(SIGHUP, shellPid: shellPid, foregroundGroups: foregroundGroups)
+        Logger.terminal.info("Session hung up: \(signalled) groups")
+        return true
+    }
+
+    /// SIGKILL once to what SIGHUP left. The groups read at hang-up count too: once the shell exits its pty is gone,
+    /// but a job that ignored SIGHUP is still in the shell's session (code-reviewer W1).
+    private func killRemaining() {
+        guard hungUp, !killed else { return }
+        killed = true
+        rememberForegroundGroup()
+        let signalled = TerminalHangUp.send(SIGKILL, shellPid: shellPid, foregroundGroups: foregroundGroups)
+        if signalled > 0 { Logger.terminal.notice("Session killed after the hang-up: \(signalled) groups") }
+    }
+
+    private func rememberForegroundGroup() {
+        let master = terminal.process.childfd
+        let group = master >= 0 ? tcgetpgrp(master) : -1
+        if group > 1, !foregroundGroups.contains(group) { foregroundGroups.append(group) }
     }
 
     private func exited(_ code: Int32?) {
@@ -106,11 +135,6 @@ final class SwiftTermSession: TerminalSession {
         terminal.endSecureInput()
         Logger.terminal.info("Session ended, status \(code.map(String.init) ?? "none", privacy: .public)")
         onExit?()
-    }
-
-    private func foregroundGroup() -> pid_t {
-        let master = terminal.process.childfd
-        return master >= 0 ? tcgetpgrp(master) : -1
     }
 
     private static func font(_ size: CGFloat) -> NSFont { .monospacedSystemFont(ofSize: size, weight: .regular) }
@@ -146,8 +170,9 @@ private final class ProcessEvents: LocalProcessTerminalViewDelegate {
 }
 
 /// Stands in for the view as its `terminalDelegate` (D48, design review L2): programs in the terminal can neither
-/// read nor write the clipboard, and every other call goes to the view. Each method is written out, so a new one
-/// SwiftTerm adds fails to compile here instead of quietly reaching the clipboard.
+/// read nor write the clipboard, and every other call goes to the view. Each method is written out; a new one that
+/// SwiftTerm adds without a default fails to compile here, but one with a default wouldn't, so dependency-manager
+/// checks this protocol on every SwiftTerm bump (code-reviewer S5).
 @MainActor
 final class GuardedTerminalDelegate: TerminalViewDelegate {
     private weak var terminal: LocalProcessTerminalView?

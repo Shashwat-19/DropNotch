@@ -62,10 +62,18 @@ struct LoginShell: Equatable {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
         let shell = make(account: account, allowedShells: shells, isExecutable: isExecutableFile,
                          inherited: ProcessInfo.processInfo.environment, version: version,
-                         locale: Locale.current.identifier)
+                         locale: posixLocale(language: Locale.current.language.languageCode?.identifier,
+                                             region: Locale.current.region?.identifier))
         // Never the path: it can name the user.
         if shell.executable != account.shell { Logger.terminal.notice("Account shell not usable; using the fallback") }
         return shell
+    }
+
+    /// "zh_CN" from Chinese (Simplified, China): POSIX has no script part, so "zh-Hans_CN" would make every program
+    /// warn that the locale failed (code-reviewer S2). Without a language or region, en_US.
+    static func posixLocale(language: String?, region: String?) -> String {
+        guard let language, let region else { return "en_US" }
+        return "\(language)_\(region)"
     }
 
     static func isExecutableFile(_ path: String) -> Bool {

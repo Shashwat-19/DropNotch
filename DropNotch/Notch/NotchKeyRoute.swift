@@ -16,6 +16,9 @@ enum NotchKeyRoute: Equatable {
 
     /// 53 is kVK_Escape.
     static let escapeKeyCode: UInt16 = 53
+    /// ANSI key codes (kVK_ANSI_…) for the keys the terminal routes, used when the layout types something else.
+    static let latinKeys: [UInt16: String] = [8: "c", 9: "v", 0: "a", 43: ",", 18: "1", 19: "2", 20: "3", 21: "4",
+                                              23: "5", 22: "6", 26: "7", 28: "8", 25: "9"]
 
     /// - Parameters:
     ///   - characters: `charactersIgnoringModifiers`.
@@ -28,7 +31,10 @@ enum NotchKeyRoute: Equatable {
             return ownerFocused || hasMarkedText ? .pass : .dismiss
         }
         guard ownerFocused, modifiers.contains(.command) else { return .pass }
-        let key = characters?.lowercased() ?? ""
+        // On a Cyrillic, Greek or Hebrew layout ⌘C doesn't give "c"; menus go by the key's position then, and so does
+        // this (code-reviewer S4).
+        let typed = characters?.lowercased() ?? ""
+        let key = typed.unicodeScalars.allSatisfy(\.isASCII) && !typed.isEmpty ? typed : latinKeys[keyCode] ?? typed
         // The tabs' ⌘1… and Settings' ⌘, stay with SwiftUI's shortcuts.
         if key.count == 1, "123456789,".contains(key) { return .pass }
         guard modifiers == .command else { return .swallow }

@@ -17,8 +17,16 @@ struct TerminalExpandedView: View {
             .onChange(of: hasKeyboardFocus, initial: true) {
                 guard hasKeyboardFocus else { return }
                 if module.state == .notStarted { module.openSession() }
-                focus = .start
+                focusStartButton()
             }
+            // After End Session or an exit with the keys here, Start New Session takes them (code-reviewer S7).
+            .onChange(of: module.state) { if hasKeyboardFocus { focusStartButton() } }
+    }
+
+    /// Only while a button is showing: a running terminal takes the keys itself, and moving SwiftUI's focus then would
+    /// take first responder from it (code-reviewer S3).
+    private func focusStartButton() {
+        if module.state != .running { focus = .start }
     }
 
     @ViewBuilder

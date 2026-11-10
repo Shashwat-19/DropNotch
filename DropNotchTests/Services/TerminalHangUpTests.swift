@@ -24,8 +24,8 @@ final class TerminalHangUpTests: XCTestCase {
 
     /// The real call refuses a group outside the shell's session: here DropNotch's own (the test host's).
     func testSendSkipsGroupsOutsideTheShellsSession() {
-        XCTAssertEqual(TerminalHangUp.send(0, shellPid: getpid(), foregroundGroup: getpgrp()), 0)
-        XCTAssertEqual(TerminalHangUp.send(0, shellPid: 99_999, foregroundGroup: -1), 0, "no such process")
+        XCTAssertEqual(TerminalHangUp.send(0, shellPid: getpid(), foregroundGroups: [getpgrp()]), 0)
+        XCTAssertEqual(TerminalHangUp.send(0, shellPid: 99_999, foregroundGroups: []), 0, "no such process")
     }
 
     // MARK: Real processes, each spawned here and only ever signalled here
@@ -70,7 +70,7 @@ final class TerminalHangUpTests: XCTestCase {
     func testSendHangsUpAShellInItsOwnSession() throws {
         let shell = try spawnSleep(flags: Int32(POSIX_SPAWN_SETSID))
         XCTAssertEqual(getsid(shell), shell)
-        XCTAssertEqual(TerminalHangUp.send(SIGHUP, shellPid: shell, foregroundGroup: -1), 1)
+        XCTAssertEqual(TerminalHangUp.send(SIGHUP, shellPid: shell, foregroundGroups: []), 1)
         XCTAssertEqual(terminatingSignal(shell), SIGHUP)
     }
 
@@ -81,9 +81,18 @@ final class TerminalHangUpTests: XCTestCase {
         let outsider = try spawnSleep(flags: Int32(POSIX_SPAWN_SETPGROUP))
         XCTAssertEqual(getpgid(outsider), outsider)
         XCTAssertNotEqual(getsid(outsider), shell)
-        XCTAssertEqual(TerminalHangUp.send(SIGHUP, shellPid: shell, foregroundGroup: outsider), 1)
+        XCTAssertEqual(TerminalHangUp.send(SIGHUP, shellPid: shell, foregroundGroups: [outsider]), 1)
         XCTAssertEqual(terminatingSignal(shell), SIGHUP)
         XCTAssertEqual(waitpid(outsider, nil, WNOHANG), 0, "still running")
         XCTAssertEqual(kill(outsider, 0), 0)
+    }
+
+    /// code-reviewer W1: groups read at different times are all candidates, each signalled once. (A real job that
+    /// outlives its shell is checked by device check 3: a test host spawning a shell without a pty stopped when that
+    /// shell ended, cause unknown, 2026-11-10.)
+    func testSendTakesEveryForegroundGroupReadSoFarOnce() throws {
+        let shell = try spawnSleep(flags: Int32(POSIX_SPAWN_SETSID))
+        XCTAssertEqual(TerminalHangUp.send(0, shellPid: shell, foregroundGroups: [shell, -1, shell, 0]), 1)
+        XCTAssertEqual(kill(shell, 0), 0, "signal 0 only checks")
     }
 }

@@ -26,6 +26,15 @@ final class NotchKeyRouteTests: XCTestCase {
         XCTAssertEqual(route("C", [.command, .capsLock]), .copy, "Caps Lock doesn't matter")
     }
 
+    /// code-reviewer S4: a Russian layout types "с" (Cyrillic) for ⌘C; the key's position decides.
+    func testCopyPasteAndTabsOnANonLatinLayout() {
+        XCTAssertEqual(route("с", .command, keyCode: 8), .copy)
+        XCTAssertEqual(route("м", .command, keyCode: 9), .paste)
+        XCTAssertEqual(route("ф", .command, keyCode: 0), .selectAll)
+        XCTAssertEqual(route("б", .command, keyCode: 43), .pass)
+        XCTAssertEqual(route("й", .command, keyCode: 12), .swallow, "⌘Q's position, still swallowed")
+    }
+
     func testTabsAndSettingsShortcutsStillWork() {
         for key in ["1", "5", "9", ","] { XCTAssertEqual(route(key, .command), .pass, key) }
     }

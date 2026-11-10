@@ -49,7 +49,9 @@ final class NotchTerminalView: LocalProcessTerminalView {
 
     func endSecureInput() { secureInput.set(false) }
 
+    /// SwiftTerm's own focus (first responder in a key window). Not `window.firstResponder`: during
+    /// `resignFirstResponder` that is still this view (code-reviewer W2).
     private func syncSecureInput() {
-        secureInput.set(window?.isKeyWindow == true && window?.firstResponder === self)
+        secureInput.set(window != nil && hasFocus)
     }
 }

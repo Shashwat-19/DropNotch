@@ -51,6 +51,13 @@ final class LoginShellTests: XCTestCase {
         ])
     }
 
+    func testPosixLocaleDropsTheScript() {
+        XCTAssertEqual(LoginShell.posixLocale(language: "zh", region: "CN"), "zh_CN")
+        XCTAssertEqual(LoginShell.posixLocale(language: "en", region: "GB"), "en_GB")
+        XCTAssertEqual(LoginShell.posixLocale(language: "sr", region: nil), "en_US")
+        XCTAssertEqual(LoginShell.posixLocale(language: nil, region: "DE"), "en_US")
+    }
+
     func testLangFallsBackToTheLocale() {
         XCTAssertEqual(env(make())["LANG"], "en_GB.UTF-8")
         XCTAssertEqual(env(make(inherited: ["LANG": ""], locale: "de_DE@calendar=gregorian"))["LANG"], "de_DE.UTF-8")
