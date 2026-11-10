@@ -11,8 +11,8 @@ struct NotchGeometry: Equatable {
     /// How much the shape grows while the open delay runs (peek): 12 pt each side and
     /// 8 pt down, so a pointer resting near the notch stays inside.
     static let peekGrowth = CGSize(width: 24, height: 8)
-    /// Minimum size of the open panel. One height for every tab (D16, D29): 190 pt gives Home five calendar rows on
-    /// the Air (D46).
+    /// Minimum size of the open panel at Standard. One height for every tab (D16, D29): 190 pt gives Home five calendar
+    /// rows on the Air (D46). Large adds to both (`NotchSize`, D49).
     static let openSize = CGSize(width: 480, height: 190)
     /// How far the panel reaches above the screen. A pointer pushed against the top edge
     /// reports y == screen maxY, which a frame ending there counts as outside (D20).
@@ -52,8 +52,9 @@ struct NotchGeometry: Equatable {
     ///   - backingScale: `backingScaleFactor`, used to align edges to whole pixels.
     ///   - topRowItems: the module tabs that are on plus the Settings button; the open shape widens past
     ///     `topRowMinItems` (D45 Q5, D48: six items, such as five tabs and the gear, make it 596 pt on the Air).
+    ///   - size: Settings › General › Notch size (D49): Large is taller and adds its width whatever tabs are on.
     init(screenFrame: CGRect, safeAreaTop: CGFloat, auxLeftWidth: CGFloat?, auxRightWidth: CGFloat?,
-         menuBarHeight: CGFloat, backingScale: CGFloat, topRowItems: Int = topRowMinItems) {
+         menuBarHeight: CGFloat, backingScale: CGFloat, topRowItems: Int = topRowMinItems, size: NotchSize = .standard) {
         let closed: CGRect
         if safeAreaTop > 0, let left = auxLeftWidth, let right = auxRightWidth {
             hasNotch = true
@@ -73,8 +74,9 @@ struct NotchGeometry: Equatable {
         // row right of the housing (D35): centred on the notch, so each side gets `topRowWidth`. A pill is ours to
         // draw over, so only a real notch is kept clear.
         let housing = hasNotch ? closed.width : 0
-        let open = CGSize(width: max(Self.openSize.width, compactPeek.width, housing + 2 * Self.topRowWidth(items: topRowItems)),
-                          height: max(Self.openSize.height, peek.height))
+        let open = CGSize(width: max(Self.openSize.width, compactPeek.width, housing + 2 * Self.topRowWidth(items: topRowItems))
+                              + size.addedWidth,
+                          height: max(size.openHeight, peek.height))
 
         closedFrame = Self.pixelAligned(closed, scale: backingScale)
         peekFrame = Self.pixelAligned(Self.topCentred(midX: closed.midX, top: closed.maxY, size: peek),

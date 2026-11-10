@@ -53,6 +53,19 @@ final class TerminalModuleTests: XCTestCase {
         XCTAssertNil(module.homeCard)
     }
 
+    /// Shash (D48): a click on the Terminal tab or its ⌘ number gives it the keys at once; other tabs don't ask.
+    func testChoosingTheTerminalTabTakesTheKeys() {
+        XCTAssertTrue(module(start: false).takesKeysOnSelect)
+        XCTAssertFalse(NotesModule().takesKeysOnSelect)
+        XCTAssertFalse(HomeModule().takesKeysOnSelect)
+    }
+
+    /// "Type as soon as the notch opens" is off unless chosen, under a fixed key.
+    func testTypeOnOpenIsOffByDefault() {
+        XCTAssertEqual(TerminalSettings.typeOnOpenKey, "terminal.typeOnOpen")
+        XCTAssertFalse(makeDefaults().bool(forKey: TerminalSettings.typeOnOpenKey))
+    }
+
     /// Nothing at launch or on a hover-open: only an explicit open starts a shell (D48, design review M4).
     func testStartSpawnsNothing() {
         let module = module()

@@ -12,6 +12,7 @@ struct ClipboardExpandedView: View {
     @Environment(\.notchHasKeyboardFocus) private var hasKeyboardFocus
     @Environment(\.requestNotchKeyboardFocus) private var requestKeyboardFocus
     @Environment(\.dismissNotch) private var dismissNotch
+    @Environment(\.notchSize) private var size
 
     private var shown: [ClipboardItem] { module.items(matching: query) }
 
@@ -48,7 +49,7 @@ struct ClipboardExpandedView: View {
                 list
             }
         }
-        .font(.subheadline)
+        .font(.notch(.subheadline, size))
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear { module.refresh() }
     }
@@ -120,11 +121,11 @@ struct ClipboardExpandedView: View {
                             Image(systemName: "photo")
                         }
                     }
-                    .frame(width: 32, height: 20)
+                    .frame(width: size.scaled(32), height: size.scaled(20))
                     Text("Image")
                 } else {
                     Image(systemName: item.isLink ? "link" : "doc.text")
-                        .frame(width: 32)
+                        .frame(width: size.scaled(32))
                     // Verbatim: copied text is never looked up for translation.
                     Text(verbatim: item.preview)
                         .lineLimit(1)
@@ -132,7 +133,8 @@ struct ClipboardExpandedView: View {
                 }
                 Spacer(minLength: 0)
             }
-            .frame(height: 24)
+            // 28 pt at Large (D49).
+            .frame(height: size.scaled(24))
             .padding(.horizontal, 6)
             // A dot in the leading padding (D39). Only a keyboard-opened notch highlights a row, so only then do the
             // others dim; a hover-opened list stays white.

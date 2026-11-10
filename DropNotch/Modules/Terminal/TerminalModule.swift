@@ -12,6 +12,8 @@ final class TerminalModule: NotchModule {
     let systemImage = "apple.terminal"
     let hasCompactContent = false
     let isEnabledByDefault = false
+    /// A click on its tab or its ⌘ number puts the keys in the terminal straight away (Shash, D48).
+    let takesKeysOnSelect = true
 
     enum State: Equatable {
         case notStarted, running, ended

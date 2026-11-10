@@ -8,6 +8,7 @@ struct FileTrayExpandedView: View {
     /// Keyboard focus. Only the hotkey makes the panel key, so this stays nil while hovering (D30).
     @FocusState private var focus: Focus?
     @Environment(\.notchHasKeyboardFocus) private var hasKeyboardFocus
+    @Environment(\.notchSize) private var size
     @State private var shareMenu = TrayShareMenu()
 
     var body: some View {
@@ -87,7 +88,7 @@ struct FileTrayExpandedView: View {
         return VStack(spacing: 2) {
             Image(nsImage: url.map { NSWorkspace.shared.icon(forFile: $0.path) } ?? NSWorkspace.shared.icon(for: .item))
                 .resizable()
-                .frame(width: 40, height: 40)
+                .frame(width: size.scaled(40), height: size.scaled(40))
                 // Only the icon is dimmed, so the name stays readable.
                 .opacity(url == nil ? 0.4 : 1)
                 // A missing file is greyed out and badged, so the state doesn't rest on dimming alone (L6). The badge
@@ -96,11 +97,12 @@ struct FileTrayExpandedView: View {
                     if url == nil { Image(systemName: "questionmark.circle.fill").foregroundStyle(.white) }
                 }
             Text(name)
-                .font(.subheadline)
+                .font(.notch(.subheadline, size))
                 .lineLimit(1)
                 .truncationMode(.middle)
         }
-        .frame(width: 72)
+        // 83 pt at Large (D49).
+        .frame(width: size.scaled(72))
         .padding([.horizontal, .top], NotchStyle.tightSpacing)
         // Room for the dot inside the tile: the horizontal scroll view would clip it below.
         .padding(.bottom, NotchStyle.spacing)
@@ -131,8 +133,8 @@ struct FileTrayExpandedView: View {
                 // The system's own AirDrop image; there is no public SF Symbol for it.
                 Label { Text("AirDrop") } icon: { Image(nsImage: airDrop?.image ?? NSImage()).resizable().scaledToFit() }
                     .labelStyle(.iconOnly)
-                    .frame(width: 28, height: 20)
-                    .frame(height: 24)
+                    .frame(width: size.scaled(28), height: size.scaled(20))
+                    .frame(height: size.scaled(24))
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -152,7 +154,7 @@ struct FileTrayExpandedView: View {
         .overlay(alignment: .leading) {
             if module.saveFailed {
                 Text("Couldn't save the tray")
-                    .font(.subheadline)
+                    .font(.notch(.subheadline, size))
                     .foregroundStyle(.secondary)
             }
         }
@@ -172,7 +174,9 @@ struct FileTrayExpandedView: View {
     private func icon(_ label: LocalizedStringKey, systemImage: String) -> some View {
         Label(label, systemImage: systemImage)
             .labelStyle(.iconOnly)
-            .frame(width: 28, height: 24)
+            // One step up at Large, like the tiles (D49, test-writer).
+            .font(.notch(.body, size))
+            .frame(width: size.scaled(28), height: size.scaled(24))
             .contentShape(Rectangle())
     }
 

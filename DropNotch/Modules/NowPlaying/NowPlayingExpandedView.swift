@@ -13,6 +13,7 @@ struct NowPlayingExpandedView: View {
     /// Keyboard focus. Only the hotkey makes the panel key, so this stays nil while hovering (D30).
     @FocusState private var focus: Focus?
     @Environment(\.notchHasKeyboardFocus) private var hasKeyboardFocus
+    @Environment(\.notchSize) private var size
 
     var body: some View {
         if let info = module.shown {
@@ -29,7 +30,7 @@ struct NowPlayingExpandedView: View {
                         // Verbatim (a String, not a literal): track names are never looked up for translation.
                         Text(text.title)
                             // A card's title is one step larger than a tab's (D42).
-                            .font(.body.weight(.semibold))
+                            .font(.notch(.body, size).weight(.semibold))
                             .opacity(textOpacity)
                         if module.deniedPlayer == info.player {
                             Button(action: openAutomationSettings) {
@@ -43,11 +44,11 @@ struct NowPlayingExpandedView: View {
                             }
                             .buttonStyle(.plain)
                             .foregroundStyle(.link)
-                            .font(.subheadline)
+                            .font(.notch(.subheadline, size))
                             .keyboardControl(Focus.settingsLink, focus: $focus, action: openAutomationSettings)
                         } else if let artist = text.artist {
                             Text(artist)
-                                .font(.subheadline)
+                                .font(.notch(.subheadline, size))
                                 .foregroundStyle(.secondary)
                                 .opacity(textOpacity)
                         }
@@ -104,9 +105,9 @@ struct NowPlayingExpandedView: View {
             // Icon-only on screen; VoiceOver reads the label.
             Label(label, systemImage: systemImage)
                 .labelStyle(.iconOnly)
-                .font(.title3)
-                // At least the ~24 pt target L7 asks for; the whole highlight circle is clickable.
-                .frame(width: 28, height: 28)
+                .font(.notch(.title3, size))
+                // At least the ~24 pt target L7 asks for; the whole highlight circle is clickable. 32 pt at Large (D49).
+                .frame(width: size.scaled(28), height: size.scaled(28))
                 .contentShape(Circle())
         }
         .buttonStyle(NowPlayingControlStyle())

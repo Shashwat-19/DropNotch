@@ -12,11 +12,13 @@ struct NotchHoverStateMachine {
 
     enum Event: Hashable {
         case pointerEntered, pointerExited, openDelayElapsed, exitDebounceElapsed
-        /// The global shortcut: opens the notch with keyboard focus, or closes a notch it opened (D30).
+        /// The global shortcut: opens the notch with keyboard focus, or closes a notch it opened (D30). The pointer
+        /// leaving still closes it (D49 revision).
         case hotkeyPressed
         /// Escape, or the panel lost keyboard focus. Closes only a notch the hotkey opened (D30).
         case dismissed
-        /// A click in a hover-opened note (D31): takes keyboard focus and, unlike the hotkey, never closes.
+        /// A click in a hover-opened note or terminal (D31, D48): takes keyboard focus and, unlike the hotkey, never
+        /// closes the notch itself. The pointer leaving still closes it (D49 revision).
         case focusRequested
         /// The pointer moved inside the panel: screen x in points, event time in seconds.
         case pointerMoved(x: Double, time: Double)
@@ -32,14 +34,20 @@ struct NotchHoverStateMachine {
     static let openDelay: Duration = .milliseconds(120)
     /// Avoids flicker when the pointer grazes the edge (ARCHITECTURE.md §9).
     static let exitDebounce: Duration = .milliseconds(100)
+    /// The exit debounce while the panel has keyboard focus (Shash, D48, D49): long enough to drift off and back
+    /// without the rest of a typed password landing in the app in front (ARCHITECTURE.md §9).
+    static let focusedExitDebounce: Duration = .milliseconds(500)
     /// Horizontal speed, in points per second, above which peek counts as a sweep along
     /// the menu bar and the open delay starts again (D20).
     static let sweepSpeed: Double = 600
 
     private(set) var phase = Phase.closed
     private(set) var pointerInside = false
-    /// Opened by the hotkey: the panel holds keyboard focus and the pointer leaving doesn't close it (D30).
+    /// The panel holds keyboard focus: opened or focused by the hotkey, or a click asked for focus (D30, D31). Cleared
+    /// when the notch closes, including when the pointer leaves (D49 revision).
     private(set) var openedByKeyboard = false
+    /// How long the pointer must stay out before the notch closes: 0.5 s with keyboard focus, else 0.1 s.
+    var exitDelay: Duration { openedByKeyboard ? Self.focusedExitDebounce : Self.exitDebounce }
     /// The open delay ran out during peek while the pointer was briefly outside.
     private var openDue = false
     /// The previous move inside the panel, for the sweep speed. Cleared on enter and exit,
@@ -84,7 +92,8 @@ struct NotchHoverStateMachine {
             openedByKeyboard.toggle()
             phase = openedByKeyboard ? .open : .closed
             openDue = false
-            return nil
+            // A press just after the pointer left mustn't be undone by that exit's debounce (D49 revision).
+            return openedByKeyboard ? .cancelExitDebounce : nil
         case .focusRequested:
             openedByKeyboard = true
             phase = .open
@@ -96,10 +105,14 @@ struct NotchHoverStateMachine {
             phase = .closed
             return nil
         case .exitDebounceElapsed:
-            guard !pointerInside, !openedByKeyboard, phase != .closed else { return nil }
+            // The pointer leaving closes the notch however it was opened, keyboard focus included (D49 revision; revises D30,
+            // D31 and D48). `NotchState` holds this event back while a mouse button is down, for drags.
+            guard !pointerInside, phase != .closed else { return nil }
             let wasPeek = phase == .peek
             phase = .closed
             openDue = false
+            // Otherwise the next hotkey press would toggle it off and do nothing.
+            openedByKeyboard = false
             return wasPeek ? .cancelOpenDelay : nil
         }
     }

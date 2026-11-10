@@ -51,6 +51,9 @@ protocol NotchModule: AnyObject {
     func topRowAccessory() -> AnyView?
     /// Its tab was clicked or chosen with its ⌘ number: opened on purpose, unlike a hover-open (D48).
     func didSelectTab()
+    /// Choosing its tab (a click or its ⌘ number) also gives the notch keyboard focus, so it can be typed into at once
+    /// without a second click (D48: the terminal).
+    var takesKeysOnSelect: Bool { get }
 
     /// Begin observing. Only called while the module is enabled; nothing may run before it.
     func start()
@@ -64,4 +67,5 @@ extension NotchModule {
     var isEnabledByDefault: Bool { true }
     func topRowAccessory() -> AnyView? { nil }
     func didSelectTab() {}
+    var takesKeysOnSelect: Bool { false }
 }

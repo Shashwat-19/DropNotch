@@ -4,13 +4,14 @@ import SwiftUI
 /// words and symbols as well as colour (L6).
 struct BatteryCardView: View {
     let module: BatteryModule
+    @Environment(\.notchSize) private var size
 
     var body: some View {
         if let status = module.status {
             VStack(spacing: NotchStyle.tightSpacing) {
                 ring(status)
                 state(status)
-                    .font(.subheadline)
+                    .font(.notch(.subheadline, size))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -32,13 +33,13 @@ struct BatteryCardView: View {
                 // Starts at 12 o'clock, like the system's battery widget.
                 .rotationEffect(.degrees(-90))
             Text(Double(status.percent) / 100, format: .percent)
-                .font(.title3.weight(.semibold).monospacedDigit())
+                .font(.notch(.title3, size).weight(.semibold).monospacedDigit())
                 // "100 %" in locales with a space before the sign is wider than the ring's opening.
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
         .padding(lineWidth / 2)
-        .frame(width: 60, height: 60)
+        .frame(width: size.scaled(60), height: size.scaled(60))
     }
 
     @ViewBuilder
