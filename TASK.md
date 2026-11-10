@@ -364,7 +364,7 @@ R8. Edge cases (9, 13, 40): `kill -STOP` a player, click (gives up in about 2 s)
 Device checks moved here from feature branches (speed mode, CLAUDE.md). Run them in the release branch on a Release build on a notched Mac.
 
 From branch 9, `feat/polish` (accessibility-auditor, 2026-11-01; not fixed on the branch, decide before release):
-- **Open (High).** File Tray has no keyboard path: tiles can't take focus, the actions are Tab stops only with Keyboard navigation on, and the hotkey sets no first focus. Same for Clipboard's Turn On, Add Clipboard and Clear (Medium).
+- **Closed in code by D40; not re-checked on a device for 0.2.** (Was: Open (High).) File Tray has no keyboard path: tiles can't take focus, the actions are Tab stops only with Keyboard navigation on, and the hotkey sets no first focus. Same for Clipboard's Turn On, Add Clipboard and Clear (Medium).
 - **Open (Medium).** VoiceOver finds nothing in the closed or compact notch (no element or open action); also the start of click-to-open. No announcement on open or ⌘N tab switch (L4); copy-back now says "Copied".
 - **Pending.** VoiceOver with ⌃⌥N on each tab and the closed notch; Increase Contrast on the selected tab, tile and row; Reduce Motion: ⌘1/⌘2 only cross-fade, Settings rows don't slide.
 
