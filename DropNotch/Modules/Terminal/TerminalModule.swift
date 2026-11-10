@@ -102,3 +102,7 @@ final class TerminalModule: NotchModule {
         rows = 0
     }
 }
+
+/// The panel gives a focused terminal its Escape and its own ⌘ keys (D48). Here, not in Services, so the view doesn't
+/// depend on the notch's key routing.
+extension NotchTerminalView: NotchKeyOwner {}

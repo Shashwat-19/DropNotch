@@ -37,8 +37,10 @@ final class SwiftTermSessionTests: XCTestCase {
         session.hangUpAndWait()
     }
 
-    /// Balanced: never left on (design review L1).
-    func testSecureKeyboardEntryTurnsOffAgain() {
+    /// Balanced: never left on (design review L1). The state is system-wide, so it is skipped while another process
+    /// (such as loginwindow on a locked screen) holds secure input.
+    func testSecureKeyboardEntryTurnsOffAgain() throws {
+        try XCTSkipIf(IsSecureEventInputEnabled(), "another process has secure input on")
         let secure = SecureKeyboardEntry()
         secure.set(true)
         XCTAssertTrue(IsSecureEventInputEnabled())
