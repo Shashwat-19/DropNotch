@@ -16,7 +16,15 @@ final class NotchState {
     /// The hotkey holds the notch open and the panel is key (D30). The open content moves focus to its controls.
     private(set) var hasKeyboardFocus = false
     /// Settings › General › Notch size (D49), read once at launch and changed only through `setNotchSize`.
-    private(set) var notchSize = NotchSize.saved()
+    private(set) var notchSize: NotchSize
+
+    @ObservationIgnored private let defaults: UserDefaults
+
+    /// `defaults` is for tests.
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        notchSize = NotchSize.saved(defaults)
+    }
 
     // Strong reference cycle (state → panel → hosting view → root view → state), on
     // purpose: AppDelegate keeps all of them for the app's lifetime.
@@ -59,7 +67,7 @@ final class NotchState {
 
     /// Settings › General › Notch size (D49): saved, then the shape is measured again where it is, so an open notch
     /// stays open and redraws at the new size. Unlike a screen change, the hover state is kept.
-    func setNotchSize(_ size: NotchSize, defaults: UserDefaults = .standard) {
+    func setNotchSize(_ size: NotchSize) {
         guard size != notchSize else { return }
         notchSize = size
         defaults.set(size.rawValue, forKey: NotchSize.key)

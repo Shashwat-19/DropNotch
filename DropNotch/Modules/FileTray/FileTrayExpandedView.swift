@@ -133,8 +133,8 @@ struct FileTrayExpandedView: View {
                 // The system's own AirDrop image; there is no public SF Symbol for it.
                 Label { Text("AirDrop") } icon: { Image(nsImage: airDrop?.image ?? NSImage()).resizable().scaledToFit() }
                     .labelStyle(.iconOnly)
-                    .frame(width: 28, height: 20)
-                    .frame(height: 24)
+                    .frame(width: size.scaled(28), height: size.scaled(20))
+                    .frame(height: size.scaled(24))
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -174,7 +174,9 @@ struct FileTrayExpandedView: View {
     private func icon(_ label: LocalizedStringKey, systemImage: String) -> some View {
         Label(label, systemImage: systemImage)
             .labelStyle(.iconOnly)
-            .frame(width: 28, height: 24)
+            // One step up at Large, like the tiles (D49, test-writer).
+            .font(.notch(.body, size))
+            .frame(width: size.scaled(28), height: size.scaled(24))
             .contentShape(Rectangle())
     }
 

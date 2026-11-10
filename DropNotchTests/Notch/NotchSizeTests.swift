@@ -61,8 +61,8 @@ final class NotchSizeTests: XCTestCase {
         let name = "NotchSizeTests.\(UUID())"
         let defaults = UserDefaults(suiteName: name)!
         defer { defaults.removePersistentDomain(forName: name) }
-        let state = NotchState()
-        state.setNotchSize(.large, defaults: defaults)
+        let state = NotchState(defaults: defaults)
+        state.setNotchSize(.large)
         XCTAssertEqual(state.notchSize, .large)
         XCTAssertEqual(defaults.string(forKey: NotchSize.key), "large")
         XCTAssertNil(state.geometry)
@@ -161,9 +161,9 @@ final class NotchSizeTests: XCTestCase {
         let name = "NotchSizeTests.\(UUID())"
         let defaults = UserDefaults(suiteName: name)!
         defer { defaults.removePersistentDomain(forName: name) }
-        let state = NotchState()
+        let state = NotchState(defaults: defaults)
         let current = state.notchSize
-        state.setNotchSize(current, defaults: defaults)
+        state.setNotchSize(current)
         XCTAssertEqual(state.notchSize, current)
         XCTAssertNil(defaults.string(forKey: NotchSize.key))
         XCTAssertNil(state.geometry)
