@@ -363,8 +363,10 @@ R8. Edge cases (9, 13, 40): `kill -STOP` a player, click (gives up in about 2 s)
 
 Device checks moved here from feature branches (speed mode, CLAUDE.md). Run them in the release branch on a Release build on a notched Mac.
 
+For v0.2.0 (not run; listed under Known limitations in the 0.2.0 notes): 77 (VoiceOver on Home), 78 (Larger Text and every card off), 83 (VoiceOver on the Battery card), and the battery and calendar pending items in the v0.2 section below.
+
 From branch 9, `feat/polish` (accessibility-auditor, 2026-11-01; not fixed on the branch, decide before release):
-- **Open (High).** File Tray has no keyboard path: tiles can't take focus, the actions are Tab stops only with Keyboard navigation on, and the hotkey sets no first focus. Same for Clipboard's Turn On, Add Clipboard and Clear (Medium).
+- **Closed in code by D40; not re-checked on a device for 0.2.** (Was: Open (High).) File Tray has no keyboard path: tiles can't take focus, the actions are Tab stops only with Keyboard navigation on, and the hotkey sets no first focus. Same for Clipboard's Turn On, Add Clipboard and Clear (Medium).
 - **Open (Medium).** VoiceOver finds nothing in the closed or compact notch (no element or open action); also the start of click-to-open. No announcement on open or ⌘N tab switch (L4); copy-back now says "Copied".
 - **Pending.** VoiceOver with ⌃⌥N on each tab and the closed notch; Increase Contrast on the selected tab, tile and row; Reduce Motion: ⌘1/⌘2 only cross-fade, Settings rows don't slide.
 
@@ -377,7 +379,7 @@ From branch 5, `feat/notes`:
 
 From branch 2, `feat/now-playing-media`:
 - **Pending.** 17–20 for Spotify (as written above): time and bar, a seek in Spotify's window, click and drag seek with the first-seek prompt and VoiceOver adjust, Spotify artwork, an ad, and app icons without the grant.
-- **Pending.** 26. Release launch, and `codesign -d --entitlements -` shows only apple-events.
+- **Pending.** 26. Release launch, and `codesign -d --entitlements -` shows only apple-events (since D44: apple-events and personal-information.calendars).
 - **Pending.** UI feel (D27): glass appears on hover only, in the non-activating panel, with press feedback on macOS 26+; its press bounce respects Reduce Motion; on macOS 14/15 the white hover circle appears in the non-activating panel; a late Music burst doesn't flicker the play/pause icon; artwork on a track change fades old → new directly, with the app icon only for a track without artwork or after the 2 s hold.
 21. **Pending.** Network (`nettop` or a firewall): only `i.scdn.co`, at most one request per Spotify track change, none for Music, none while idle. Offline: app icon, no retries.
 23. **Pending.** Energy: 0 wake-ups while closed and while paused; about 1 a second while open and playing (the elapsed time); WindowServer within about 3 points of its baseline; display sleep with the notch open closes it.

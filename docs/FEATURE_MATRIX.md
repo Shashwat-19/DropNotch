@@ -19,7 +19,7 @@ The "DropNotch priority" column below is the Phase 1 plan. As of release/v0.1.0 
 
 - **Ships in v0.1.0:** notch panel, geometry and hover; the pill on screens without a notch; the ⌃⌥N hotkey with keyboard focus (D30, D40); menu-bar item; launch at login; Settings with module order and compact-slot choice (D34); Now Playing for Music and Spotify with artwork, progress bar and seek (D22–D26); the decorative compact waveform (D28); notes (D31); file tray with drag in and out, AirDrop and Share (D32, D40); clipboard history (D33); no analytics or telemetry. Distributed as an ad-hoc-signed DMG (D41).
 - **Not in v0.1.0, planned for v0.2:** several displays at once, hiding from screen capture, the diagnostics panel, Now Playing for any app (MediaRemote), the real waveform, shuffle and repeat, calendar, timer, battery and Bluetooth, Sparkle updates, Developer ID signing and notarisation.
-- **Home dashboard (Shash, 2026-11-01):** the README roadmap names a v0.2 Home dashboard with a music card, calendar, battery and terminal. Calendar and battery are v0.2 rows below; the terminal row still says Later (it needs a dependency and a security review for subprocesses), so its date isn't settled.
+- **Home dashboard (Shash, 2026-11-01):** the README roadmap names a v0.2 Home dashboard with a music card, calendar, battery and terminal. Calendar and battery are v0.2 rows below; the terminal row still says Later (it needs a dependency and a security review for subprocesses), so its date isn't settled. **Update (v0.2.0, 2026-11-10):** the terminal shipped in v0.2 as its own tab (D48), not a Home card.
 - **Not in v0.1.0, from MVP rows:** Quick Look, thumbnails and open/reveal in the tray (D32); favourite in Now Playing (D26); click-to-open and a VoiceOver element for the closed notch.
 - Device checks still open for the release are listed in TASK.md, "Release checklist".
 
@@ -68,7 +68,7 @@ The "DropNotch priority" column below is the Phase 1 plan. As of release/v0.1.0 
 | User-chosen calendar or notes panel | Calendar not mentioned [I] | EventKit with change notifications; a 60 s loop on the lock screen [V] | EventKit + store-changed notification; no loop | Public [V] | Calendars (full access) [V] | Low [V] | Notes panel MVP; calendar v0.2 | Ask for Calendars only when the calendar panel is first chosen. |
 | Reminders | Not mentioned | EventKit [V] | EventKit | Public [V] | Reminders [V] | Low | Later | |
 | Timer | Not mentioned | Own 1 s countdown [V]; also mirrors the Clock app via Accessibility scraping and log stream [V] | Own timer: one timer aligned to the end time, 1 Hz UI tick only while visible | Public | None | Low (own); High (Clock mirror) [V] | v0.2 | Never scrape the Clock app. |
-| Terminal | Not mentioned | SwiftTerm, login shell [V] | Third-party terminal view | Public, third-party [V] | None [I] | Low [V] | Later | Needs a dependency and a security review (subprocesses). |
+| Terminal | Not mentioned | SwiftTerm, login shell [V] | Third-party terminal view | Public, third-party [V] | None [I] | Low [V] | v0.2 (shipped, D48) | SwiftTerm 1.99.3, pinned by commit; security-auditor design and code reviews; commands use DropNotch's permissions, disclosed. |
 | Keep awake | Not mentioned | IOPMAssertion, 1 s ticker while active [V] | IOPMAssertion, no ticker | Public [V] | None | Low [V] | Later | Not in DropNotch's list. |
 
 ## System status
@@ -99,7 +99,7 @@ The "DropNotch priority" column below is the Phase 1 plan. As of release/v0.1.0 
 | Feature | Canopy | Atoll | macOS API / approach for DropNotch | Public or private | Permissions | Breakage risk on macOS updates | DropNotch priority | Notes |
 |---|---|---|---|---|---|---|---|---|
 | No analytics or telemetry | Stated [V] | Not checked | Policy (CLAUDE.md) | — | — | — | MVP | |
-| Updates | Update checks contact Canopy's server [V]; mechanism not stated [I] | Sparkle 2.7.0, four channels, EdDSA-signed appcasts served from the repo's raw host [V] | Sparkle, exact pin, appcast on GitHub Releases | Public third-party [V] | Network | Low [V] | v0.2 | D10; needs Developer ID first. |
+| Updates | Update checks contact Canopy's server [V]; mechanism not stated [I] | Sparkle 2.7.0, four channels, EdDSA-signed appcasts served from the repo's raw host [V] | Sparkle, exact pin, appcast on GitHub Releases | Public third-party [V] | Network | Low [V] | Later | D10; needs Developer ID first. |
 | Licence checks, trial | Yes, checked at every launch [V] | — | — | — | — | — | Skip | Open source. |
 | Extension RPC server | — | Loopback WebSocket that trusts a client's self-declared bundle ID [V] | — | — | — | Security: high [V] | Skip | |
 | LocalSend transfer | — | TLS delegate accepts any server certificate [V] | — | — | Local network [I] | Security: high [V] | Skip | |
