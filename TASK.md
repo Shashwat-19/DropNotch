@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-11-10):** v0.1.0 is released. v0.2 (Home dashboard, D42–D45) is in progress in speed mode: see "v0.2" at the end. Branch 1, `feat/home`, is merged to main (2026-11-09). Branch 2, `feat/battery-card`, is merged to main (2026-11-09). Branch 3, `feat/calendar-card`, and branch 3b, `feat/home-layout` (D46), are merged to main (2026-11-09; device checks 84–94 passed on one Release build). Branch 4, `feat/quick-commands`, was built but set aside unmerged (Shash, 2026-11-10); branch 4b, `feat/terminal` (D48), is merged to main (2026-11-10; device checks 95–100 passed). `feat/notch-size` (D49) is in progress.
+**Status (2026-11-10):** v0.1.0 is released. v0.2 (Home dashboard, D42–D45) is in progress in speed mode: see "v0.2" at the end. Branch 1, `feat/home`, is merged to main (2026-11-09). Branch 2, `feat/battery-card`, is merged to main (2026-11-09). Branch 3, `feat/calendar-card`, and branch 3b, `feat/home-layout` (D46), are merged to main (2026-11-09; device checks 84–94 passed on one Release build). Branch 4, `feat/quick-commands`, was built but set aside unmerged (Shash, 2026-11-10); branch 4b, `feat/terminal` (D48), is merged to main (2026-11-10; device checks 95–100 passed). `feat/notch-size` (D49) is merged (checks 101–113 passed). Next: `release/v0.2.0`.
 
 **Phase 3 status (2026-11-01, kept for history):** release/v0.1.0 in progress: the keyboard fix (D40), reviews and DMG (D41) are done; the one device session below is next, then Shash approves the public steps. Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, 4, `feat/hotkey`, 5, `feat/notes`, 6, `feat/file-tray`, and 7, `feat/clipboard`, are merged to main and pushed to `origin`. Branches 8, `feat/settings`, and 9, `feat/polish`, are merged to main (2026-11-01). Next: release. See "Phase 3" below.
 
@@ -470,7 +470,7 @@ Device checks (MacBook Air, **Release build** of `feat/terminal`; Clipboard on; 
 ### Branch 4c: `feat/notch-size` (D49)
 Settings › General › Notch size: Standard or Large (+40 pt high, +80 pt wide, text one step up), picked by Shash from docs/mockups/notch-size-v0.2.html.
 
-**Status (2026-11-10):** built. test-writer: 6 tests, two gaps fixed. code-reviewer: Approve with changes (W1–W3, S1–S8 applied). 597 tests, 0 failures. Release build running for the checks below.
+**Status (2026-11-10):** merged to main; device checks 101–113 passed. test-writer: 6 tests, two gaps fixed. code-reviewer: Approve with changes (W1–W3, S1–S8 applied). 597 tests, 0 failures. Release build running for the checks below.
 
 Device checks (MacBook Air, **Release build** of `feat/notch-size`; Clipboard and Terminal on):
 101. **Large.** Settings › General › Notch size › Large. Open the notch: about 80 pt wider and 40 pt taller (676 × 230), the tabs clear of the housing; turn Clipboard off: 616 pt wide. Home: 6 calendar rows, artwork about 124 pt, larger title, time and controls. Go through every tab (Notes, Tray with its buttons, Clipboard, Terminal; Battery on, if you like): larger text, nothing clipped by the rounded corners. Quit and relaunch: still Large.
@@ -491,3 +491,4 @@ Check 110 worked on ffb8667, but 1 s felt slow; now 0.5 s (Shash, 2026-11-10):
 Check 111 passed (Shash, 2026-11-10, Release 7d66b5d). Then keys on choosing the Terminal tab, and "Type as soon as the notch opens" (D48):
 112. **Tab click and ⌘ number.** Hover-open on another tab, click the Terminal tab: the caret turns solid and typing goes to the shell with no second click; secure input is on (`ioreg -l -w 0 | grep -c SecureInputPID` in Terminal.app is 1 or more). Same with ⌘ and Terminal's number after ⌃⌥N. Leaving closes after about 0.5 s.
 113. **Type as soon as the notch opens.** Off (default): a hover-open on the Terminal tab keeps the caret hollow and the keys with the app in front. Turn it on in Settings › Terminal (check the help text): a hover-open on Terminal gives the shell the keys at once; with no session yet, Start Session takes them and no shell starts until you press Return or click. Turn it off again.
+Checks 112–113 passed (Shash, 2026-11-10, Release 4f03075); Shash keeps "hover never starts a shell". Merged to main 2026-11-10.
