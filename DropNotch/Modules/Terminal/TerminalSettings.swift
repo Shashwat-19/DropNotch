@@ -4,6 +4,8 @@ import CoreGraphics
 enum TerminalSettings {
     static let fontSizeKey = "terminal.fontSize"
     static let scrollbackKey = "terminal.scrollback"
+    /// "Type as soon as the notch opens": a hover-open on the Terminal tab gives it the keys too. Off by default (D48).
+    static let typeOnOpenKey = "terminal.typeOnOpen"
     static let fontSizes = 10...14
     static let defaultFontSize = 11
     static let scrollbackChoices = [1_000, 5_000, 10_000]

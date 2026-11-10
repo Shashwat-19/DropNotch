@@ -7,6 +7,7 @@ struct TerminalSettingsView: View {
 
     @AppStorage(TerminalSettings.fontSizeKey) private var fontSize = TerminalSettings.defaultFontSize
     @AppStorage(TerminalSettings.scrollbackKey) private var scrollback = TerminalSettings.defaultScrollback
+    @AppStorage(TerminalSettings.typeOnOpenKey) private var typeOnOpen = false
     @State private var confirmsTurnOn = false
 
     var body: some View {
@@ -18,6 +19,12 @@ struct TerminalSettingsView: View {
                 }))
             } footer: {
                 Text("Your login shell, in your home folder. It starts when you open the tab, keeps running while the notch is closed, and ends with End Session, turning the tab off or quitting DropNotch.")
+                    .foregroundStyle(.secondary)
+            }
+            Section {
+                Toggle("Type as soon as the notch opens", isOn: $typeOnOpen)
+            } footer: {
+                Text("Your keys go to the terminal whenever the notch opens on it, even if you only passed over it. A stray Return can run a command.")
                     .foregroundStyle(.secondary)
             }
             Section {

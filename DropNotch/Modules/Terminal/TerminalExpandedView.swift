@@ -9,14 +9,24 @@ struct TerminalExpandedView: View {
     @Environment(\.requestNotchKeyboardFocus) private var requestKeyboardFocus
     @AppStorage(TerminalSettings.fontSizeKey) private var fontSize = TerminalSettings.defaultFontSize
     @AppStorage(TerminalSettings.scrollbackKey) private var scrollback = TerminalSettings.defaultScrollback
+    @AppStorage(TerminalSettings.typeOnOpenKey) private var typeOnOpen = false
     @FocusState private var focus: Focus?
+    /// The keys came from "Type as soon as the notch opens" on a hover-open, not a deliberate open: they go to a running
+    /// shell or to Start Session, but a hover never starts the shell itself (D48, design review M4).
+    @State private var focusedByPassingOver = false
 
     var body: some View {
         content
+            // Inserted on each open (D19). With the setting on, a hover-open asks for the keys too (Shash, D48).
+            .onAppear {
+                guard typeOnOpen, !hasKeyboardFocus else { return }
+                focusedByPassingOver = true
+                requestKeyboardFocus()
+            }
             // ⌃⌥N on this tab opens it on purpose: the shell starts (D48).
             .onChange(of: hasKeyboardFocus, initial: true) {
                 guard hasKeyboardFocus else { return }
-                if module.state == .notStarted { module.openSession() }
+                if module.state == .notStarted, !focusedByPassingOver { module.openSession() }
                 focusStartButton()
             }
             // After End Session or an exit with the keys here, Start New Session takes them (code-reviewer S7).

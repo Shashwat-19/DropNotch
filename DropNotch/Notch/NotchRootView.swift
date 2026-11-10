@@ -143,6 +143,8 @@ struct NotchRootView: View {
         return Button {
             withAnimation(NotchStyle.spring) { registry.selectedTabID = module.id }
             module.didSelectTab()
+            // The terminal takes the keys at once, as after a click in it (D48).
+            if module.takesKeysOnSelect { state.send(.focusRequested) }
         } label: {
             Label { Text(module.title) } icon: { Image(systemName: module.systemImage) }
                 .labelStyle(.iconOnly)
