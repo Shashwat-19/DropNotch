@@ -95,7 +95,8 @@ final class SwiftTermSession: TerminalSession {
         guard shellPid > 1, !killed else { return }
         sendHangUp()
         let deadline = Date.now.addingTimeInterval(1)
-        while Date.now < deadline, ([shellPid] + foregroundGroups).contains(where: { getsid($0) == shellPid }) {
+        while Date.now < deadline,
+              !TerminalHangUp.liveTargets(shellPid: shellPid, foregroundGroups: foregroundGroups).isEmpty {
             usleep(20_000)
         }
         killRemaining()
@@ -195,8 +196,8 @@ final class GuardedTerminalDelegate: TerminalViewDelegate {
     func clipboardCopy(source: TerminalView, content: Data) {}
     func clipboardRead(source: TerminalView) -> Data? { nil }
     func kittyClipboardCapabilities(source: TerminalView) -> KittyClipboardCapabilities { [] }
-    func kittyClipboardAvailableMimeTypes(source: TerminalView, location: KittyClipboardLocation) -> [String]? { nil }
-    // Denied, not nil: nil would mean "use the system clipboard".
+    // Empty and denied, never nil: nil means "use the system clipboard" (security-auditor L-C).
+    func kittyClipboardAvailableMimeTypes(source: TerminalView, location: KittyClipboardLocation) -> [String]? { [] }
     func kittyClipboardRead(source: TerminalView, location: KittyClipboardLocation,
                             mimeType: String) -> KittyClipboardReadResult? { .denied }
     func kittyClipboardWrite(source: TerminalView, location: KittyClipboardLocation,

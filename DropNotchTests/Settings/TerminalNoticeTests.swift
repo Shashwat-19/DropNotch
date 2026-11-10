@@ -16,4 +16,24 @@ final class TerminalNoticeTests: XCTestCase {
     func testTheShownKey() {
         XCTAssertEqual(TerminalNotice.shownKey, "terminal.permissionsNoticeShown")
     }
+
+    /// security-auditor L-A: a Terminal flag saved before the notice was confirmed is turned off at launch.
+    @MainActor
+    func testEnforceTurnsOffTerminalUntilTheNoticeIsConfirmed() {
+        let name = "TerminalNoticeTests.\(UUID())"
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        defaults.set(true, forKey: "module.terminal.enabled")
+        let terminal = TerminalModule(makeSession: { _, _ in fatalError("no session in this test") }, defaults: defaults)
+        let registry = ModuleRegistry(modules: [terminal], defaults: defaults)
+        XCTAssertTrue(registry.enabledIDs.contains("terminal"))
+
+        TerminalNotice.enforce(on: registry, defaults: defaults)
+        XCTAssertFalse(registry.enabledIDs.contains("terminal"))
+
+        registry.setEnabled("terminal", true)
+        defaults.set(true, forKey: TerminalNotice.shownKey)
+        TerminalNotice.enforce(on: registry, defaults: defaults)
+        XCTAssertTrue(registry.enabledIDs.contains("terminal"), "confirmed: left on")
+    }
 }

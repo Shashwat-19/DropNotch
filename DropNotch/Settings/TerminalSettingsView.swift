@@ -36,7 +36,7 @@ struct TerminalSettingsView: View {
             }
             Section {
                 // The notice's text, kept here (Shash, D48).
-                TerminalNotice.message(calendarsAllowed: TerminalNotice.calendarsAllowed)
+                TerminalNotice.message(calendars: TerminalNotice.calendars)
                     .fixedSize(horizontal: false, vertical: true)
                 Text("Programs in the terminal can't read or change your clipboard; ⌘C and ⌘V work as usual. If a command needs something DropNotch hasn't been allowed, macOS asks in DropNotch's name.")
             } header: {

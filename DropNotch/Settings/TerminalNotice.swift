@@ -10,13 +10,26 @@ enum TerminalNotice {
     static func needsConfirmation(_ defaults: UserDefaults = .standard) -> Bool { !defaults.bool(forKey: shownKey) }
 
     /// The Calendars line follows the real setting; folders and other apps can't be checked without a prompt.
-    static var calendarsAllowed: Bool { EKEventStore.authorizationStatus(for: .event) == .fullAccess }
+    static var calendars: EKAuthorizationStatus { EKEventStore.authorizationStatus(for: .event) }
+
+    /// Turns off a Terminal tab that was saved as on before its notice was ever confirmed, such as by an early test
+    /// build, so the notice is always seen first (security-auditor L-A). Called at launch, before modules start.
+    @MainActor
+    static func enforce(on registry: ModuleRegistry, defaults: UserDefaults = .standard) {
+        guard needsConfirmation(defaults),
+              let terminal = registry.modules.first(where: { $0 is TerminalModule }) else { return }
+        registry.setEnabled(terminal.id, false)
+    }
 
     static let title: LocalizedStringKey = "Terminal uses DropNotch's permissions"
 
-    static func message(calendarsAllowed: Bool) -> Text {
-        let calendars = calendarsAllowed ? Text("Calendars: full access, which can add, change and delete events")
-                                         : Text("Calendars: not allowed")
+    static func message(calendars status: EKAuthorizationStatus) -> Text {
+        let calendars = switch status {
+        case .fullAccess: Text("Calendars: full access, which can add, change and delete events")
+        // Write-only lets commands add events (security-auditor L-D).
+        case .writeOnly: Text("Calendars: can add events")
+        default: Text("Calendars: not allowed")
+        }
         return Text("""
             Commands you run in the Terminal tab, and your shell's setup files, can use everything DropNotch is allowed to use, without asking again:
             • \(calendars)
@@ -40,7 +53,7 @@ extension View {
                 turnOn()
             }
         } message: {
-            TerminalNotice.message(calendarsAllowed: TerminalNotice.calendarsAllowed)
+            TerminalNotice.message(calendars: TerminalNotice.calendars)
         }
     }
 }

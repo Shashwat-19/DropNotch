@@ -14,7 +14,7 @@ grep -E '"(identity|revision)"' DropNotch.xcodeproj/project.xcworkspace/xcshared
     | sed -E 's/.*: "([^"]+)".*/\1/' | paste - - | diff -u scripts/Package.resolved.expected - \
     || { echo "Resolved packages differ from scripts/Package.resolved.expected." >&2; exit 1; }
 xcodebuild -quiet -scheme DropNotch -configuration Release -destination 'platform=macOS' \
-    -derivedDataPath build/DerivedData -skipPackagePluginValidation clean build
+    -derivedDataPath build/DerivedData -skipPackagePluginValidation -onlyUsePackageVersionsFromResolvedFile clean build
 
 app=build/DerivedData/Build/Products/Release/DropNotch.app
 version=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$app/Contents/Info.plist")

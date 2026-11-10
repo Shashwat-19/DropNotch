@@ -27,6 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !Self.isTestHost {
             // Before any module writes there (D47).
             PrivateFolder.secureApplicationSupport()
+            TerminalNotice.enforce(on: registry)
             registry.start()
             // Inherits the main actor. The stream ends only with the app.
             Task { [notchState] in

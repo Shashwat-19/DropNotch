@@ -95,4 +95,12 @@ final class TerminalHangUpTests: XCTestCase {
         XCTAssertEqual(TerminalHangUp.send(0, shellPid: shell, foregroundGroups: [shell, -1, shell, 0]), 1)
         XCTAssertEqual(kill(shell, 0), 0, "signal 0 only checks")
     }
+
+    /// security-auditor L-B: a group is found by its members, so one whose leader has gone is still a target.
+    func testGroupsInSessionListsTheSessionsGroups() throws {
+        let shell = try spawnSleep(flags: Int32(POSIX_SPAWN_SETSID))
+        XCTAssertEqual(TerminalHangUp.groupsInSession(shell), [shell])
+        XCTAssertEqual(TerminalHangUp.liveTargets(shellPid: shell, foregroundGroups: [getpgrp(), 99_999]), [shell])
+        XCTAssertFalse(TerminalHangUp.groupsInSession(getsid(0)).isEmpty, "the test host's own session")
+    }
 }
