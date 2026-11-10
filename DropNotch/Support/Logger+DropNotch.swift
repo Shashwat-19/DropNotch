@@ -17,6 +17,9 @@ extension Logger {
     static let calendar = Logger(subsystem: subsystem, category: "Calendar")
     /// Failures only: never a reading.
     static let battery = Logger(subsystem: subsystem, category: "Battery")
+    /// Session starts and ends, exit statuses and signals only: never typed text, output, titles, folders, the
+    /// environment or the shell's path (D48).
+    static let terminal = Logger(subsystem: subsystem, category: "Terminal")
     /// Error domains and codes only.
     static let settings = Logger(subsystem: subsystem, category: "Settings")
 }

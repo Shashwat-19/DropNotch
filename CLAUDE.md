@@ -35,7 +35,7 @@ Once docs/ARCHITECTURE.md exists it is the source of truth for module layout. Ke
 
 ## Commands
 - Regenerate project (after any project.yml change, and after adding/removing files): `xcodegen generate`
-- Build + test: `xcodebuild -scheme DropNotch -destination 'platform=macOS' build test`
+- Build + test: `xcodebuild -scheme DropNotch -destination 'platform=macOS' -skipPackagePluginValidation build test` (SwiftTerm runs a build-tool plugin, D48; in the Xcode app, "Trust & Enable" it once)
 - Errors only: append `2>&1 | grep -E "error:|warning:|failed" | head -40`
 - Result only: append `2>&1 | tail -20`
 - App logs: `log stream --predicate 'subsystem == "com.shashwat.DropNotch"' --level debug`
@@ -50,7 +50,7 @@ Once docs/ARCHITECTURE.md exists it is the source of truth for module layout. Ke
 
 ### Project
 - Never edit DropNotch.xcodeproj; it is generated and gitignored. Change project.yml (targets, Info.plist keys such as LSUIElement, entitlements, build settings, Swift packages under `packages:`) and run `xcodegen generate`.
-- Package.resolved lives inside the gitignored .xcodeproj, so pin packages with `exactVersion:` in project.yml.
+- Package.resolved lives inside the gitignored .xcodeproj, so pin packages by commit with `revision:` in project.yml (a tag can be moved, D48) and add each to scripts/Package.resolved.expected, which make-dmg.sh checks.
 - Ask Shash before adding any dependency.
 - Before planning each new feature, dependency-manager searches for maintained Swift packages under MIT, BSD or Apache-2.0 that cover it, and reports licence, maintenance, size and how much work it saves. Never GPL. Shash approves each package before it's added.
 - Private or undocumented APIs (MediaRemote, IOBluetooth battery keys, SkyLight) sit behind a protocol in Services/ with a fallback, so a macOS update disables one feature instead of crashing the app.

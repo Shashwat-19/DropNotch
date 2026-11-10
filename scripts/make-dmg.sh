@@ -7,8 +7,14 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 xcodegen generate
+# SwiftTerm runs a build-tool plugin, so the build skips Xcode's plugin trust check (D48). Before that, make sure every
+# package resolved to the commit in scripts/Package.resolved.expected: a moved tag or a new transitive package stops here.
+xcodebuild -quiet -resolvePackageDependencies -scheme DropNotch -derivedDataPath build/DerivedData
+grep -E '"(identity|revision)"' DropNotch.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved \
+    | sed -E 's/.*: "([^"]+)".*/\1/' | paste - - | diff -u scripts/Package.resolved.expected - \
+    || { echo "Resolved packages differ from scripts/Package.resolved.expected." >&2; exit 1; }
 xcodebuild -quiet -scheme DropNotch -configuration Release -destination 'platform=macOS' \
-    -derivedDataPath build/DerivedData clean build
+    -derivedDataPath build/DerivedData -skipPackagePluginValidation -onlyUsePackageVersionsFromResolvedFile clean build
 
 app=build/DerivedData/Build/Products/Release/DropNotch.app
 version=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$app/Contents/Info.plist")

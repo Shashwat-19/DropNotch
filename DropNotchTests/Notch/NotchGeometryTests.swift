@@ -125,7 +125,7 @@ final class NotchGeometryTests: XCTestCase {
         let geometry = NotchGeometry(screenFrame: screen, safeAreaTop: inset, auxLeftWidth: 100,
                                      auxRightWidth: 100, menuBarHeight: inset, backingScale: 2)
         XCTAssertEqual(geometry.openFrame.width,
-                       max(geometry.compactPeekFrame.width, geometry.closedFrame.width + 2 * NotchGeometry.topRowWidth))
+                       max(geometry.compactPeekFrame.width, geometry.closedFrame.width + 2 * NotchGeometry.topRowWidth()))
         XCTAssertTrue(geometry.openFrame.contains(geometry.peekFrame))
         XCTAssertTrue(geometry.openFrame.contains(geometry.compactPeekFrame))
     }
@@ -346,16 +346,44 @@ final class NotchGeometryTests: XCTestCase {
     /// The row sits right-aligned in the open shape; the housing is the closed frame, both in the open shape's local x.
     private func assertRowClearOfHousing(_ geometry: NotchGeometry, file: StaticString = #filePath, line: UInt = #line) {
         let open = geometry.openFrame
-        XCTAssertGreaterThanOrEqual(open.width - geometry.openTopRowLeading, NotchGeometry.topRowWidth,
+        XCTAssertGreaterThanOrEqual(open.width - geometry.openTopRowLeading, NotchGeometry.topRowWidth(),
                                     file: file, line: line)
         let housing = (geometry.closedFrame.minX - open.minX)...geometry.openTopRowLeading
-        let row = (open.width - NotchGeometry.topRowWidth + NotchGeometry.topRowInset)...(open.width - NotchGeometry.topRowInset)
+        let row = (open.width - NotchGeometry.topRowWidth() + NotchGeometry.topRowInset)...(open.width - NotchGeometry.topRowInset)
         XCTAssertFalse(housing.overlaps(row), "housing \(housing) row \(row)", file: file, line: line)
     }
 
     func testTopRowWidthFitsFiveItems() {
-        XCTAssertEqual(NotchGeometry.topRowWidth, 5 * 28 + 4 * 2 + 2 * 8)
-        XCTAssertEqual(NotchGeometry.topRowWidth, 164)
+        XCTAssertEqual(NotchGeometry.topRowWidth(), 5 * 28 + 4 * 2 + 2 * 8)
+        XCTAssertEqual(NotchGeometry.topRowWidth(), 164)
+    }
+
+    /// Five tabs and the gear (D45 Q5, D48): 596 pt on the Air, and the row still clears the housing.
+    func testMoreTopRowItemsWidenTheOpenShape() {
+        func geometry(items: Int) -> NotchGeometry {
+            NotchGeometry(screenFrame: air, safeAreaTop: inset, auxLeftWidth: 631, auxRightWidth: 631,
+                          menuBarHeight: inset, backingScale: 2, topRowItems: items)
+        }
+        XCTAssertEqual(geometry(items: 1).openFrame.width, 536, "never narrower than five items")
+        XCTAssertEqual(geometry(items: 5).openFrame.width, 536)
+        XCTAssertEqual(geometry(items: 6).openFrame.width, 596)
+        XCTAssertEqual(NotchGeometry.topRowWidth(items: 6), 194)
+        let six = geometry(items: 6)
+        XCTAssertGreaterThanOrEqual(six.openFrame.width - six.openTopRowLeading, NotchGeometry.topRowWidth(items: 6))
+    }
+
+    /// The strip left of the housing for a module's accessory (D48, mock-up): 132 pt at 536, 162 pt at 596, after the
+    /// 24 pt side margin and the 8 pt inset; it ends where the housing starts.
+    func testTheStripLeftOfTheHousing() {
+        for (items, strip) in [(5, 132.0), (6, 162.0)] {
+            let geometry = NotchGeometry(screenFrame: air, safeAreaTop: inset, auxLeftWidth: 631, auxRightWidth: 631,
+                                         menuBarHeight: inset, backingScale: 2, topRowItems: items)
+            XCTAssertEqual(geometry.openHousingLeading - 24 - NotchGeometry.topRowInset, strip)
+            XCTAssertEqual(geometry.openFrame.minX + geometry.openHousingLeading, geometry.closedFrame.minX)
+        }
+        let pill = NotchGeometry(screenFrame: air, safeAreaTop: 0, auxLeftWidth: nil, auxRightWidth: nil,
+                                 menuBarHeight: 24, backingScale: 2)
+        XCTAssertEqual(pill.openHousingLeading, pill.openFrame.width / 2, "without a notch, the left half")
     }
 
     func testAirLikeScreenTopRowClearsTheHousing() {
@@ -382,7 +410,7 @@ final class NotchGeometryTests: XCTestCase {
             let geometry = notched(screen, left: left, right: right)
             XCTAssertEqual(geometry.openFrame.width,
                            max(NotchGeometry.openSize.width, geometry.compactPeekFrame.width,
-                               geometry.closedFrame.width + 2 * NotchGeometry.topRowWidth))
+                               geometry.closedFrame.width + 2 * NotchGeometry.topRowWidth()))
             XCTAssertEqual(geometry.openFrame.width, expected)
             assertRowClearOfHousing(geometry)
         }
@@ -401,6 +429,6 @@ final class NotchGeometryTests: XCTestCase {
         let geometry = plain(air)
         XCTAssertEqual(geometry.openFrame.width, NotchGeometry.openSize.width)
         XCTAssertEqual(geometry.openTopRowLeading, geometry.openFrame.width / 2)
-        XCTAssertGreaterThanOrEqual(geometry.openFrame.width / 2, NotchGeometry.topRowWidth)
+        XCTAssertGreaterThanOrEqual(geometry.openFrame.width / 2, NotchGeometry.topRowWidth())
     }
 }

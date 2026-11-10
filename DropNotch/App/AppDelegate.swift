@@ -10,7 +10,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let registry = ModuleRegistry(modules: [HomeModule(), NowPlayingModule(source: ScriptablePlayersSource()),
                                             CalendarModule(source: EventKitCalendarSource())]
         + (PowerSourceBatterySource.hasInternalBattery ? [BatteryModule(source: PowerSourceBatterySource())] : [])
-        + [NotesModule(), FileTrayModule(), ClipboardModule()])
+        + [NotesModule(), FileTrayModule(), ClipboardModule(),
+            TerminalModule { fontSize, scrollback in SwiftTermSession(fontSize: fontSize, scrollback: scrollback) }])
     private var screenObserver: ScreenObserver?
 
     /// Unit tests run inside the app, so it launches for them too. Xcode sets this variable for the
@@ -26,6 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !Self.isTestHost {
             // Before any module writes there (D47).
             PrivateFolder.secureApplicationSupport()
+            TerminalNotice.enforce(on: registry)
             registry.start()
             // Inherits the main actor. The stream ends only with the app.
             Task { [notchState] in
@@ -34,6 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+        followTabCount()
         notchState.screensChanged()
         followCompactContent()
         screenObserver = ScreenObserver { [notchState] in notchState.screensChanged() }
@@ -46,6 +49,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor in self?.followCompactContent() }
         }
         notchState.setWings(wings)
+    }
+
+    /// Widens the open notch while more tabs are on than the row's minimum fits (D45 Q5), the same way as above.
+    private func followTabCount() {
+        let items = withObservationTracking { registry.expandedModules.count + 1 } onChange: { [weak self] in
+            Task { @MainActor in self?.followTabCount() }
+        }
+        notchState.setTopRowItems(items)
     }
 
     func applicationWillTerminate(_ notification: Notification) {

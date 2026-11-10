@@ -107,6 +107,14 @@ final class ModuleRegistryTests: XCTestCase {
         XCTAssertNil(registry.slotModule(for: .left))
     }
 
+    /// D45 Q5 dropped the tab limit: with Terminal and Clipboard on there are five tabs and the gear, and the open shape
+    /// widens instead (D48).
+    func testARegistryWithSixTabsInits() {
+        let ids = ["home", "notes", "file-tray", "clipboard", "terminal", "extra"]
+        let registry = ModuleRegistry(modules: ids.map { FakeModule($0) }, defaults: makeDefaults())
+        XCTAssertEqual(registry.expandedModules.map(\.id), ids)
+    }
+
     func testInitStartsAndStopsNothing() {
         let a = FakeModule("a"), b = FakeModule("b")
         _ = ModuleRegistry(modules: [a, b], defaults: makeDefaults())
@@ -538,5 +546,27 @@ final class ModuleRegistryTests: XCTestCase {
         XCTAssertEqual(defaults.object(forKey: "module.battery.enabled") as? Bool, true)
         XCTAssertEqual(registry.homeCards.map(\.id), ["now-playing", "calendar", "battery"])
         XCTAssertTrue(defaultsRegistry(defaults).0.enabledIDs.contains("battery"))
+    }
+
+    /// The real Terminal module (D48): off by default, so it sorts with the modules that are off and has no tab; turning
+    /// it on puts it last among those on; neither the registry starting nor turning it on spawns a shell.
+    func testTerminalIsOffByDefaultAndSortsWithTheOffModules() {
+        // Opening a session would only fail the test: a SwiftTermSession spawns nothing until `start`.
+        let terminal = TerminalModule(makeSession: { fontSize, scrollback in
+            XCTFail("no shell without a deliberate open")
+            return SwiftTermSession(fontSize: fontSize, scrollback: scrollback)
+        }, makeShell: { LoginShell(executable: "/bin/false", argv0: "false", directory: "/", environment: []) },
+           defaults: makeDefaults())
+        let a = FakeModule("a"), b = FakeModule("b"), off = FakeModule("off", onByDefault: false)
+        let registry = ModuleRegistry(modules: [a, terminal, off, b], defaults: makeDefaults())
+        XCTAssertEqual(registry.tabOrder, ["a", "b", "terminal", "off"])
+        XCTAssertEqual(registry.expandedModules.map(\.id), ["a", "b"])
+        registry.start()
+        registry.setEnabled("terminal", true)
+        XCTAssertEqual(registry.tabOrder, ["a", "b", "terminal", "off"])
+        XCTAssertEqual(registry.expandedModules.map(\.id), ["a", "b", "terminal"])
+        XCTAssertEqual(terminal.state, .notStarted)
+        registry.setEnabled("terminal", false)
+        XCTAssertEqual(registry.expandedModules.map(\.id), ["a", "b"])
     }
 }

@@ -25,10 +25,6 @@ final class ModuleRegistry {
 
     init(modules: [any NotchModule], defaults: UserDefaults = .standard) {
         precondition(Set(modules.map(\.id)).count == modules.count, "Module ids must be unique")
-        // Every tab plus the Settings button must fit right of the camera housing (D35), or the row would spill under it.
-        // Home cards have no tab (D42).
-        assert(modules.filter { $0.homeCard == nil }.count + 1 <= NotchGeometry.topRowMaxItems,
-               "Raise NotchGeometry.topRowMaxItems for another module")
         self.modules = modules
         self.defaults = defaults
         // A module with no saved flag takes its default (D46).
