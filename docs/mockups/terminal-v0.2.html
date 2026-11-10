@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terminal Tab Mock-up</title>
+<!--
+  DropNotch feat/terminal mock-up: a terminal in the open notch at the 190 pt height (D46), on a MacBook Air.
+  Not app code: a planning aid only. Sizes come from NotchGeometry.swift, NotchStyle.swift and NotchRootView.swift
+  (main, 2026-11-10): openSize 480 × 190, top row height = max(closed height, 24 + 4), tabs 28 × 24 with 2 pt between
+  and 8 pt at each end, sidePadding 24, bottomPadding 12, shoulder 10, bottom radius 18. The open width follows the
+  tabs that are on plus Settings, never fewer than 5 items (D45 Q5): 536 pt, or 596 pt with six items.
+  Cell sizes are measured with Core Text on macOS 27.0.1 (ascent + descent + leading, and the advance of "W") for the
+  system monospaced font (SF Mono); the cell height is rounded up to whole points here. SwiftTerm's own rounding may
+  differ by a column or a row. 1 CSS px = 1 pt at 1×. The housing is approximate: 208 × 32 pt.
+-->
+<style>
+  :root { --page: #e9e9ee; --ink: #1d1d1f; --muted: #6e6e73; --panel: #ffffff; --line: #d2d2d7; --accent: #0a84ff;
+          --menubar: rgba(246,246,246,.72); --menuink: #1d1d1f; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --page: #111113; --ink: #f5f5f7; --muted: #a1a1a6; --panel: #1c1c1e;
+      --line: #38383a; --menubar: rgba(30,30,30,.6); --menuink: #f5f5f7; }
+  }
+  :root[data-theme="dark"] { --page: #111113; --ink: #f5f5f7; --muted: #a1a1a6; --panel: #1c1c1e; --line: #38383a;
+    --menubar: rgba(30,30,30,.6); --menuink: #f5f5f7; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink);
+         font: 14px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif; }
+  main { max-width: 1320px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 0; }
+  p.lead { color: var(--muted); margin: 0 0 16px; max-width: 80ch; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: flex-end; margin-bottom: 20px;
+              position: sticky; top: 0; z-index: 2; background: var(--page); padding: 8px 0; }
+  .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; background: var(--panel); color: var(--ink); padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .label { font-size: 12px; color: var(--muted); }
+  .option { margin: 0 0 28px; }
+  .option header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 8px; }
+  .option header .facts { font-size: 13px; color: var(--muted); }
+  .badge { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 10px; background: var(--accent); color: #fff; }
+  .stage-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--line); }
+  .stage { position: relative; min-width: 100%; background: linear-gradient(160deg, #4b6cb7, #182848); overflow: hidden; }
+  .scaler { position: absolute; left: 50%; top: 0; transform-origin: top center; }
+  .menubar { position: absolute; top: 0; background: var(--menubar); backdrop-filter: blur(20px); color: var(--menuink);
+             font-size: 13px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; }
+  .notch { position: absolute; top: 0; color: #fff; }
+  .notch svg.shape { position: absolute; left: 0; top: 0; }
+  .housing { position: absolute; top: 0; border: 1px dashed rgba(255,255,255,.22); border-top: 0; border-radius: 0 0 10px 10px; }
+  .housing .cam { position: absolute; left: 50%; top: 11px; width: 9px; height: 9px; margin-left: -4.5px; border-radius: 50%;
+                  background: #0c0c12; box-shadow: inset 0 0 0 2px #1a1a26; }
+  .tab { position: absolute; width: 28px; height: 24px; display: grid; place-items: center; color: rgba(255,255,255,.5); }
+  .tab svg { width: 15px; height: 15px; }
+  .tab.sel { color: #fff; }
+  .tab.sel::after { content: ""; position: absolute; left: 12px; top: 24px; width: 4px; height: 4px; border-radius: 50%; background: #fff; }
+  .lefts { position: absolute; display: flex; align-items: center; gap: 8px; font-size: 11px; color: rgba(255,255,255,.55); white-space: nowrap; }
+  .pill { color: #fff; background: rgba(255,255,255,.14); border-radius: 6px; padding: 2px 7px; font-size: 11px; }
+  .area { position: absolute; overflow: hidden; }
+  .term { font-family: ui-monospace, "SF Mono", Menlo, monospace; color: #e6e6e6; white-space: pre; }
+  .term .line { overflow: hidden; }
+  .term .p { color: #7ee787; } .term .d { color: #79c0ff; } .term .m { color: #f2cc60; } .term .q { color: #ff7b72; }
+  .cursor { display: inline-block; background: #e6e6e6; vertical-align: top; }
+  .cursor.hollow { background: transparent; outline: 1px solid #e6e6e6; outline-offset: -1px; }
+  .footer { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: space-between;
+            font-size: 11px; color: rgba(255,255,255,.55); }
+  .ended { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: rgba(255,255,255,.6); font-size: 11px; }
+  .ended .btn { margin-top: 8px; display: inline-block; color: #fff; background: rgba(255,255,255,.14); border-radius: 6px; padding: 3px 10px; }
+  .dims { position: absolute; font: 10px/1 ui-monospace, Menlo, monospace; color: #ffd60a; white-space: nowrap; }
+  .grid { position: absolute; inset: 0; pointer-events: none;
+          background-image: linear-gradient(to right, rgba(255,214,10,.12) 1px, transparent 1px),
+                            linear-gradient(to bottom, rgba(255,214,10,.12) 1px, transparent 1px); }
+  table { border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  th, td { border: 1px solid var(--line); padding: 4px 10px; text-align: left; }
+  th { background: var(--panel); }
+  ul.notes { color: var(--muted); max-width: 90ch; }
+  @media (max-width: 600px) { main { padding: 16px; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Terminal tab at 190 pt (MacBook Air)</h1>
+  <p class="lead">The open notch with a Terminal tab, at the fixed 190 pt height. The terminal uses the same margins as every
+    other tab (D37). Layout A puts the session controls in the empty strip left of the camera housing, so the terminal keeps
+    every row. Layout B puts them in a footer under the terminal instead. Yellow figures are measured; the grid shows the cells.</p>
+
+  <div class="controls">
+    <div><div class="label">Tabs on</div><div class="seg" id="width"></div></div>
+    <div><div class="label">Font size</div><div class="seg" id="font"></div></div>
+    <div><div class="label">State</div><div class="seg" id="mode"></div></div>
+    <div><div class="label">Overlays</div><div class="seg" id="overlay"></div></div>
+    <div><div class="label">Zoom</div><div class="seg" id="zoom"></div></div>
+  </div>
+
+  <div id="stages"></div>
+
+  <h2>Rows × columns at 190 pt</h2>
+  <table id="table"></table>
+  <ul class="notes">
+    <li>Six top-row items (Home, Notes, Tray, Clipboard, Terminal and Settings) make the notch 596 pt wide; with Clipboard off it stays 536 pt (D45 Q5).</li>
+    <li>Not focused: the cursor is hollow and keys go to the app in front. Focused (after a click in the terminal or ⌃⌥N): the cursor is solid, and the notch stays open when the pointer leaves.</li>
+    <li>Layout A's strip left of the housing is 132 pt at 536 pt and 162 pt at 596 pt: room for the shell's name and End Session, not the size, which goes in the button's tooltip.</li>
+    <li>Ended: the shell exited or End Session was pressed; nothing runs until Start New Session.</li>
+  </ul>
+</main>
+<script>
+const G = { item: { w: 28, h: 24 }, spacing: 2, inset: 8, shoulder: 10, bottomR: 18, side: 24, bottom: 12, h: 190,
+            housing: 208, closedH: 32 };
+const rowWidth = n => Math.max(n, 5) * G.item.w + (Math.max(n, 5) - 1) * G.spacing + 2 * G.inset;
+// Core Text, system monospaced font, macOS 27.0.1: [advance of "W", ascent + descent + leading].
+const CELL = { 10: [6.182, 11.777], 11: [6.800, 12.955], 12: [7.418, 14.133], 13: [8.036, 15.311], 14: [8.654, 16.488] };
+const FOOTER = 20;
+const ICON = {
+  home: '<svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.6"/><rect x="9" y="1" width="6" height="6" rx="1.6"/><rect x="1" y="9" width="6" height="6" rx="1.6"/><rect x="9" y="9" width="6" height="6" rx="1.6"/></svg>',
+  notes: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="1.5" width="11" height="13" rx="2"/><path d="M5 5.5h6M5 8.5h6M5 11.5h3.5"/></svg>',
+  tray: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1.5 9.5l2-6.5h9l2 6.5v4h-13z"/><path d="M1.5 9.5h4l1 1.5h3l1-1.5h4"/></svg>',
+  clip: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2.5" width="10" height="12" rx="2"/><rect x="5.5" y="1" width="5" height="3" rx="1" fill="currentColor"/></svg>',
+  term: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="2.5" width="13" height="11" rx="2"/><path d="M4.5 6l2 2-2 2M8 10.5h3.5"/></svg>',
+  gear: '<svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="5.2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-dasharray="2.2 1.6"/><circle cx="8" cy="8" r="2"/></svg>'
+};
+const P = '<span class="p">you@MacBook-Air</span> <span class="d">DropNotch</span> % ';
+const LINES = [
+  'Last login: Tue Nov 10 11:42:07 on ttys004',
+  '<span class="p">you@MacBook-Air</span> <span class="d">~</span> % cd Developer/DropNotch',
+  P + 'git status -sb',
+  '## feat/terminal',
+  ' <span class="q">M</span> docs/DECISIONS.md',
+  '<span class="q">??</span> docs/mockups/terminal-v0.2.html',
+  P + 'brew --version',
+  'Homebrew 4.6.3',
+  P + 'ls',
+  'DropNotch  DropNotchTests  README.md  docs  project.yml  scripts',
+  P + 'xcodebuild test 2>&1 | tail -2',
+  '<span class="m">   Executed 528 tests, with 0 failures (0 unexpected)</span>',
+  '** TEST SUCCEEDED **',
+  P + 'CURSOR'
+];
+const state = { tabs: 6, font: 11, mode: "focused", overlay: true, zoom: 1.5 };
+
+function shapePath(w, h) {
+  const s = G.shoulder, r = G.bottomR, W = w + 2 * s;
+  return `M0 0 H${W} Q${W - s} 0 ${W - s} ${s} V${h - r} Q${W - s} ${h} ${W - s - r} ${h} H${s + r} Q${s} ${h} ${s} ${h - r} V${s} Q${s} 0 0 0 Z`;
+}
+function metrics(tabs, font, footer) {
+  const w = Math.max(480, G.housing + 2 * rowWidth(tabs)), rowH = Math.max(G.closedH, G.item.h + 4);
+  const areaW = w - 2 * G.side, areaH = G.h - rowH - G.bottom;
+  const [cw, chRaw] = CELL[font], ch = Math.ceil(chRaw), termH = areaH - (footer ? FOOTER : 0);
+  return { w, rowH, areaW, areaH, cw, ch, termH, cols: Math.floor(areaW / cw), rows: Math.floor(termH / ch) };
+}
+function termHTML(m) {
+  if (state.mode === "ended") {
+    return `<div class="ended"><div>Session ended<br><span class="btn">Start New Session</span></div></div>`;
+  }
+  const shown = LINES.slice(-m.rows);
+  const cursor = `<span class="cursor ${state.mode === "focused" ? "" : "hollow"}" style="width:${m.cw}px;height:${m.ch}px"></span>`;
+  const body = shown.map(l => `<div class="line" style="height:${m.ch}px;line-height:${m.ch}px">${l.replace("CURSOR", cursor)}</div>`).join("");
+  const grid = state.overlay ? `<div class="grid" style="background-size:${m.cw}px ${m.ch}px;width:${m.cols * m.cw}px;height:${m.rows * m.ch}px"></div>` : "";
+  return `<div class="term" style="font-size:${state.font}px;position:relative;height:${m.termH}px;width:${m.areaW}px;overflow:hidden">${body}${grid}</div>`;
+}
+function stage(layout) {
+  const footer = layout === "B", m = metrics(state.tabs, state.font, footer);
+  const { w, rowH, areaW, areaH } = m, W = w + 2 * G.shoulder, h = G.h;
+  const rowLead = (w - G.housing) / 2 + G.housing;
+  const tabs = state.tabs === 6 ? ["home", "notes", "tray", "clip", "term"] : ["home", "notes", "tray", "term"];
+  let x = rowLead + G.inset;
+  const ty = (rowH - G.item.h - 4) / 2;
+  const tabHTML = tabs.map(t => {
+    const el = `<div class="tab ${t === "term" ? "sel" : ""}" style="left:${G.shoulder + x}px;top:${ty}px">${ICON[t]}</div>`;
+    x += G.item.w + G.spacing; return el;
+  }).join("") + `<div class="tab" style="left:${G.shoulder + w - G.inset - G.item.w}px;top:${ty}px">${ICON.gear}</div>`;
+  // Layout A has only the strip left of the housing: (w − housing) / 2 − side padding − inset, 132 pt at 536.
+  const strip = (w - G.housing) / 2 - G.side - G.inset;
+  const status = footer ? (state.mode === "ended" ? "zsh · ended" : `zsh · ${m.cols} × ${m.rows}`)
+                        : (state.mode === "ended" ? "zsh · ended" : "zsh");
+  const end = state.mode === "ended" ? "" : `<span class="pill">End Session</span>`;
+  const left = footer ? "" : `<div class="lefts" style="left:${G.shoulder + G.side}px;top:${ty}px;height:${G.item.h}px;max-width:${strip}px;overflow:hidden">${status}${end}</div>`;
+  const foot = footer ? `<div class="footer" style="height:${FOOTER}px"><span>${status}</span>${end}</div>` : "";
+  const dims = !state.overlay ? "" : `
+    <div class="dims" style="left:${G.shoulder + 6}px;top:${h + 6}px">open shape ${w} × ${h} pt · module ${areaW} × ${areaH} · ${m.cols} columns × ${m.rows} rows at ${state.font} pt (cell ${m.cw} × ${m.ch})</div>`;
+  const menuW = Math.max(W + 360, 1000);
+  const notch = `<div class="menubar" style="left:${-menuW / 2}px;width:${menuW}px;height:${G.closedH}px"><span> File  Edit  View</span><span>Tue 10 Nov 11:45</span></div>
+    <div class="notch" style="left:${-W / 2}px;width:${W}px;height:${h}px">
+      <svg class="shape" width="${W}" height="${h}" viewBox="0 0 ${W} ${h}"><path d="${shapePath(w, h)}" fill="#000"/></svg>
+      <div class="housing" style="left:${G.shoulder + (w - G.housing) / 2}px;width:${G.housing}px;height:${G.closedH}px"><div class="cam"></div></div>
+      ${left}${tabHTML}
+      <div class="area" style="left:${G.shoulder + G.side}px;top:${rowH}px;width:${areaW}px;height:${areaH}px">${termHTML(m)}${foot}</div>
+      ${dims}
+    </div>`;
+  const z = state.zoom;
+  const title = footer ? "Layout B: controls in a footer" : "Layout A: controls left of the housing";
+  return `<section class="option"><header><h2>${title}</h2>${footer ? "" : '<span class="badge">Recommended</span>'}
+    <span class="facts">${m.cols} × ${m.rows} at ${state.font} pt; ${footer ? "the footer costs " + (Math.floor(areaH / m.ch) - m.rows) + " row(s)" : "no rows lost"}</span></header>
+    <div class="stage-wrap"><div class="stage" style="height:${(h + 34) * z}px;min-width:${(W + 40) * z}px">
+      <div class="scaler" style="transform:scale(${z})">${notch}</div></div></div></section>`;
+}
+function table() {
+  const fonts = [10, 11, 12, 13, 14];
+  const head = `<tr><th>Font</th>${[5, 6].map(t => `<th>${t === 6 ? "596 pt (Clipboard on)" : "536 pt (Clipboard off)"}: A</th><th>B</th>`).join("")}</tr>`;
+  const rows = fonts.map(f => `<tr><td>${f} pt${f === 11 ? " (default)" : ""}</td>${[5, 6].map(t => {
+    const a = metrics(t, f, false), b = metrics(t, f, true);
+    return `<td>${a.cols} × ${a.rows}</td><td>${b.cols} × ${b.rows}</td>`; }).join("")}</tr>`).join("");
+  document.getElementById("table").innerHTML = head + rows;
+}
+function seg(id, options, key) {
+  const el = document.getElementById(id);
+  el.innerHTML = options.map(([v, l]) => `<button aria-pressed="${state[key] === v}" data-v="${v}">${l}</button>`).join("");
+  el.onclick = e => { const b = e.target.closest("button"); if (!b) return;
+    const v = options.find(([o]) => String(o) === b.dataset.v)[0]; state[key] = v; render(); };
+}
+function render() {
+  seg("width", [[6, "Clipboard on: 596 pt"], [5, "Clipboard off: 536 pt"]], "tabs");
+  seg("font", [10, 11, 12, 13, 14].map(f => [f, f + " pt"]), "font");
+  seg("mode", [["focused", "Focused"], ["unfocused", "Not focused"], ["ended", "Ended"]], "mode");
+  seg("overlay", [[true, "Measurements"], [false, "Clean"]], "overlay");
+  seg("zoom", [[1, "1×"], [1.5, "1.5×"], [2, "2×"]], "zoom");
+  document.getElementById("stages").innerHTML = stage("A") + stage("B");
+  table();
+}
+render();
+</script>
+</body>
+</html>
