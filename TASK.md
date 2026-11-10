@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-11-09):** v0.1.0 is released. v0.2 (Home dashboard, D42–D45) is in progress in speed mode: see "v0.2" at the end. Branch 1, `feat/home`, is merged to main (2026-11-09). Branch 2, `feat/battery-card`, is merged to main (2026-11-09). Branch 3, `feat/calendar-card`, and branch 3b, `feat/home-layout` (D46), are merged to main (2026-11-09; device checks 84–94 passed on one Release build). Branch 4, `feat/quick-commands`, is next.
+**Status (2026-11-10):** v0.1.0 is released. v0.2 (Home dashboard, D42–D45) is in progress in speed mode: see "v0.2" at the end. Branch 1, `feat/home`, is merged to main (2026-11-09). Branch 2, `feat/battery-card`, is merged to main (2026-11-09). Branch 3, `feat/calendar-card`, and branch 3b, `feat/home-layout` (D46), are merged to main (2026-11-09; device checks 84–94 passed on one Release build). Branch 4, `feat/quick-commands`, was built but set aside unmerged (Shash, 2026-11-10); branch 4b, `feat/terminal`, is planned and waiting for decisions.
 
 **Phase 3 status (2026-11-01, kept for history):** release/v0.1.0 in progress: the keyboard fix (D40), reviews and DMG (D41) are done; the one device session below is next, then Shash approves the public steps. Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, 4, `feat/hotkey`, 5, `feat/notes`, 6, `feat/file-tray`, and 7, `feat/clipboard`, are merged to main and pushed to `origin`. Branches 8, `feat/settings`, and 9, `feat/polish`, are merged to main (2026-11-01). Next: release. See "Phase 3" below.
 
@@ -432,8 +432,35 @@ Device checks (Release build of `feat/home-layout`, the same one as 84–89):
 93. Battery default: before launching, `defaults read com.shashwat.DropNotch module.battery.enabled` (check 82 probably saved a value; note it). Then `defaults delete com.shashwat.DropNotch module.battery.enabled`, relaunch: Battery is off in Settings › Modules and Home shows two cards. Turn it on: three cards, Battery at the right, and the Now Playing title still shows.
 94. VoiceOver on Home: the Calendar header reads the weekday, "N more events today" and the date; the bar still reads "Playback position, X of Y".
 
-### Branch 4: `feat/quick-commands` (D45; security-auditor)
-Decided (Shash, 2026-11-09, recorded in D45): confirm on change. A Keychain fingerprint per command (DropNotch-only access); a command changed outside DropNotch shows "Changed outside DropNotch" and needs an explicit confirm in Settings, with its full text shown, before it runs. Settings and README say commands run with DropNotch's permissions. security-auditor reviews the design before the branch is built.
+### Branch 4: `feat/quick-commands` (D45; not merged)
+Built and reviewed (2026-11-10), then set aside by Shash (2026-11-10) for a real terminal in the notch: the branch stays as it is, unmerged. Only its D47 commit (Application Support folder 0700) was cherry-picked to main (755961f).
+
+### Branch 4b: `feat/terminal` (D48; SwiftTerm; security-auditor; Release build)
+**Status (2026-11-10):** planned, waiting for Shash's decisions and the security-auditor's design review. Mock-up: docs/mockups/terminal-v0.2.html (Layout A: "zsh" and End Session in the strip left of the housing; SF Mono 11 pt gives 71 × 11 at 536 pt, 80 × 11 at 596 pt).
+
+Dependency (dependency-manager, 2026-11-10): SwiftTerm `exactVersion: 1.99.3` (MIT; pre-2.0). Its library target runs a build-tool plugin, so `xcodebuild` needs `-skipPackagePluginValidation` and Xcode needs "Trust & Enable" once; PR #808's Xcode 27 failure didn't reproduce on 27.1 [V: probe]. `LocalProcessTerminalView.clipboardRead` hands the clipboard to any program in the terminal (OSC 52), so the plan replaces its `terminalDelegate`.
+
+Plan (planner, 2026-11-10; one commit per step):
+1. docs: D48 (supersedes D45's SwiftTerm paragraph; licence, pin, build plugin, clipboard seam, DropNotch's permissions for child processes); ARCHITECTURE §2, §3, §6, §9, §10.
+2. chore: SwiftTerm in project.yml and THIRD_PARTY_NOTICES.md; `-skipPackagePluginValidation` in README, docs/RELEASING.md, scripts/make-dmg.sh, TASK.md, CLAUDE.md and the agent files (Decision 5).
+3. feat: the open width follows the tabs (D45 Q5), ported from db17f72: `NotchGeometry(topRowItems:)`, `NotchState.setTopRowItems`, `AppDelegate.followTabCount`; the registry's tab-limit assert removed.
+4. feat: panel key routing: a pure `NotchKeyRoute` and a `NotchKeyOwner` marker. With the terminal focused, Escape goes to the shell; ⌘C, ⌘V and ⌘A act on the terminal; ⌘1–9 and ⌘, still reach the tabs and Settings; other ⌘ keys (⌘Q, ⌘W, ⌘H, ⌘M) are swallowed, since SwiftTerm otherwise sends them to the app's menu.
+5. feat: a module's accessory in the top row left of the housing (132 pt at 536, 162 pt at 596).
+6. feat: `LoginShell`: `getpwuid` `pw_shell`, used if absolute, listed in /etc/shells and executable, else /bin/zsh; argv0 `-zsh`; home folder from the account; a fresh allow-listed environment (TERM, COLORTERM, TERM_PROGRAM, HOME, USER, LOGNAME, SHELL, a base PATH that the login shell extends, LANG, TMPDIR, SSH_AUTH_SOCK), never DropNotch's own.
+7. feat: `TerminalSession` protocol (tests never spawn a shell) and a pure `TerminalHangUp.targets` that never signals DropNotch's own process group.
+8. feat: `SwiftTermSession` and `NotchTerminalView` (subclass of `LocalProcessTerminalView`): our `terminalDelegate` refuses OSC 52, forwards the rest; black background in Light mode too; steady caret; copy only with a selection; End Session sends SIGHUP to the shell's and the foreground job's process groups, then SIGKILL after 2 s.
+9. feat: `TerminalModule` (off by default; shell starts on the tab's first appearance; `.notStarted`/`.running`/`.ended`; Start New Session; `stop()` hangs up), `TerminalExpandedView` (keeps the same view across closes), `TerminalTopRowView`, `Logger.terminal` (never typed text, output, titles, directories or the environment).
+10. feat: registered after Clipboard.
+11. feat: settings: font 10–14 pt (default 11), scrollback 1,000 / 5,000 / 10,000 (default 1,000), the permissions text.
+12. docs: README.
+13. Build, tests, Release build and launch (D11), stop for device checks.
+
+Decisions for Shash: (1) where the font and scrollback settings go: a Settings › Terminal tab (recommended); (2) OSC 52 writes from programs (vim, tmux yank): refuse, like reads (recommended), or allow writes only; (3) confirm before ending a running command: no for v0.2 (recommended); (4) reword the folder and Automation usage strings to mention the Terminal tab: yes (recommended); (5) approve adding `-skipPackagePluginValidation` to CLAUDE.md and three agent files.
+
+Design review (security-auditor, 2026-11-10): sound with changes, needs Shash's decisions. H1 the Calendars usage string ("only reads your calendars") becomes untrue, and folder and Automation prompts caused from the terminal would show tray or Music text: reword all five, add a local-network string, and show a one-time sheet listing DropNotch's current grants when Terminal is first turned on. M1 SwiftTerm doesn't close DropNotch's descriptors before `execve` [V: probe]: set close-on-exec on fds ≥ 3 before starting, and on the pty master. M2 `nohup`/`disown` jobs outlive the session and DropNotch, still credited to it [V: probe]: at quit, SIGHUP, wait up to 1 s, SIGKILL; disclose. M3 stricter hang-up targets (> 1, never our own group or pid, same session id, re-read the foreground group). M4 dotfiles and Homebrew tools run with DropNotch's grants whenever a session starts: start the shell only on an explicit open (click, ⌘N, hotkey), never on hover; accept the rest in D48. M5 pin SwiftTerm (and KeyboardShortcuts) by commit and check the resolved package list before building with `-skipPackagePluginValidation`. M6 hollow caret when keys aren't going to the terminal. Lows: secure keyboard entry while focused (L1), refuse OSC 52 writes (L2), ⌘V under Ask (L3), multi-line paste documented (L4), no SwiftTerm host logging; README mentions ~/.zsh_history (L5), `TERM_PROGRAM=DropNotch`, argv0 from the shell's name (L6), screen watchers (L7), parser advisories at release (L8), entitlements unchanged (L9). Already right [V]: OSC 52 refused through the delegate seam; Kitty clipboard and media reads off; title reports empty; no input echo from status queries; paste control bytes neutralised; links need ⌘-click.
+
+Device checks (Release build on the Air), up to 6: width and shell; keys; lifetime (close and reopen, End Session, exit, module off, Quit, `kill -9`); clipboard; permissions; settings and accessibility. Written out after the decisions.
+
 ### Branch 5: `release/v0.2.0`
 README (permissions: two entitlements, Calendars; features; roadmap), ARCHITECTURE, FEATURE_MATRIX, RISKS via docs-writer; performance-optimizer; accessibility-auditor; dependency-manager; changelog-agent; MARKETING_VERSION 0.2.0; DMG.
 - **Pending (from feat/home; not run, Shash 2026-11-09).** 77: VoiceOver on Home (reads "Home", then a "Now Playing" group; Tab and ←/→ reach the controls; the bar is adjustable). 78: Larger Text keeps the cards' padding with smaller artwork; every card off shows "Turn on a Home card in Settings".
