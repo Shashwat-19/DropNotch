@@ -1129,3 +1129,16 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 **Review:** test-writer, 2026-11-09: 15 tests (default-off modules, 190 pt height, capacity steps, "Now" at midnight and on DST days), no bugs. code-reviewer, 2026-11-09: Approve with changes. W1 the time falls back when the bar is narrow (above); S1 the time follows a drag; S2 check 92 reworded (the time's top lies in the bar's click target); S3 ARCHITECTURE §9 wording; S4 D44 note. S5 (VoiceOver reads "+N" before the date) left to device check 94.
 
 **Alternatives:** +30 pt (4 rows on the Air); +50 pt (5 rows on a 14" MacBook Pro too, at 10 pt more of the screen); a taller height for Home only (rejected: D16, D29, a size change on every tab switch); the as-built 29 % Calendar (titles cut off early); keeping Battery on by default.
+
+---
+
+## D47. DropNotch's Application Support folder is private (0700)
+
+**Date:** 2026-11-10 · **Status:** Accepted (Shash, 2026-11-10); built on `feat/quick-commands` as its own commit and cherry-picked to main (Shash, 2026-11-10: that branch isn't merged)
+
+**Decision:**
+- `~/Library/Application Support/DropNotch` is created 0700, and an existing one is set to 0700 at every launch, before any module starts (`PrivateFolder.secureApplicationSupport`). Folder only, nothing recursive; `tray.json` and `Notes/note.txt` are set to 0600 too. Notes and the tray set 0600 again after each save, because an atomic write replaces the file; the 0700 folder already keeps other accounts out.
+- Through file descriptors (`open` with `O_NOFOLLOW`, `fstat` for the owner, `fchmod`), so a symlink in the folder's place, or in a file's, is left alone rather than followed: DropNotch never changes another folder's permissions.
+- Before this, the folder was 0755 and the two files 0644 (security-auditor, quick-commands design review L6): other accounts on the Mac could list the tray and read the note.
+
+**Alternatives:** `FileManager.setAttributes` on the paths (follows symlinks); chmod everything recursively (the tray's copies keep the modes they came with, inside the 0700 folder); leaving it to each module's save (an existing install would stay 0755 until every module had saved).

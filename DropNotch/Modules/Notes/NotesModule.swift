@@ -84,6 +84,8 @@ final class NotesModule: NotchModule {
             try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
             // Atomic: a crash mid-write leaves the old note, never half of the new one.
             try Data(text.utf8).write(to: fileURL, options: .atomic)
+            // The write replaces the file, so 0600 is set again each time; the 0700 folder already keeps others out (D47).
+            try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: fileURL.path)
             savedText = text
             saveFailed = false
         } catch {

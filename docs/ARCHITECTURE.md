@@ -116,6 +116,7 @@ Transient HUDs (timed overlays shown for a few seconds: battery, Bluetooth conne
 | Data | Where | Format | Notes |
 |---|---|---|---|
 | Settings, module enabled flags, layout | `UserDefaults` via `@AppStorage`/a small settings model | Property list | Small values only. |
+| Folder | `~/Library/Application Support/DropNotch` | 0700, set at every launch; `tray.json` and `note.txt` 0600 (D47) | Other accounts on the Mac can't list or read it. Set through file descriptors that never follow a symlink. |
 | Quick notes | `~/Library/Application Support/DropNotch/Notes/note.txt` | One plain-text UTF-8 file (one note in the MVP, D31) | Human-readable, easy to back up. Saves are debounced (section 9), atomic, and flushed on quit. A file that can't be read is never overwritten. Not through a `FileLocations` helper yet: the module takes the file URL, which tests set. |
 | File tray items | `…/Application Support/DropNotch/tray.json`; copies in `…/DropNotch/Tray/<UUID>/<name>` | JSON (`Codable`), atomic write on every change | Holds plain bookmarks, or the folder of a fallback copy (D6, D32). A file that can't be read is never overwritten. |
 | Clipboard history | Memory by default; optional `…/Application Support/DropNotch/clipboard.json` (D34) | JSON array of text and link strings, 0600, excluded from backups; images stay in memory | Persistence is off by default (D7). Nothing goes to `UserDefaults`, because Atoll's use of it puts clipboard text in a preferences plist [V: research note §3]. |

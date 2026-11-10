@@ -24,6 +24,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // A test run must never start real modules (no player permission checks or Apple Events) or take
         // the user's global shortcut.
         if !Self.isTestHost {
+            // Before any module writes there (D47).
+            PrivateFolder.secureApplicationSupport()
             registry.start()
             // Inherits the main actor. The stream ends only with the app.
             Task { [notchState] in
