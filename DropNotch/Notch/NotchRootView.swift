@@ -42,6 +42,7 @@ struct NotchRootView: View {
                         // only the menu bar's height, and the dot would hang into the module (code-reviewer W1).
                         topRow.frame(height: max(state.geometry?.closedFrame.height ?? 0,
                                                  NotchGeometry.topRowItemSize.height + 4))
+                            .overlay(alignment: .leading) { topRowAccessory }
                         if let module = registry.selectedModule {
                             // Every module gets the same margins (D37). The id makes a tab switch cross-fade.
                             module.expandedView()
@@ -97,6 +98,18 @@ struct NotchRootView: View {
         }
         .padding(.leading, (state.geometry?.openTopRowLeading ?? 0) + NotchGeometry.topRowInset)
         .padding(.trailing, NotchGeometry.topRowInset)
+    }
+
+    /// The selected module's accessory in the strip left of the camera housing (D48), from the module's side margin to
+    /// `topRowInset` short of the housing, at the tabs' height so it lines up with them.
+    @ViewBuilder
+    private var topRowAccessory: some View {
+        if let accessory = registry.selectedModule?.topRowAccessory(), let geometry = state.geometry {
+            accessory
+                .frame(width: max(0, geometry.openHousingLeading - NotchStyle.sidePadding - NotchGeometry.topRowInset),
+                       height: NotchGeometry.topRowItemSize.height, alignment: .leading)
+                .padding(.leading, NotchStyle.sidePadding)
+        }
     }
 
     /// Opens Settings in front, the same way as the menu-bar item (D14), which can hide behind the notch on a crowded

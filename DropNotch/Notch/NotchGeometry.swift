@@ -93,6 +93,12 @@ struct NotchGeometry: Equatable {
         (hasNotch ? closedFrame.maxX : openFrame.midX) - openFrame.minX
     }
 
+    /// Where the camera housing starts, from the open shape's leading edge: the strip left of it holds the selected
+    /// module's top-row accessory (D48). Without a notch, the middle of the shape, as for `openTopRowLeading`.
+    var openHousingLeading: CGFloat {
+        (hasNotch ? closedFrame.minX : openFrame.midX) - openFrame.minX
+    }
+
     /// Width of one compact wing (D28).
     var wingWidth: CGFloat { (compactFrame.width - closedFrame.width) / 2 }
 

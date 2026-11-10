@@ -372,6 +372,20 @@ final class NotchGeometryTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(six.openFrame.width - six.openTopRowLeading, NotchGeometry.topRowWidth(items: 6))
     }
 
+    /// The strip left of the housing for a module's accessory (D48, mock-up): 132 pt at 536, 162 pt at 596, after the
+    /// 24 pt side margin and the 8 pt inset; it ends where the housing starts.
+    func testTheStripLeftOfTheHousing() {
+        for (items, strip) in [(5, 132.0), (6, 162.0)] {
+            let geometry = NotchGeometry(screenFrame: air, safeAreaTop: inset, auxLeftWidth: 631, auxRightWidth: 631,
+                                         menuBarHeight: inset, backingScale: 2, topRowItems: items)
+            XCTAssertEqual(geometry.openHousingLeading - 24 - NotchGeometry.topRowInset, strip)
+            XCTAssertEqual(geometry.openFrame.minX + geometry.openHousingLeading, geometry.closedFrame.minX)
+        }
+        let pill = NotchGeometry(screenFrame: air, safeAreaTop: 0, auxLeftWidth: nil, auxRightWidth: nil,
+                                 menuBarHeight: 24, backingScale: 2)
+        XCTAssertEqual(pill.openHousingLeading, pill.openFrame.width / 2, "without a notch, the left half")
+    }
+
     func testAirLikeScreenTopRowClearsTheHousing() {
         let side = (air.width - 208) / 2
         let geometry = notched(air, left: side, right: side)

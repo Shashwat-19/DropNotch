@@ -47,6 +47,8 @@ protocol NotchModule: AnyObject {
     func compactView(slot: CompactSlot) -> AnyView
     func expandedView() -> AnyView
     func settingsView() -> AnyView
+    /// Shown in the open notch's top row left of the camera housing while the module's tab is selected (D48).
+    func topRowAccessory() -> AnyView?
 
     /// Begin observing. Only called while the module is enabled; nothing may run before it.
     func start()
@@ -58,4 +60,5 @@ extension NotchModule {
     var hasCompactView: Bool { false }
     var homeCard: HomeCardSize? { nil }
     var isEnabledByDefault: Bool { true }
+    func topRowAccessory() -> AnyView? { nil }
 }
