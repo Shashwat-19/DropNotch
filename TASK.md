@@ -486,3 +486,5 @@ Device checks (MacBook Air, **Release build** of `feat/notch-size`; Clipboard an
 109. **After ⌃⌥N.** ⌃⌥N with the pointer away: it stays open. Move the pointer in and out: it closes. ⌃⌥N again: it opens with keyboard focus (not a press that does nothing). Escape and a click in another app still close it.
 Checks 107–109 passed (Shash, 2026-11-10, Release 2901a55). Then 1 s to come back while the notch has keyboard focus (Shash):
 110. **Drift with focus.** Click into the terminal and type; move the pointer off the notch and back within a second: it stays open and typing still goes to the shell. Stay off longer than 1 s: it closes. Hover-only (no click): it still closes after about 0.1 s.
+Check 110 worked on ffb8667, but 1 s felt slow; now 0.5 s (Shash, 2026-11-10):
+111. **Drift with focus at 0.5 s.** Click into the terminal and type; drift off and back within half a second: it stays open and typing still goes to the shell. Stay off longer: it closes after about 0.5 s. Hover-only: about 0.1 s. Hover alone never gives the terminal the keys; ⌃⌥N does.

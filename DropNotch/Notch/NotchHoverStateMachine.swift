@@ -36,7 +36,7 @@ struct NotchHoverStateMachine {
     static let exitDebounce: Duration = .milliseconds(100)
     /// The exit debounce while the panel has keyboard focus (Shash, D48, D49): long enough to drift off and back
     /// without the rest of a typed password landing in the app in front (ARCHITECTURE.md §9).
-    static let focusedExitDebounce: Duration = .seconds(1)
+    static let focusedExitDebounce: Duration = .milliseconds(500)
     /// Horizontal speed, in points per second, above which peek counts as a sweep along
     /// the menu bar and the open delay starts again (D20).
     static let sweepSpeed: Double = 600
@@ -46,7 +46,7 @@ struct NotchHoverStateMachine {
     /// The panel holds keyboard focus: opened or focused by the hotkey, or a click asked for focus (D30, D31). Cleared
     /// when the notch closes, including when the pointer leaves (D49 revision).
     private(set) var openedByKeyboard = false
-    /// How long the pointer must stay out before the notch closes: 1 s with keyboard focus, else 0.1 s.
+    /// How long the pointer must stay out before the notch closes: 0.5 s with keyboard focus, else 0.1 s.
     var exitDelay: Duration { openedByKeyboard ? Self.focusedExitDebounce : Self.exitDebounce }
     /// The open delay ran out during peek while the pointer was briefly outside.
     private var openDue = false

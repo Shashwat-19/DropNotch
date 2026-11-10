@@ -250,13 +250,13 @@ final class NotchHoverStateMachineTests: XCTestCase {
         }
     }
 
-    /// Shash (D48, D49): 1 s to come back while the notch has keyboard focus, so a typed password can't land in the
+    /// Shash (D48, D49): 0.5 s to come back while the notch has keyboard focus, so a typed password can't land in the
     /// app in front because the pointer drifted; hover-only opens keep 0.1 s.
     func testTheExitDelayIsLongerWithKeyboardFocus() {
         var machine = opened
         XCTAssertEqual(machine.exitDelay, .milliseconds(100))
         _ = machine.handle(.focusRequested)
-        XCTAssertEqual(machine.exitDelay, .seconds(1))
+        XCTAssertEqual(machine.exitDelay, .milliseconds(500))
         XCTAssertEqual(machine.handle(.pointerExited), .startExitDebounce)
         XCTAssertEqual(machine.handle(.pointerEntered), .cancelExitDebounce, "back in time: stays open")
         XCTAssertEqual(machine.phase, .open)
@@ -264,7 +264,7 @@ final class NotchHoverStateMachineTests: XCTestCase {
         _ = machine.handle(.exitDebounceElapsed)
         XCTAssertEqual(machine.phase, .closed)
         XCTAssertEqual(machine.exitDelay, .milliseconds(100), "focus cleared with the close")
-        XCTAssertEqual(driven([.hotkeyPressed]).exitDelay, .seconds(1))
+        XCTAssertEqual(driven([.hotkeyPressed]).exitDelay, .milliseconds(500))
     }
 
     /// D49 revision (revises D30): the pointer leaving closes a hotkey-opened notch too, and clears its keyboard focus.
