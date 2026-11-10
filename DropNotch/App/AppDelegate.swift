@@ -10,7 +10,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let registry = ModuleRegistry(modules: [HomeModule(), NowPlayingModule(source: ScriptablePlayersSource()),
                                             CalendarModule(source: EventKitCalendarSource())]
         + (PowerSourceBatterySource.hasInternalBattery ? [BatteryModule(source: PowerSourceBatterySource())] : [])
-        + [NotesModule(), FileTrayModule(), ClipboardModule()])
+        + [NotesModule(), FileTrayModule(), ClipboardModule(),
+            TerminalModule { fontSize, scrollback in SwiftTermSession(fontSize: fontSize, scrollback: scrollback) }])
     private var screenObserver: ScreenObserver?
 
     /// Unit tests run inside the app, so it launches for them too. Xcode sets this variable for the

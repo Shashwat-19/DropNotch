@@ -138,7 +138,10 @@ struct NotchRootView: View {
     private func tab(_ module: any NotchModule, index: Int) -> some View {
         let selected = module.id == registry.selectedModule?.id
         // The shared spring, which here only cross-fades, so it stays on under Reduce Motion (L8).
-        return Button { withAnimation(NotchStyle.spring) { registry.selectedTabID = module.id } } label: {
+        return Button {
+            withAnimation(NotchStyle.spring) { registry.selectedTabID = module.id }
+            module.didSelectTab()
+        } label: {
             Label { Text(module.title) } icon: { Image(systemName: module.systemImage) }
                 .labelStyle(.iconOnly)
                 .frame(width: NotchGeometry.topRowItemSize.width, height: NotchGeometry.topRowItemSize.height)

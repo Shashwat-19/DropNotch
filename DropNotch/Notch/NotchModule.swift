@@ -49,6 +49,8 @@ protocol NotchModule: AnyObject {
     func settingsView() -> AnyView
     /// Shown in the open notch's top row left of the camera housing while the module's tab is selected (D48).
     func topRowAccessory() -> AnyView?
+    /// Its tab was clicked or chosen with its ⌘ number: opened on purpose, unlike a hover-open (D48).
+    func didSelectTab()
 
     /// Begin observing. Only called while the module is enabled; nothing may run before it.
     func start()
@@ -61,4 +63,5 @@ extension NotchModule {
     var homeCard: HomeCardSize? { nil }
     var isEnabledByDefault: Bool { true }
     func topRowAccessory() -> AnyView? { nil }
+    func didSelectTab() {}
 }
