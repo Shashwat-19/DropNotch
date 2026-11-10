@@ -22,13 +22,13 @@ New permissions and prompts. As before, macOS asks only when you first use the f
 - Calendar card: today's all-day events and the events still to come, then tomorrow's first event once today's are over; a click opens Calendar.
 - Settings › Privacy › Show event titles: turn it off to show only times on the Calendar card.
 - Battery card, off by default: charge percentage in a ring, Charging or On power, and a warning colour below 20 %. Only on Macs with a battery.
-- Terminal tab, off by default: your login shell in the notch, like Terminal.app. It starts only when you open the tab on purpose (a click on the tab, its ⌘ number, or ⌃⌥N), never on hover, and keeps running while the notch is closed.
+- Terminal tab, off by default: your login shell in the notch, like Terminal.app. It starts only when you open the tab on purpose (a click on the tab, its ⌘ number, ⌃⌥N on the Terminal tab, or Start Session), never on hover, and keeps running while the notch is closed.
 - The terminal takes your keys after a click in it, a click on its tab, its ⌘ number or ⌃⌥N; Settings › Terminal › Type as soon as the notch opens also gives it the keys on hover (off by default, as a stray Return can run a command).
 - End Session ends the shell and anything running in it, without asking; Start New Session begins a fresh one.
 - Settings › Terminal: font size (10–14 pt), scrollback (1,000, 5,000 or 10,000 lines) and the permissions text.
 - Programs in the terminal can't read or change your clipboard; ⌘C and ⌘V work as usual.
 - While the terminal has your keys, secure keyboard entry is on, so other apps can't read what you type; text expanders and other keyboard tools pause until you click elsewhere.
-- Settings › General › Notch size: Standard or Large. Large is taller and wider, with larger text, artwork and controls on every tab; the terminal keeps its font size and gets more rows and columns.
+- Settings › General › Notch size: Standard (the default) or Large. Large is taller and wider, with larger text, artwork and controls on every tab; the terminal keeps its font size and gets more rows and columns.
 
 ### Changed
 - The open notch is 40 pt taller (190 pt) on every tab, so the Calendar card and Clipboard show five rows on a MacBook Air.
