@@ -7,13 +7,13 @@ struct CalendarCardView: View {
     let module: CalendarModule
     @Environment(\.openURL) private var openURL
     @FocusState private var focus: Focus?
+    @Environment(\.notchSize) private var size
 
     /// Fixed heights, so the number of rows that fit can be worked out from the card's height. The header is the
-    /// weekday line over the 30 pt date (D46).
-    private static let weekdayHeight: CGFloat = 14
-    private static let dateHeight: CGFloat = 30
-    private static let headerHeight = weekdayHeight + dateHeight
-    private static let rowHeight: CGFloat = 14
+    /// weekday line over the 30 pt date (D46); Large is one step up: 16, 36 and 16 pt rows (D49).
+    private static func weekdayHeight(_ size: NotchSize) -> CGFloat { size.scaled(14) }
+    private static func dateHeight(_ size: NotchSize) -> CGFloat { size == .large ? 36 : 30 }
+    private static func rowHeight(_ size: NotchSize) -> CGFloat { size.scaled(14) }
     private static let rowSpacing: CGFloat = 2
 
     var body: some View {
@@ -40,7 +40,7 @@ struct CalendarCardView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.link)
-                .font(.subheadline)
+                .font(.notch(.subheadline, size))
                 .keyboardControl(Focus.settings, focus: $focus, action: openPrivacySettings)
             }
         case .restricted:
@@ -61,29 +61,30 @@ struct CalendarCardView: View {
             GeometryReader { proxy in
                 let now = Date()
                 let upcoming = UpcomingEvents(events: module.events, now: now, calendar: .autoupdatingCurrent,
-                                              capacity: Self.capacity(height: proxy.size.height))
+                                              capacity: Self.capacity(height: proxy.size.height, size: size))
                 VStack(alignment: .leading, spacing: Self.rowSpacing) {
                     header(now: now, hidden: upcoming.hiddenCount)
                         .padding(.bottom, NotchStyle.tightSpacing - Self.rowSpacing)
                     ForEach(Array(upcoming.rows.enumerated()), id: \.offset) { _, row in
-                        self.row(row, now: now).frame(height: Self.rowHeight)
+                        self.row(row, now: now).frame(height: Self.rowHeight(size))
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .contentShape(Rectangle())
             }
         }
-        .font(.subheadline)
+        .font(.notch(.subheadline, size))
         .lineLimit(1)
     }
 
     /// The locale's narrow AM/PM marker, where it has one: "Tomorrow 9:00 AM" left no room for the title.
     private static let time = Date.FormatStyle.dateTime.hour(.defaultDigits(amPM: .narrow)).minute()
 
-    /// Rows under the header; at least one. Five on the Air's 126 pt card, four on a 14" MacBook Pro's (D46).
-    static func capacity(height: CGFloat) -> Int {
-        let space = height - headerHeight - NotchStyle.tightSpacing
-        return max(1, Int((space + rowSpacing) / (rowHeight + rowSpacing)))
+    /// Rows under the header; at least one. Five on the Air's 126 pt card, four on a 14" MacBook Pro's (D46); six on
+    /// the Air's 166 pt card at Large (D49).
+    static func capacity(height: CGFloat, size: NotchSize = .standard) -> Int {
+        let space = height - weekdayHeight(size) - dateHeight(size) - NotchStyle.tightSpacing
+        return max(1, Int((space + rowSpacing) / (rowHeight(size) + rowSpacing)))
     }
 
     /// The ends of today's timed events still to come, and midnight: the moments the card changes. Midnight redraws
@@ -98,7 +99,7 @@ struct CalendarCardView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 4) {
                 Text(now.formatted(.dateTime.weekday(.wide)).localizedUppercase)
-                    .font(.subheadline.weight(.bold))
+                    .font(.notch(.subheadline, size).weight(.bold))
                     .foregroundStyle(.red)
                     .minimumScaleFactor(0.8)
                 Spacer(minLength: 0)
@@ -108,10 +109,10 @@ struct CalendarCardView: View {
                         .accessibilityLabel(Text("\(hidden) more events today"))
                 }
             }
-            .frame(height: Self.weekdayHeight)
+            .frame(height: Self.weekdayHeight(size))
             Text(now, format: .dateTime.day())
-                .font(.system(size: 30, weight: .semibold).monospacedDigit())
-                .frame(height: Self.dateHeight)
+                .font(.system(size: Self.dateHeight(size), weight: .semibold).monospacedDigit())
+                .frame(height: Self.dateHeight(size))
         }
     }
 

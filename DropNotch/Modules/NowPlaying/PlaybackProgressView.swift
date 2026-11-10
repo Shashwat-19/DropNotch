@@ -13,6 +13,7 @@ struct PlaybackProgressView: View {
     /// speaks, and the next adjust's base, until the player's new position arrives.
     @State private var seekTarget: TimeInterval?
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverOn
+    @Environment(\.notchSize) private var size
 
     var body: some View {
         // The bar moves on its own. Only for VoiceOver is the whole view redrawn, once a second while playing, so
@@ -38,8 +39,9 @@ struct PlaybackProgressView: View {
                     .contentShape(Rectangle())
                     .gesture(seekGesture(width: geometry.size.width))
             }
-            // The bar is 4 pt; the 28 pt frame is the click and drag target (L7), as tall as the controls beside it.
-            .frame(height: 28)
+            // The bar is 4 pt; the 28 pt frame (32 at Large, D49) is the click and drag target (L7), as tall as the
+            // controls beside it.
+            .frame(height: size.scaled(28))
             // SwiftUI updates this text about once a second while the view exists and is playing, visible or not;
             // closing the notch (including on screen sleep) removes it (ARCHITECTURE §9).
             let elapsedText = Text(timerInterval: start...start.addingTimeInterval(duration),
@@ -59,7 +61,7 @@ struct PlaybackProgressView: View {
                 }
                 Color.clear.frame(width: 0, height: 0)
             }
-            .font(.subheadline.monospacedDigit())
+            .font(.notch(.subheadline, size).monospacedDigit())
             .foregroundStyle(.secondary)
             // Tucked up under the bar: most of its frame is click target, not bar.
             .padding(.top, -8)

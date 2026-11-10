@@ -15,6 +15,8 @@ final class NotchState {
     private(set) var displayedWings: Set<CompactSlot> = []
     /// The hotkey holds the notch open and the panel is key (D30). The open content moves focus to its controls.
     private(set) var hasKeyboardFocus = false
+    /// Settings › General › Notch size (D49), read once at launch and changed only through `setNotchSize`.
+    private(set) var notchSize = NotchSize.saved()
 
     // Strong reference cycle (state → panel → hosting view → root view → state), on
     // purpose: AppDelegate keeps all of them for the app's lifetime.
@@ -42,21 +44,41 @@ final class NotchState {
         displayedWings = wantedWings
         syncKeyFocus()
 
-        let screens = NSScreen.screens.compactMap { screen in
-            screen.displayID.map { (id: $0, screen: screen, geometry: NotchGeometry(screen: screen, topRowItems: topRowItems)) }
-        }
-        guard let id = ScreenObserver.chooseDisplay(screens.map { ($0.id, $0.geometry.hasNotch) }, on: .saved),
-              let chosen = screens.first(where: { $0.id == id }) else {
+        guard let chosen = chosenDisplay() else {
             Logger.notch.debug("No display for the notch panel")
             geometry = nil
             panel.orderOut(nil)
             return
         }
-        Logger.notch.debug("Notch panel on display \(id), notch: \(chosen.geometry.hasNotch)")
+        Logger.notch.debug("Notch panel on display \(chosen.id), notch: \(chosen.geometry.hasNotch)")
         geometry = chosen.geometry
         setPanelFrame(chosen.geometry.panelFrame(for: .closed, wings: wantedWings), reason: "screen change")
         // Shows the panel without activating DropNotch.
         panel.orderFrontRegardless()
+    }
+
+    /// Settings › General › Notch size (D49): saved, then the shape is measured again where it is, so an open notch
+    /// stays open and redraws at the new size. Unlike a screen change, the hover state is kept.
+    func setNotchSize(_ size: NotchSize, defaults: UserDefaults = .standard) {
+        guard size != notchSize else { return }
+        notchSize = size
+        defaults.set(size.rawValue, forKey: NotchSize.key)
+        guard geometry != nil, let chosen = chosenDisplay() else { return screensChanged() }
+        changeCount += 1
+        geometry = chosen.geometry
+        setPanelFrame(chosen.geometry.panelFrame(for: displayedPhase, wings: displayedWings), reason: "notch size")
+    }
+
+    /// The display the notch goes on (D9) and its geometry at the current tabs and size.
+    private func chosenDisplay() -> (id: CGDirectDisplayID, geometry: NotchGeometry)? {
+        let screens = NSScreen.screens.compactMap { screen in
+            screen.displayID.map { (id: $0, geometry: NotchGeometry(screen: screen, topRowItems: topRowItems,
+                                                                    size: notchSize)) }
+        }
+        guard let id = ScreenObserver.chooseDisplay(screens.map { ($0.id, $0.geometry.hasNotch) }, on: .saved) else {
+            return nil
+        }
+        return screens.first { $0.id == id }
     }
 
     /// Called by the tracking area in `NotchHostingView` and by this class's own timers.
@@ -190,12 +212,12 @@ private extension NSScreen {
 }
 
 private extension NotchGeometry {
-    init(screen: NSScreen, topRowItems: Int) {
+    init(screen: NSScreen, topRowItems: Int, size: NotchSize) {
         self.init(screenFrame: screen.frame,
                   safeAreaTop: screen.safeAreaInsets.top,
                   auxLeftWidth: screen.auxiliaryTopLeftArea?.width,
                   auxRightWidth: screen.auxiliaryTopRightArea?.width,
                   menuBarHeight: screen.frame.maxY - screen.visibleFrame.maxY,
-                  backingScale: screen.backingScaleFactor, topRowItems: topRowItems)
+                  backingScale: screen.backingScaleFactor, topRowItems: topRowItems, size: size)
     }
 }

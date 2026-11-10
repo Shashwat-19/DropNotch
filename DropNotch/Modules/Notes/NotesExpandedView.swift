@@ -6,6 +6,7 @@ struct NotesExpandedView: View {
     @FocusState private var isFocused: Bool
     @Environment(\.notchHasKeyboardFocus) private var hasKeyboardFocus
     @Environment(\.requestNotchKeyboardFocus) private var requestKeyboardFocus
+    @Environment(\.notchSize) private var size
 
     var body: some View {
         VStack(spacing: NotchStyle.tightSpacing) {
@@ -40,12 +41,12 @@ struct NotesExpandedView: View {
                     .onChange(of: hasKeyboardFocus, initial: true) { if hasKeyboardFocus { isFocused = true } }
                 if module.saveFailed {
                     Text("Couldn't save the note")
-                        .font(.subheadline)
+                        .font(.notch(.subheadline, size))
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }
-        .font(.body)
+        .font(.notch(.body, size))
     }
 }

@@ -6,6 +6,7 @@ struct NotchEmptyState<Action: View>: View {
     let text: LocalizedStringKey
     let systemImage: String
     let action: Action
+    @Environment(\.notchSize) private var size
 
     init(_ text: LocalizedStringKey, systemImage: String, @ViewBuilder action: () -> Action) {
         self.text = text
@@ -18,10 +19,10 @@ struct NotchEmptyState<Action: View>: View {
             VStack(spacing: NotchStyle.tightSpacing) {
                 // Decoration: VoiceOver reads the text.
                 Image(systemName: systemImage)
-                    .font(.title2)
+                    .font(.notch(.title2, size))
                     .accessibilityHidden(true)
                 Text(text)
-                    .font(.subheadline)
+                    .font(.notch(.subheadline, size))
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
             }

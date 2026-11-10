@@ -30,6 +30,15 @@ struct GeneralSettingsView: View {
                 }
             }
             Section {
+                Picker("Notch size", selection: Binding(get: { notchState.notchSize },
+                                                         set: { notchState.setNotchSize($0) })) {
+                    Text("Standard").tag(NotchSize.standard)
+                    Text("Large").tag(NotchSize.large)
+                }
+            } footer: {
+                Text("Large is taller and wider, with larger text, for every tab.").foregroundStyle(.secondary)
+            }
+            Section {
                 KeyboardShortcuts.Recorder("Open and close the notch", name: .toggleNotch)
                 Picker("Show the notch on", selection: $display) {
                     Text("Built-in display").tag(NotchDisplay.builtIn)

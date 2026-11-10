@@ -67,6 +67,8 @@ struct NotchRootView: View {
                     // For the Home tab, which lays out the modules that are Home cards (D42).
                     .environment(registry)
                     .environment(\.notchHasKeyboardFocus, state.hasKeyboardFocus)
+                    // The open content's text and controls follow the notch size (D49); the top row doesn't.
+                    .environment(\.notchSize, state.notchSize)
                     // A click in a hover-opened note takes keyboard focus (D31).
                     .environment(\.requestNotchKeyboardFocus, NotchFocusRequest { state.send(.focusRequested) })
                     // Clipboard copy-back closes a keyboard-opened notch so ⌘V reaches the front app.

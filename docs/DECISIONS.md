@@ -1179,3 +1179,18 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - About 72,000 lines of pre-2.0 parser code read output from programs and remote hosts inside DropNotch's process. SwiftTerm's advisories join dependency-manager's release check (L8).
 
 **Alternatives:** quick commands that open Terminal.app (D45, built and set aside: Shash wants a real terminal); a separate terminal window (not in the notch); disclaiming responsibility so child processes get their own permissions (private API, and Shash wants DropNotch's); our own forkpty and a text view (no full-screen programs); libvterm (MIT; we'd write the renderer, selection and input); Ghostty's library (no stable embedding API); xterm.js (no web views, CLAUDE.md).
+
+---
+
+## D49. Notch size: Standard or Large
+
+**Date:** 2026-11-10 · **Status:** Accepted (Shash, 2026-11-10: Large = +40 pt high, +80 pt wide, always with the larger text; Standard by default); built on `feat/notch-size`. Mock-up: docs/mockups/notch-size-v0.2.html.
+
+**Decision:**
+- Settings › General › Notch size: Standard (today's 190 pt open height and width) or Large. Each is one fixed open size for every tab, so D16 and D29 hold; it changes only from Settings, never per tab or on hover. New installs get Standard (`notch.size` in defaults; anything unrecognised reads as Standard).
+- Large is 40 pt taller (230 pt) and adds 80 pt to the width the top row needs, whatever tabs are on: 676 × 230 pt on the Air with six top-row items (five tabs and Settings), 616 × 230 with five or fewer. The closed, peek and compact shapes don't change.
+- Large's contents grow with the space, not only its margins: text one step up (11 → 13, 13 → 15, 15 → 17, 17 → 20 pt) and fixed sizes by the same ratio, rounded (`NotchSize.scaled`: 14 → 16, 24 → 28, 28 → 32, 72 → 83). On the Air: the Now Playing artwork 89 → 124 pt with 32 pt controls, Calendar 5 → 6 rows (16 pt rows under a 16 pt weekday and a 36 pt date), Clipboard 28 pt rows, larger tray tiles, Notes and empty states. Standard keeps the system text styles. The top row (tabs, Settings, the Terminal accessory) is the same at both sizes.
+- The terminal keeps the font chosen in Settings › Terminal; it gets more rows and columns (80 × 11 → 92 × 14 at 11 pt). A switch resizes the view, and SwiftTerm tells the shell the new size (TIOCSWINSZ, SIGWINCH).
+- A switch while the notch is open re-measures it in place: the notch stays open at the new size, and the hover state is kept (unlike a screen change, which closes it).
+
+**Alternatives:** +30/+60 (no extra calendar row with the larger text); +50/+100 (47 % of the Air's width for little more); scaling the whole content with `scaleEffect` (blurry text, and it would scale the terminal's font and AppKit views); a size per tab (breaks D16/D29); larger text as a separate setting (Shash: always with Large).
