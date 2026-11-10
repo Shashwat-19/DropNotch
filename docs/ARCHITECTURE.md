@@ -34,6 +34,8 @@ DropNotch/
     Notes/        NotesModule (load and save), NotesExpandedView (D31)
     Battery/      BatteryModule, BatteryCardView: the narrow Home card (D43)
     Calendar/     CalendarModule, CalendarCardView: the medium Home card (D44)
+    Terminal/     TerminalModule, TerminalExpandedView, TerminalTopRowView, TerminalSettings: the Terminal tab, off by
+                  default (D48)
   Services/       one protocol + implementations per system dependency:
                   Now Playing (D21–D24): NowPlayingSource, NowPlayingInfo, NoNowPlayingSource,
                   MediaPlayer, PlayerNotificationParser, NowPlayingSelection, AppleEventOutcome,
@@ -43,6 +45,8 @@ DropNotch/
                   Battery (D43): BatterySource, BatteryStatus, PowerSourceBatterySource (IOKit power sources).
                   Calendar (D44): CalendarSource, CalendarAccess, CalendarEvent, EventKitCalendarSource (read only;
                   the store lives in a private actor), UpcomingEvents (pure: what the card lists).
+                  Terminal (D48): TerminalSession, SwiftTermSession (SwiftTerm, with GuardedTerminalDelegate refusing
+                  the clipboard), NotchTerminalView, LoginShell (pure), TerminalHangUp (pure).
                   Planned: MediaRemote (v0.2), BluetoothBatteryProvider (deferred, D43), …
   Settings/       SettingsView with General, Modules, Privacy and About tabs (D34). Planned: per-module settings
   Support/        Logger categories, small shared helpers (FourCharCode+Code). Planned: file locations (section 5)
@@ -195,6 +199,8 @@ Target: zero wake-ups while idle, apart from the clipboard poll. Intervals below
 | Now-playing elapsed time (D26, D46) | About 1 Hz, driven by SwiftUI (`Text(timerInterval:pauseTime:)`) | Open notch on Home **and** playing; no ticks while paused; gone when the notch closes (D19), including on screen sleep | A clock has to change every second. Each tick is a SwiftUI layout of the notch's hosting view: about 0.5 % app CPU [V: harness, 2026-10-25, before D42]. Dropped in D42 for lack of room; back with the 190 pt notch (D46). |
 | Compact-slot grace (D28) | One-shot 2 s | Playback paused or stopped while the wings show, until it plays again | Keeps the closed shape from flapping on a quick pause or a Music burst, without keeping the menu bar blocked while paused. |
 | Decorative waveform (D28) | No app timer: Core Animation repeating animations, capped at 15 fps | Compact view visible **and** playing **and** display awake **and** not Low Power Mode **and** not Reduce Motion | Animation; the render server draws it, as the progress bar. Still bars otherwise. |
+| Terminal hang-up (D48) | One-shot 2 s after End Session | A session ended while it ran | SIGKILL for what SIGHUP didn't end; no signal says a process ignored SIGHUP. At quit, the wait is up to 1 s inline instead, since a later timer would never run. |
+| Terminal output (D48) | No app timer: SwiftTerm reads the pty on its own I/O thread and draws through an `NSView` display link that runs only while output is pending and the view is on screen, pausing after 8 idle frames; the caret is steady, not blinking | A session is running | A busy program (`top`, `tail -f`) is still parsed while the notch is closed, in proportion to its output, as in any terminal. Idle wake-ups with a shell at its prompt: unmeasured, on the release checklist. |
 | Calendar card event ends (D44) | No app timer: a SwiftUI `TimelineView(.explicit)` at the end times of today's remaining events | Card on screen (notch open on Home) | An event that ends while the notch is open drops off; closed, the next open recomputes the list anyway. |
 
 The Now Playing source adds no timers and no polling; the open view adds the two rows above (D26). Music's bursts of two states are not debounced; a one-shot 150 ms debounce would be added here only if device check 10 shows a flicker (D24).
@@ -206,4 +212,5 @@ Not allowed: any repeating timer while idle, a hover polling loop, a memory watc
 - `os.Logger(subsystem: "com.shashwat.DropNotch", category: "<Module>")` [V: CLAUDE.md]. Never log clipboard content, file names or track info. Dynamic strings and objects are redacted by default, but integers, floats and booleans are not [V: https://developer.apple.com/documentation/os/generating-log-messages-from-your-code], so mark anything sensitive `privacy: .private` explicitly.
 - One network request in the MVP: Spotify artwork, one HTTPS GET per track to `i.scdn.co` only, ephemeral session, no cookies or disk cache, never logged (D25). Lyrics, weather and updates are later features, and each one comes with privacy copy that says what it sends.
 - Each permission is requested when its feature is first enabled, never at launch. Now Playing is on by default (D21), so its Automation prompt comes on the first click on a control (D23). The Calendar card is on by default too, so its prompt comes only from its Allow button or from turning it on in Settings (D44).
+- Terminal (D48): nothing typed and nothing shown is logged, nor titles, folders, the environment or the shell's path; logs carry session starts and ends, exit statuses and signal counts. Scrollback is in memory only and goes with the session. SwiftTerm's host logging is never turned on; in Debug builds it may print parser diagnostics, including bits of output, to the Xcode console (not the unified log). The shell itself keeps its history (~/.zsh_history), as in any terminal.
 - Calendar (D44): event titles, times and calendar names are never logged or saved; logs carry access states, counts and error codes. Titles live in memory and `stop()` clears them; Settings › Privacy › Show event titles off shows times only.
