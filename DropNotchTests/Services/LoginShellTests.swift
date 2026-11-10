@@ -64,4 +64,13 @@ final class LoginShellTests: XCTestCase {
         XCTAssertTrue(shell.argv0.hasPrefix("-"))
         XCTAssertFalse(shell.environment.contains { $0.hasPrefix("DYLD_") || $0.hasPrefix("XCTest") || $0.hasPrefix("XPC_") })
     }
+
+    /// The real check behind "an executable regular file": no folders, no plain files, nothing missing.
+    func testIsExecutableFile() {
+        XCTAssertTrue(LoginShell.isExecutableFile("/bin/zsh"))
+        XCTAssertFalse(LoginShell.isExecutableFile("/bin"), "a folder")
+        XCTAssertFalse(LoginShell.isExecutableFile("/etc/shells"), "not executable")
+        XCTAssertFalse(LoginShell.isExecutableFile("/bin/no-such-shell-\(UUID())"))
+        XCTAssertFalse(LoginShell.isExecutableFile(""))
+    }
 }

@@ -157,4 +157,38 @@ final class TerminalModuleTests: XCTestCase {
         XCTAssertEqual(TerminalSettings.scrollback(10_000), 10_000)
         XCTAssertEqual(TerminalSettings.scrollback(2_000), 1_000)
     }
+
+    func testEndSessionAndStopWithoutASessionDoNothing() {
+        let module = module()
+        module.endSession()
+        XCTAssertEqual(module.state, .notStarted, "End Session before any session doesn't mark it ended")
+        module.stop()
+        XCTAssertEqual(module.state, .notStarted)
+        XCTAssertTrue(made.isEmpty)
+    }
+
+    /// An ended session's callbacks are cut, so a late exit or click can't reach the module (or a later session).
+    func testEndingASessionDetachesItsCallbacks() {
+        let module = module()
+        module.didSelectTab()
+        let first = made[0].session
+        first.onFocusRequest = {}
+        module.endSession()
+        XCTAssertNil(first.onExit)
+        XCTAssertNil(first.onFocusRequest)
+        module.openSession()
+        module.stop()
+        XCTAssertNil(made[1].session.onExit)
+        XCTAssertEqual(made[1].session.hangUps, 0, "stop waits instead")
+        XCTAssertEqual(made[1].session.waitedHangUps, 1)
+    }
+
+    /// The top row names the shell actually started, such as the fallback when the account's isn't usable.
+    func testShellNameFollowsTheShellStarted() {
+        let fish = LoginShell(executable: "/opt/homebrew/bin/fish", argv0: "-fish", directory: "/Users/you", environment: [])
+        let module = TerminalModule(makeSession: { _, _ in FakeSession() }, makeShell: { fish }, defaults: makeDefaults())
+        module.start()
+        module.didSelectTab()
+        XCTAssertEqual(module.shellName, "fish")
+    }
 }

@@ -11,4 +11,9 @@ final class TerminalNoticeTests: XCTestCase {
         defaults.set(true, forKey: TerminalNotice.shownKey)
         XCTAssertFalse(TerminalNotice.needsConfirmation(defaults))
     }
+
+    /// D48 names the key; changing it would ask existing users again.
+    func testTheShownKey() {
+        XCTAssertEqual(TerminalNotice.shownKey, "terminal.permissionsNoticeShown")
+    }
 }
