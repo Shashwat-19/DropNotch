@@ -251,7 +251,7 @@ Terms for a reader new to Swift or AppKit:
 **Date:** 2026-10-24 · **Status:** Accepted (verification for D10)
 
 - Licence: MIT, copyright Sindre Sorhus [V: https://github.com/sindresorhus/KeyboardShortcuts/blob/main/license]. Compatible with MIT DropNotch (D1) [I: both permissive; MIT only requires keeping the notice].
-- Pin: `exactVersion: 3.1.0`, released 2026-09-11, latest stable; release notes mention macOS 27 compatibility [V: https://github.com/sindresorhus/KeyboardShortcuts/releases/tag/3.1.0].
+- Pin: `exactVersion: 3.1.0` (since D48: `revision:` 772133d9…, the commit tag 3.1.0 points to), released 2026-09-11, latest stable; release notes mention macOS 27 compatibility [V: https://github.com/sindresorhus/KeyboardShortcuts/releases/tag/3.1.0].
 - 3.0.0 was a breaking release that renamed the default-shortcut API and moved the package to Swift 6 [V: https://github.com/sindresorhus/KeyboardShortcuts/releases/tag/3.0.0]. DropNotch stays in Swift 5 mode: the package module compiles with `-swift-version 6` and the app module with `-swift-version 5`, and build and tests pass [V: local build logs, 2026-10-24].
 - Requires macOS 10.15+. No package-level dependencies, so nothing transitive is fetched [V: Package.swift; Package.resolved has one pin]. Manifest needs swift-tools 6.2, satisfied by the installed Swift 6.4 toolchain [V: `swift --version`].
 - Resolved to revision `772133d9dbe800fdac0473226822994c5c162c58` (tag 3.1.0); the checked-out `license` file is MIT [V: Package.resolved, checkout]. Verified by `dependency-manager` on 2026-10-24 after the package was added on feat/project-config.

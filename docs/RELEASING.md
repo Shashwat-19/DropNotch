@@ -2,7 +2,7 @@
 
 For maintainers. Run everything from the repository root. The commands show 0.1.0; change the version throughout for a later release. Nothing here is run by the build or by CI.
 
-Before you start: the device checks in TASK.md's Release checklist are done, `xcodebuild -scheme DropNotch -destination 'platform=macOS' build test` passes, and CHANGELOG.md has the version's section.
+Before you start: the device checks in TASK.md's Release checklist are done, `xcodebuild -scheme DropNotch -destination 'platform=macOS' -skipPackagePluginValidation build test` passes, and CHANGELOG.md has the version's section.
 
 1. **README commit.** Update README.md (download link, install steps, checksum command) and CHANGELOG.md on the `release/v0.1.0` branch, then commit with `docs:`. Write `build/notes-final.md` from the CHANGELOG section: highlights, three install lines, known limitations, and the line `SHA-256 (DropNotch-0.1.0.dmg): <sha256>`. `build/` is gitignored, so this file is not committed.
 2. **Merge to main and push.**

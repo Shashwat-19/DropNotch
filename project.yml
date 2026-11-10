@@ -10,10 +10,16 @@ fileGroups:
   - TASK.md
   - docs
 packages:
-  # MIT; licence and pin recorded in docs/DECISIONS.md D10a.
+  # Pinned by commit, not tag: a tag can be moved (D48, design review M5). make-dmg.sh checks what resolves.
+  # MIT; licence recorded in docs/DECISIONS.md D10a. Tag 3.1.0.
   KeyboardShortcuts:
     url: https://github.com/sindresorhus/KeyboardShortcuts
-    exactVersion: 3.1.0
+    revision: 772133d9dbe800fdac0473226822994c5c162c58
+  # MIT; licence recorded in docs/DECISIONS.md D48. Tag v1.99.3. Runs a build-tool plugin: xcodebuild needs
+  # -skipPackagePluginValidation, Xcode needs "Trust & Enable" once.
+  SwiftTerm:
+    url: https://github.com/migueldeicaza/SwiftTerm
+    revision: 282c3c3a932b55c129628876b70f37d993af1615
 settings:
   base:
     SWIFT_VERSION: "5.0"
@@ -31,6 +37,8 @@ targets:
         buildPhase: resources
     dependencies:
       - package: KeyboardShortcuts
+      - package: SwiftTerm
+        product: SwiftTerm
     info:
       path: DropNotch/Info.plist
       properties:

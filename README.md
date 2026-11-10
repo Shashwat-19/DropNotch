@@ -66,10 +66,10 @@ You need Xcode 27 or later and [XcodeGen](https://github.com/yonaskolb/XcodeGen)
 
 ```sh
 xcodegen generate
-xcodebuild -scheme DropNotch -destination 'platform=macOS' build test
+xcodebuild -scheme DropNotch -destination 'platform=macOS' -skipPackagePluginValidation build test
 ```
 
-Run `xcodegen generate` again after adding or removing files. The first build fetches the KeyboardShortcuts package. Local builds are ad-hoc signed. To make the release DMG, run `brew install create-dmg` once, then `scripts/make-dmg.sh`; it writes `build/DropNotch-<version>.dmg` and its `.sha256` file.
+Run `xcodegen generate` again after adding or removing files. The first build fetches the KeyboardShortcuts and SwiftTerm packages. SwiftTerm runs a small build plugin, so `xcodebuild` needs `-skipPackagePluginValidation` and Xcode asks you to "Trust & Enable" it once. `scripts/make-dmg.sh` first checks every package resolved to the commit listed in `scripts/Package.resolved.expected`. Local builds are ad-hoc signed. To make the release DMG, run `brew install create-dmg` once, then `scripts/make-dmg.sh`; it writes `build/DropNotch-<version>.dmg` and its `.sha256` file.
 
 ## Roadmap
 

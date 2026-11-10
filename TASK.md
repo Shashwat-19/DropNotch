@@ -55,7 +55,7 @@ g. **Unit tests via `test-writer`.**
    - Hover state machine (the pure transition function).
    - Registry start and stop on enable and disable.
 
-h. **Build and test.** Run `xcodegen generate`, then `xcodebuild -scheme DropNotch -destination 'platform=macOS' build test`. Show the real output. Nothing is claimed as passing without it.
+h. **Build and test.** Run `xcodegen generate`, then `xcodebuild -scheme DropNotch -destination 'platform=macOS' -skipPackagePluginValidation build test`. Show the real output. Nothing is claimed as passing without it.
 
 i. **Manual checks on a real notched Mac.** These cannot run in CI.
    - Hover at the top pixel row.
