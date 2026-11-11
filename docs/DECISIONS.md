@@ -1227,3 +1227,17 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - `zap` removes `~/Library/Application Support/DropNotch` (`PrivateFolder.applicationSupport`) and `~/Library/Preferences/com.shashwat.DropNotch.plist`, the paths the README's uninstall note gives.
 
 **Alternatives:** submitting to homebrew/cask now (fails the audit above); DMG only (no one-line install or `brew upgrade`); `--no-quarantine` in the install line (bypasses Gatekeeper; deprecated in Homebrew 5.0.0).
+
+## D51. Landing site in website/, on Vercel, with page-view analytics
+
+**Date:** 2026-11-11 · **Status:** Proposed (site requested by Shash, 2026-11-11; details await approval).
+
+**Decision:**
+- One static page, `website/index.html`: no framework, no build step, no dependencies. Sections follow getdroppy.app's order and pacing (hero, bento of feature clips, FAQ, install); the visual language follows the apple-design skill (system font, size-specific tracking, critically damped springs, translucent nav, reduced-motion, reduced-transparency and increased-contrast variants).
+- The hero illustration clips a fixed-size canvas to the notch shape, as the app's panel does, with the app's timings (0.12 s open delay, 0.1 s exit debounce). It is labelled as an illustration.
+- Deployed as the Vercel project `dropnotch`, Git-connected with Root Directory `website`. `.vercelignore` keeps the launch notes and the download log off the site.
+- Measurement: Vercel Web Analytics on the site (cookieless page views); GitHub release download counts via `website/downloads.sh`; GitHub Issues linked from the page. The app's no-analytics rule is unchanged: the footer says the site counts page views and the app counts nothing.
+- Every claim on the page carries `data-claim` (verified with a source, or placeholder); `?claims` outlines them, and website/README.md keeps the ledger.
+- The Download button links to the versioned DMG, so each release updates the page (RELEASING.md step 10).
+
+**Alternatives:** a Next.js or Astro site (a build step and dependencies for one page); GitHub Pages (no analytics without a third-party script); linking Download to `/releases/latest` (one more click, and the asset name includes the version, so `/releases/latest/download/` can't point at a fixed file); fetching the latest release from the GitHub API in the page (a runtime dependency and rate limit to save one edit per release); showing the live download count on the page (two downloads is not social proof).

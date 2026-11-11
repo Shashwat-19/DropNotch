@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DropNotch</title>
+<meta name="description" content="Free, open-source macOS app that turns the MacBook notch into a productivity surface: music, calendar, a file tray with AirDrop, clipboard history, notes and a terminal.">
+<meta property="og:title" content="DropNotch">
+<meta property="og:description" content="Music, files, clipboard and a terminal, one hover from your MacBook notch. Free and open source.">
+<meta property="og:image" content="https://raw.githubusercontent.com/Shashwat-19/DropNotch/main/docs/images/banner.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23111'/%3E%3Cpath d='M7 9h18v5a4 4 0 0 1-4 4H11a4 4 0 0 1-4-4z' fill='%23ff8a5c'/%3E%3C/svg%3E">
+
+<!-- Vercel Web Analytics: cookieless page views. Works once Web Analytics is enabled for the project. -->
+<script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+<script defer src="/_vercel/insights/script.js"></script>
+
+<!--
+  Claims: every factual element carries data-claim="verified: <source>" or data-claim="placeholder: <what to fill>".
+  Open the page with ?claims to outline them. The full ledger is in website/README.md.
+-->
+<style>
+:root {
+  --bg: #fbfbfd;
+  --surface: #ffffff;
+  --surface-2: #f2f2f5;
+  --text: #1d1d1f;
+  --text-2: #5d5d63;
+  --hairline: rgba(0, 0, 0, 0.08);
+  --accent: #c2410c;
+  --cta-bg: #1d1d1f;
+  --cta-text: #ffffff;
+  --nav-bg: rgba(251, 251, 253, 0.72);
+  --wall-1: #dfe6f3;
+  --wall-2: #f4ece6;
+  --ok: #15803d;
+  --todo: #b45309;
+  /* Critically damped spring, response 0.4 s (apple-design §4), sampled for CSS. */
+  --spring: linear(0, 0.06, 0.186, 0.329, 0.466, 0.584, 0.682, 0.76, 0.821, 0.868, 0.903, 0.929, 0.949, 0.963, 0.973, 0.981, 0.986, 0.99, 0.993, 0.995, 0.997, 0.998, 0.998, 0.999, 1);
+  font: 100%/1.5 system-ui, -apple-system, "Helvetica Neue", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000;
+    --surface: #111113;
+    --surface-2: #1c1c1f;
+    --text: #f5f5f7;
+    --text-2: #a1a1a6;
+    --hairline: rgba(255, 255, 255, 0.1);
+    --accent: #ff8a5c;
+    --cta-bg: #f5f5f7;
+    --cta-text: #000000;
+    --nav-bg: rgba(0, 0, 0, 0.6);
+    --wall-1: #1b2233;
+    --wall-2: #2a1c22;
+    --ok: #4ade80;
+    --todo: #fbbf24;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #000000; --surface: #111113; --surface-2: #1c1c1f; --text: #f5f5f7; --text-2: #a1a1a6;
+  --hairline: rgba(255, 255, 255, 0.1); --accent: #ff8a5c; --cta-bg: #f5f5f7; --cta-text: #000000;
+  --nav-bg: rgba(0, 0, 0, 0.6); --wall-1: #1b2233; --wall-2: #2a1c22; --ok: #4ade80; --todo: #fbbf24;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 4rem; }
+body { margin: 0; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+a { color: inherit; }
+h1, h2, h3 { margin: 0; font-optical-sizing: auto; }
+p { margin: 0; }
+code { font: 0.95em/1.4 ui-monospace, "SF Mono", Menlo, monospace; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+
+.wrap { width: min(68rem, 100% - 2rem); margin-inline: auto; }
+section { padding-block: clamp(4rem, 10vw, 7.5rem); }
+.eyebrow { font-size: 0.875rem; font-weight: 600; letter-spacing: 0.02em; color: var(--accent); }
+.h2 { font-size: clamp(2rem, 4.5vw, 3rem); line-height: 1.08; letter-spacing: -0.02em; font-weight: 700; }
+.lede { font-size: clamp(1.0625rem, 1.6vw, 1.25rem); line-height: 1.5; color: var(--text-2); max-width: 38rem; }
+.muted { color: var(--text-2); }
+.small { font-size: 0.875rem; line-height: 1.45; }
+
+/* Nav: translucent layer, content scrolls under it; no hard divider. */
+.nav { position: sticky; top: 0; z-index: 10; background: var(--nav-bg); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); }
+.nav .wrap { display: flex; align-items: center; gap: 1.5rem; height: 3.25rem; }
+.brand { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; letter-spacing: -0.01em; text-decoration: none; margin-right: auto; }
+.brand svg { width: 1.375rem; height: 1.375rem; }
+.nav a:not(.brand):not(.btn) { font-size: 0.875rem; color: var(--text-2); text-decoration: none; }
+.nav a:not(.brand):not(.btn):hover { color: var(--text); }
+@media (max-width: 40rem) { .nav .hide-sm { display: none; } .nav .wrap { gap: 1rem; } }
+
+/* Buttons: feedback on press, not on release. */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; border: 0; border-radius: 999px; font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; transition: transform 100ms ease-out, opacity 100ms ease-out; -webkit-tap-highlight-color: transparent; }
+.btn:active { transform: scale(0.97); opacity: 0.85; }
+.btn-primary { background: var(--cta-bg); color: var(--cta-text); padding: 0.875rem 1.5rem; font-size: 1.0625rem; }
+.btn-small { background: var(--cta-bg); color: var(--cta-text); padding: 0.375rem 0.875rem; font-size: 0.8125rem; }
+.btn-ghost { background: var(--surface); box-shadow: 0 0 0 1px var(--hairline); color: var(--text); padding: 0.875rem 1.5rem; font-size: 1.0625rem; }
+
+/* Homebrew command with copy. */
+.brew { display: flex; align-items: center; gap: 0.5rem; max-width: 100%; text-align: left; background: var(--surface-2); border-radius: 0.875rem; padding: 0.375rem 0.375rem 0.375rem 1rem; }
+.brew code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font-size: 0.875rem; scrollbar-width: none; }
+.brew code::before { content: "$ "; color: var(--text-2); }
+@media (max-width: 40rem) { .brew code { white-space: normal; overflow-wrap: anywhere; } }
+.copy { flex: none; background: var(--surface); color: var(--text); padding: 0.5rem 0.875rem; font-size: 0.8125rem; border-radius: 0.625rem; min-width: 4.75rem; box-shadow: 0 0 0 1px var(--hairline); }
+
+/* Hero */
+.hero { padding-top: clamp(2rem, 5vw, 3.5rem); text-align: center; }
+.hero h1 { font-size: clamp(2.5rem, 6.4vw, 4.75rem); line-height: 1.04; letter-spacing: -0.03em; font-weight: 700; max-width: 15ch; margin: 1rem auto 0; text-wrap: balance; }
+.hero .lede { margin: 1.25rem auto 0; text-wrap: pretty; }
+.hero .ctas { display: flex; flex-direction: column; align-items: center; gap: 0.875rem; margin-top: 2rem; }
+.hero .brew { width: 34rem; }
+.meta { font-size: 0.8125rem; color: var(--text-2); }
+.meta a { color: var(--accent); text-decoration: none; }
+
+/* Notch demo: a fixed-size canvas clipped to the notch, as the app does. */
+.screen { position: relative; margin: 0 auto; width: min(44rem, 100%); height: 13.5rem; border-radius: 1.25rem 1.25rem 0 0; background: linear-gradient(135deg, var(--wall-1), var(--wall-2)); overflow: hidden; box-shadow: 0 0 0 1px var(--hairline); }
+.screen::before { content: ""; position: absolute; inset: 0 0 auto; height: 2rem; background: rgba(255, 255, 255, 0.18); }
+.notch { position: absolute; top: 0; left: 50%; translate: -50% 0; width: min(36rem, 100% - 1.5rem); height: 11.5rem; padding: 2.5rem 1rem 1rem; border: 0; margin: 0; background: #000; color: #fff; font: inherit; text-align: left; cursor: pointer;
+  clip-path: inset(0 calc(50% - 6.5rem) calc(100% - 2rem) calc(50% - 6.5rem) round 0 0 0.75rem 0.75rem);
+  transition: clip-path 0.6s cubic-bezier(0.2, 0.9, 0.3, 1); transition-timing-function: var(--spring); -webkit-tap-highlight-color: transparent; }
+.notch.open { clip-path: inset(0 0 0 0 round 0 0 1.75rem 1.75rem); }
+.notch:focus-visible { outline: none; }
+.notch:focus-visible .cam { box-shadow: 0 0 0 2px var(--accent); }
+.cam { position: absolute; top: 0.75rem; left: 50%; width: 0.5rem; height: 0.5rem; margin-left: -0.25rem; border-radius: 50%; background: #16181d; }
+.panel { display: grid; grid-template-columns: 1.8fr 1fr; gap: 0.5rem; height: 100%; opacity: 0; transition: opacity 0.1s; }
+.notch.open .panel { opacity: 1; transition: opacity 0.2s 0.12s; }
+.card { background: #17181c; border-radius: 1rem; padding: 0.75rem; min-width: 0; }
+.np { display: flex; gap: 0.75rem; align-items: center; }
+.art { flex: none; width: 5.5rem; aspect-ratio: 1; border-radius: 0.625rem; background: linear-gradient(135deg, #ff9a4a, #d63a7a); }
+.np-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.np-title { font-weight: 700; font-size: 0.9375rem; }
+.np-artist { font-size: 0.8125rem; opacity: 0.55; }
+.bar { height: 0.25rem; border-radius: 1rem; background: rgba(255, 255, 255, 0.18); margin-top: 0.75rem; overflow: hidden; }
+.bar::after { content: ""; display: block; width: 55%; height: 100%; background: linear-gradient(90deg, #ff9a4a, #ff5c8a); }
+.times { display: flex; justify-content: space-between; font-size: 0.6875rem; opacity: 0.5; margin-top: 0.25rem; font-variant-numeric: tabular-nums; }
+.cal { display: flex; flex-direction: column; }
+.cal-day { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; color: #ff5c5c; }
+.cal-date { font-size: 2rem; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
+.ev { display: block; border-left: 3px solid #4aa3ff; padding-left: 0.5rem; margin-top: 0.375rem; font-size: 0.75rem; line-height: 1.3; }
+.ev + .ev { border-color: #43d17a; }
+.ev span { display: block; opacity: 0.55; font-size: 0.6875rem; }
+@media (max-width: 34rem) { .panel { grid-template-columns: 1fr; } .cal { display: none; } }
+.caption { margin-top: 0.75rem; font-size: 0.8125rem; color: var(--text-2); }
+
+/* Bento of feature clips */
+.bento { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1rem; margin-top: 3rem; }
+.tile { grid-column: span 3; background: var(--surface); border-radius: 1.5rem; padding: 1.5rem; box-shadow: 0 0 0 1px var(--hairline); display: flex; flex-direction: column; gap: 0.5rem; }
+.tile.w4 { grid-column: span 4; } .tile.w2 { grid-column: span 2; }
+.tile h3 { font-size: 1.25rem; line-height: 1.2; letter-spacing: -0.015em; }
+.tile p { color: var(--text-2); font-size: 0.9375rem; line-height: 1.5; }
+.clip { order: -1; height: clamp(11rem, 18vw, 14rem); border-radius: 1rem; background: var(--surface-2); display: grid; place-items: center; margin-bottom: 0.75rem; font-size: 0.8125rem; color: var(--text-2); }
+.clip video { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+@media (max-width: 56rem) { .tile, .tile.w4, .tile.w2 { grid-column: span 3; } }
+@media (max-width: 40rem) { .bento { grid-template-columns: 1fr; } .tile, .tile.w4, .tile.w2 { grid-column: auto; } }
+.planned { margin-top: 1.5rem; font-size: 0.9375rem; color: var(--text-2); }
+.planned strong { color: var(--text); font-weight: 600; }
+
+/* FAQ */
+.faq { margin-top: 2.5rem; max-width: 46rem; }
+details { border-top: 1px solid var(--hairline); }
+details:last-child { border-bottom: 1px solid var(--hairline); }
+summary { list-style: none; cursor: pointer; padding: 1.125rem 2rem 1.125rem 0; font-weight: 600; font-size: 1.0625rem; position: relative; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; position: absolute; right: 0.25rem; top: 50%; translate: 0 -50%; font-weight: 400; font-size: 1.375rem; color: var(--text-2); transition: rotate 0.2s ease-out; }
+details[open] summary::after { rotate: 45deg; }
+details > p { padding: 0 0 1.25rem; color: var(--text-2); max-width: 40rem; }
+details > p + p { margin-top: -0.5rem; }
+
+/* Install */
+.install-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2.5rem; }
+@media (max-width: 48rem) { .install-grid { grid-template-columns: 1fr; } }
+.panel-card { background: var(--surface); border-radius: 1.5rem; padding: 1.75rem; box-shadow: 0 0 0 1px var(--hairline); display: flex; flex-direction: column; gap: 1rem; align-items: flex-start; }
+.panel-card h3 { font-size: 1.25rem; letter-spacing: -0.015em; }
+.steps { margin: 0; padding-left: 1.25rem; color: var(--text-2); font-size: 0.9375rem; }
+.steps li + li { margin-top: 0.375rem; }
+.steps strong { color: var(--text); font-weight: 600; }
+.feedback { margin-top: 1rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; background: var(--surface-2); border-radius: 1.5rem; padding: 1.75rem; }
+.feedback h3 { font-size: 1.25rem; letter-spacing: -0.015em; }
+
+footer { padding-block: 2.5rem 3rem; font-size: 0.8125rem; color: var(--text-2); }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; justify-content: space-between; }
+footer a { text-decoration: none; } footer a:hover { color: var(--text); }
+
+/* ?claims: outline every claim, green = verified, amber = placeholder. */
+.show-claims [data-claim] { outline: 2px dashed var(--ok); outline-offset: 2px; }
+.show-claims [data-claim^="placeholder"] { outline-color: var(--todo); }
+.show-claims [data-claim]::after { content: " [" attr(data-claim) "]"; display: block; font: 600 0.6875rem/1.3 ui-monospace, monospace; color: var(--ok); letter-spacing: 0; text-align: left; }
+.show-claims [data-claim^="placeholder"]::after { color: var(--todo); }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .notch, .notch.open { transition: none; }
+  .notch .panel, .notch.open .panel { transition: opacity 0.2s; }
+  .btn:active { transform: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .nav { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+@media (prefers-contrast: more) {
+  :root { --hairline: currentColor; --text-2: var(--text); }
+}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="DropNotch, back to top">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#111"/><path d="M7 9h18v5a4 4 0 0 1-4 4H11a4 4 0 0 1-4-4z" fill="#ff8a5c"/></svg>
+      DropNotch
+    </a>
+    <a class="hide-sm" href="#features">Features</a>
+    <a class="hide-sm" href="#faq">FAQ</a>
+    <a class="hide-sm" href="#install">Install</a>
+    <a href="https://github.com/Shashwat-19/DropNotch/issues">Issues</a>
+    <a class="btn btn-small" href="#install">Get it</a>
+  </div>
+</header>
+
+<main id="top">
+
+  <section class="hero">
+    <div class="wrap">
+      <div class="screen">
+        <button class="notch" type="button" aria-expanded="false" aria-label="Illustration of the DropNotch notch. Press to open or close it."
+          data-claim="verified: illustration of the Home tab (README Features; Now Playing and Calendar cards)">
+          <span class="cam" aria-hidden="true"></span>
+          <span class="panel" aria-hidden="true">
+            <span class="card np">
+              <span class="art"></span>
+              <span class="np-text">
+                <span class="np-title">Evening Drive</span>
+                <span class="np-artist">Example Artist</span>
+                <span class="bar"></span>
+                <span class="times"><span>1:42</span><span>3:08</span></span>
+              </span>
+            </span>
+            <span class="card cal">
+              <span class="cal-day">WEDNESDAY</span>
+              <span class="cal-date">11</span>
+              <span class="ev"><span>10:30</span>Stand-up</span>
+              <span class="ev"><span>14:00</span>Design review</span>
+            </span>
+          </span>
+        </button>
+      </div>
+      <p class="caption">Illustration, not a screenshot. Hover the notch, or tap it.</p>
+
+      <p class="eyebrow" style="margin-top:2.5rem" data-claim="verified: LICENSE (MIT); project.yml deploymentTarget macOS 14.0">Free and open source · macOS 14 or later</p>
+      <h1 data-claim="placeholder: headline candidate A; choose A, B or C with the evidence in website/LAUNCH.md">Music, files, clipboard and a terminal, one hover from your notch.</h1>
+      <p class="lede" data-claim="verified: README tagline; README Usage (hover or ⌃⌥N; AppDelegate.swift toggleNotch)">DropNotch turns the MacBook notch into a productivity surface. It opens when you hover over it or press ⌃⌥N, and stays out of the way otherwise.</p>
+
+      <div class="ctas">
+        <a class="btn btn-primary" data-track="download-hero"
+           href="https://github.com/Shashwat-19/DropNotch/releases/download/v0.2.0/DropNotch-0.2.0.dmg"
+           data-claim="verified: GitHub release v0.2.0 asset DropNotch-0.2.0.dmg">Download for Mac</a>
+        <p class="meta" data-claim="verified: GitHub API release v0.2.0 (7,468,146 bytes); CHANGELOG 0.2.0 known issues">Version 0.2.0 · 7.5 MB · Not yet notarised, so the first launch takes <a href="#install">one extra step</a></p>
+        <div class="brew" data-claim="verified: Shashwat-19/homebrew-tap Casks/dropnotch.rb (version 0.2.0); D50">
+          <code>brew install --cask shashwat-19/tap/dropnotch</code>
+          <button class="btn copy" type="button" data-copy="brew install --cask shashwat-19/tap/dropnotch" data-track="copy-brew-hero">Copy</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <h2 class="h2">Everything is one hover away.</h2>
+      <p class="lede" style="margin-top:1rem">Turn each tab on or off and reorder them in Settings. Nothing runs that you haven't turned on.</p>
+
+      <div class="bento">
+        <article class="tile w4" data-claim="verified: README Features (Home, Now Playing, Calendar, Battery); CHANGELOG 0.2.0">
+          <h3>Music and your day, together</h3>
+          <p>Play, pause, skip and seek in Apple Music or Spotify, with artwork and track times. Next to it, today's events from your calendars, read only. Add a battery ring if you like.</p>
+          <div class="clip" data-claim="placeholder: clip, 6 s: hover the notch, Home opens, press pause, drag the progress bar">Clip coming soon</div>
+        </article>
+        <article class="tile w2" data-claim="verified: CHANGELOG 0.1.0 File tray; FileTrayExpandedView.swift (AirDrop)">
+          <h3>A tray for files</h3>
+          <p>Drop files on the notch, then drag them out or send them with AirDrop. Your files stay where they are.</p>
+          <div class="clip" data-claim="placeholder: clip, 6 s: drag a file onto the notch, then AirDrop it">Clip coming soon</div>
+        </article>
+        <article class="tile w2" data-claim="verified: ClipboardModule.swift (limit 25, concealed types skipped); README Privacy">
+          <h3>Clipboard history</h3>
+          <p>The last 25 text, link and image items; click one to copy it back. Off until you turn it on, and password-manager entries are skipped.</p>
+          <div class="clip" data-claim="placeholder: clip, 5 s: copy two things, open Clipboard, click the older one">Clip coming soon</div>
+        </article>
+        <article class="tile w4" data-claim="verified: CHANGELOG 0.2.0 Terminal tab; README Usage">
+          <h3>A real shell in the notch</h3>
+          <p>Your login shell, like Terminal.app, inside the notch. Off by default. It starts only when you open the tab on purpose, never on hover, and keeps running while the notch is closed.</p>
+          <div class="clip" data-claim="placeholder: clip, 6 s: ⌃⌥N, switch to Terminal, run a command, close, reopen and it's still there">Clip coming soon</div>
+        </article>
+        <article class="tile" data-claim="verified: CHANGELOG 0.1.0 Notes">
+          <h3>Quick notes</h3>
+          <p>One plain-text note, saved as you type, without leaving what you're doing.</p>
+          <div class="clip" data-claim="placeholder: clip, 4 s: ⌃⌥N, ⌘2, type a line, move away">Clip coming soon</div>
+        </article>
+        <article class="tile" data-claim="verified: README Usage and Features (⌃⌥N, ⌘1 ⌘2, Esc, keyboard access, VoiceOver labels)">
+          <h3>Made for the keyboard</h3>
+          <p>⌃⌥N opens the notch ready to type. ⌘1, ⌘2 and so on switch tabs, and Esc closes it. Full keyboard access and VoiceOver labels.</p>
+          <div class="clip" data-claim="placeholder: clip, 5 s: keyboard only, ⌃⌥N, ⌘1 to ⌘4, Esc">Clip coming soon</div>
+        </article>
+      </div>
+
+      <p class="planned" data-claim="verified: README Roadmap (Planned rows; 'Dates are not promised')"><strong>Not built yet:</strong> Stats, a timer and live lyrics are planned, and signed builds with automatic updates are planned for 1.0. No dates. <a href="https://github.com/Shashwat-19/DropNotch/issues">Vote or ask for something else in Issues.</a></p>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap">
+      <h2 class="h2">Questions</h2>
+      <div class="faq">
+        <details data-claim="verified: LICENSE; README Privacy ('no accounts')">
+          <summary>Is it free?</summary>
+          <p>Yes. DropNotch is free and open source under the MIT licence. There's no account to create.</p>
+        </details>
+        <details data-claim="verified: README Install; CHANGELOG 0.2.0 known issues; README Roadmap 1.0">
+          <summary>Why does macOS block it the first time?</summary>
+          <p>DropNotch isn't signed with an Apple Developer ID or notarised yet, so macOS says "DropNotch.app" Not Opened. Click Done, then open System Settings › Privacy &amp; Security and click Open Anyway. Signed builds are planned for 1.0.</p>
+        </details>
+        <details data-claim="verified: README Requirements; project.yml macOS 14.0">
+          <summary>Which Macs does it work on?</summary>
+          <p>macOS 14 Sonoma or later. It's built for MacBooks with a notch; other Macs get a compact pill at the top of the screen. It has only been tested on Apple silicon.</p>
+        </details>
+        <details data-claim="verified: README Privacy; ArtworkDownloader.swift (i.scdn.co); CHANGELOG 0.1.0 (artwork off in Settings › Privacy)">
+          <summary>What does it send off my Mac?</summary>
+          <p>No analytics, no accounts, no telemetry. The only network request fetches Spotify artwork over HTTPS from i.scdn.co, and you can turn that off in Settings › Privacy.</p>
+        </details>
+        <details data-claim="verified: README Privacy and permissions; CHANGELOG 0.1.0 and 0.2.0">
+          <summary>What permissions does it ask for?</summary>
+          <p>Only when you first use the feature that needs it, never at launch: Automation the first time you use a Music or Spotify control, Calendars when you turn on the Calendar card, and folder access when the tray first opens a file from Desktop, Documents or Downloads.</p>
+        </details>
+        <details data-claim="verified: README Features; FEATURE_MATRIX (other players: Later)">
+          <summary>Which music apps does it support?</summary>
+          <p>Apple Music and Spotify. Other players aren't supported yet.</p>
+        </details>
+        <details data-claim="verified: CHANGELOG 0.2.0 (Terminal); README Privacy (terminal permissions)">
+          <summary>Is the terminal safe to leave on?</summary>
+          <p>It's off until you turn it on. Commands you run there use DropNotch's permissions, as they would in the terminal inside VS Code or iTerm. Settings shows exactly what that includes before you turn it on.</p>
+        </details>
+        <details data-claim="verified: README Install (brew upgrade, brew uninstall); CHANGELOG 0.2.0 (no automatic updates); CHANGELOG 0.1.0 (menu-bar Quit)">
+          <summary>How do I update or uninstall it?</summary>
+          <p>There are no automatic updates yet. Run <code>brew upgrade --cask dropnotch</code>, or download the new version here. To uninstall, quit from the menu-bar item and move DropNotch to the Bin, or run <code>brew uninstall --cask dropnotch</code>.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <h2 class="h2">Install</h2>
+      <div class="install-grid">
+        <div class="panel-card" data-claim="verified: GitHub release v0.2.0; README Install steps 1–5">
+          <h3>Download</h3>
+          <ol class="steps">
+            <li>Open the DMG and drag <strong>DropNotch</strong> into <strong>Applications</strong>.</li>
+            <li>Open DropNotch. When macOS says it's Not Opened, click <strong>Done</strong>.</li>
+            <li>In <strong>System Settings › Privacy &amp; Security</strong>, click <strong>Open Anyway</strong>, then <strong>Open</strong>.</li>
+          </ol>
+          <a class="btn btn-primary" data-track="download-install"
+             href="https://github.com/Shashwat-19/DropNotch/releases/download/v0.2.0/DropNotch-0.2.0.dmg">Download DropNotch 0.2.0</a>
+          <p class="small muted">Check the download with the <a href="https://github.com/Shashwat-19/DropNotch/releases/download/v0.2.0/DropNotch-0.2.0.dmg.sha256">SHA-256 file</a>. All versions are on <a href="https://github.com/Shashwat-19/DropNotch/releases">GitHub Releases</a>.</p>
+        </div>
+        <div class="panel-card" data-claim="verified: homebrew-tap Casks/dropnotch.rb (caveats); README Install › Homebrew">
+          <h3>Homebrew</h3>
+          <div class="brew" style="width:100%">
+            <code>brew install --cask shashwat-19/tap/dropnotch</code>
+            <button class="btn copy" type="button" data-copy="brew install --cask shashwat-19/tap/dropnotch" data-track="copy-brew-install">Copy</button>
+          </div>
+          <p class="small muted">This adds the tap and installs in one step. The first launch still needs Open Anyway, as with the DMG. Later, <code>brew upgrade --cask dropnotch</code> updates it.</p>
+        </div>
+      </div>
+
+      <div class="feedback">
+        <div>
+          <h3>Tried it? Tell me what's missing.</h3>
+          <p class="muted small" style="margin-top:0.25rem">Bugs, feature requests and "I uninstalled it because…" all help. It takes a GitHub account.</p>
+        </div>
+        <a class="btn btn-ghost" href="https://github.com/Shashwat-19/DropNotch/issues/new" data-track="issue">Open an issue</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span data-claim="verified: LICENSE (Copyright (c) 2026 Shashwat)">Made by Shashwat · MIT licence · <a href="https://github.com/Shashwat-19/DropNotch">Source on GitHub</a> · <a href="https://github.com/Shashwat-19/DropNotch/issues">Issues</a></span>
+    <span data-claim="verified: Vercel Web Analytics docs (cookieless); README Privacy (app has no analytics)">This site counts page views with Vercel Web Analytics, without cookies. The app counts nothing.</span>
+  </div>
+</footer>
+
+<p class="sr-only" aria-live="polite" id="status" style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)"></p>
+
+<script>
+// ?claims outlines every verified (green) and placeholder (amber) claim.
+if (new URLSearchParams(location.search).has('claims')) document.documentElement.classList.add('show-claims');
+
+// Notch demo: same timings as the app (0.12 s open delay, 0.1 s exit debounce, README hover state machine).
+const notch = document.querySelector('.notch');
+let timer;
+const setOpen = (open) => { notch.classList.toggle('open', open); notch.setAttribute('aria-expanded', open); };
+notch.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'mouse') return; clearTimeout(timer); timer = setTimeout(() => setOpen(true), 120); });
+notch.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'mouse') return; clearTimeout(timer); timer = setTimeout(() => setOpen(false), 100); });
+// A mouse click opens (hover may already have); touch and keyboard toggle.
+notch.addEventListener('click', (e) => { clearTimeout(timer); setOpen(e.pointerType === 'mouse' || !notch.classList.contains('open')); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
+// Open once on load so visitors who never hover still see what's inside.
+timer = setTimeout(() => setOpen(true), 700);
+
+// Copy the Homebrew command; if the clipboard API is refused, select the text so ⌘C works.
+const status = document.getElementById('status');
+document.querySelectorAll('.copy').forEach((btn) => btn.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(btn.dataset.copy);
+    btn.textContent = 'Copied';
+    status.textContent = 'Homebrew command copied';
+  } catch {
+    getSelection().selectAllChildren(btn.previousElementSibling);
+    btn.textContent = 'Press ⌘C';
+  }
+  setTimeout(() => { btn.textContent = 'Copy'; }, 1600);
+}));
+
+// Click events for Vercel Web Analytics. shortcut: custom events need a Pro plan; on Hobby they are dropped and GitHub download counts are the measure.
+document.querySelectorAll('[data-track]').forEach((el) => el.addEventListener('click', () => window.va('event', { name: el.dataset.track })));
+</script>
+</body>
+</html>
