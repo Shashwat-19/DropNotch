@@ -224,6 +224,8 @@ Terms for a reader new to Swift or AppKit:
 
 ## D10. Dependencies and distribution
 
+**Revised by D41** (2026-11-11): unsigned builds ship as full releases, not pre-releases.
+
 **Date:** 2026-10-24
 **Status:** Accepted (approved by Shash)
 
@@ -1027,6 +1029,8 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - The script writes `DropNotch-<version>.dmg.sha256`; the checksum goes in the release notes and as an asset, and README tells users how to compare it (security-auditor L2: an ad-hoc DMG can't otherwise be told from a swapped one).
 - create-dmg 1.3.0 (github.com/create-dmg/create-dmg, MIT) is a build tool on the maintainer's Mac, not linked into or shipped with the app, so it has no effect on DropNotch's licence.
 
+**Revision (Shash, 2026-11-11): unsigned builds ship as full releases.** From now on each release is a full GitHub release, not a pre-release (v0.1.0 and v0.2.0 already are), replacing D10's "publish only pre-release developer builds". A full release becomes "latest", so README's Download links point at `/releases/latest` and no longer change per release, and Homebrew's default livecheck strategies see it (D50). The app is still not notarised, and the release notes, README and the Homebrew cask's caveats keep saying so.
+
 **Alternatives:** `hdiutil` with a hand-made symlink (no window layout; kept as the fallback if create-dmg breaks). The npm `create-dmg` (it signs and needs Node; rejected, no Node in this project).
 
 ---
@@ -1216,10 +1220,10 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 
 **Decision:**
 - DropNotch installs with `brew install --cask shashwat-19/tap/dropnotch`, from our own tap, [Shashwat-19/homebrew-tap](https://github.com/Shashwat-19/homebrew-tap) (MIT). The cask downloads the release DMG from GitHub, so it only works while this repository is public. The full `shashwat-19/tap/dropnotch` name adds the tap and trusts the cask in one step, so users need no `brew tap` or `brew trust` first.
-- Not in the official homebrew/cask yet. `brew audit --cask --new` fails on two of its rules: the app isn't notarised ("not signed by a distributor that meets the system Gatekeeper requirements"), and the repository is below its notability threshold (30 forks, 30 watchers or 75 stars). Neither stops installs from our tap. Revisit once DropNotch is notarised and the repository passes the threshold.
+- Not in the official homebrew/cask yet. `brew audit --cask --new` fails on two of its rules: the app isn't notarised ("not signed by a distributor that meets the system Gatekeeper requirements"), and the repository is below its notability threshold (30 forks, 30 watchers or 75 stars). Neither stops installs from our tap. Homebrew 5.0.0 also disables official casks that fail Gatekeeper checks from September 2026 ([release notes](https://brew.sh/2025/11/12/homebrew-5.0.0/)), so notarisation is a precondition, not a nicety. Revisit once DropNotch is notarised and the repository passes the threshold.
 - Bumping `version` and `sha256` in the cask is a release step (RELEASING.md step 9); the hash comes from the release's `.sha256` asset.
-- The cask's caveats give the same first-launch route as the README: Done, then System Settings › Privacy & Security › Open Anyway. Neither suggests `--no-quarantine` or removing the quarantine attribute: that skips Gatekeeper's check for every user, and `brew install --help` no longer lists the flag (Homebrew 7.0.13).
-- The cask's `livecheck` uses `:github_releases` with a block that keeps pre-releases and skips only drafts. Without the block, `:github_releases` and `:github_latest` both skip pre-releases, and RELEASING.md step 6 publishes with `--prerelease`. (v0.1.0 and v0.2.0 are currently full releases.)
+- The cask's caveats give the same first-launch route as the README: Done, then System Settings › Privacy & Security › Open Anyway. Neither suggests `--no-quarantine` or removing the quarantine attribute: that skips Gatekeeper's check for every user, and Homebrew 5.0.0 deprecated `--no-quarantine` and `--quarantine` because it "does not wish to easily provide circumvention to macOS security features" ([release notes](https://brew.sh/2025/11/12/homebrew-5.0.0/)).
+- The cask's `livecheck` uses `:github_releases` with a block that keeps pre-releases and skips only drafts. Releases are full releases (D41 revision), which the default strategies already see; the block is there in case we ever publish a pre-release, which `:github_releases` and `:github_latest` both skip by default.
 - `zap` removes `~/Library/Application Support/DropNotch` (`PrivateFolder.applicationSupport`) and `~/Library/Preferences/com.shashwat.DropNotch.plist`, the paths the README's uninstall note gives.
 
-**Alternatives:** submitting to homebrew/cask now (fails the audit above); DMG only (no one-line install or `brew upgrade`); `--no-quarantine` in the install line (bypasses Gatekeeper; no longer in Homebrew).
+**Alternatives:** submitting to homebrew/cask now (fails the audit above); DMG only (no one-line install or `brew upgrade`); `--no-quarantine` in the install line (bypasses Gatekeeper; deprecated in Homebrew 5.0.0).

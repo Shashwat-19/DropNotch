@@ -4,12 +4,12 @@ Turns the MacBook notch into a productivity surface.
 
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue)](LICENSE)
 [![Platform: macOS 14+](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey)](#requirements)
-[![Release: v0.2.0 pre-release](https://img.shields.io/badge/release-v0.2.0%20pre--release-orange)](https://github.com/Shashwat-19/DropNotch/releases/tag/v0.2.0)
+[![Latest release](https://img.shields.io/github/v/release/Shashwat-19/DropNotch)](https://github.com/Shashwat-19/DropNotch/releases/latest)
 [![Swift 5](https://img.shields.io/badge/swift-5-F05138)](project.yml)
 
-[![Download DropNotch 0.2.0](https://img.shields.io/badge/Download-DropNotch%200.2.0-2ea44f)](https://github.com/Shashwat-19/DropNotch/releases/tag/v0.2.0)
+[![Download DropNotch](https://img.shields.io/badge/Download-DropNotch-2ea44f)](https://github.com/Shashwat-19/DropNotch/releases/latest)
 
-Pre-release: not yet notarised. Follow the first-launch steps under [Install](#install).
+Not yet notarised. Follow the first-launch steps under [Install](#install).
 
 <!-- TODO(screenshots): no images exist in docs/ or assets/ yet. Add a screenshot or GIF of the open notch here
      (suggested: docs/images/notch-open.png), and one of the DMG window, once they are captured. -->
@@ -40,7 +40,7 @@ brew install --cask shashwat-19/tap/dropnotch
 
 Then follow step 3 below for the first launch. Or install the DMG by hand:
 
-1. Download `DropNotch-0.2.0.dmg` and `DropNotch-0.2.0.dmg.sha256` from the [release page](https://github.com/Shashwat-19/DropNotch/releases/tag/v0.2.0). If you are updating, quit DropNotch from its menu-bar item first.
+1. Download `DropNotch-0.2.0.dmg` and `DropNotch-0.2.0.dmg.sha256` from the [latest release](https://github.com/Shashwat-19/DropNotch/releases/latest). If you are updating, quit DropNotch from its menu-bar item first.
 2. Open the DMG and drag **DropNotch** onto **Applications** (replace the old copy if asked).
 3. Open DropNotch. It is not notarised, so macOS blocks the first launch. On macOS 27.0.1 the dialog is titled "“DropNotch.app” Not Opened" and says "Apple could not verify “DropNotch.app” is free of malware that may harm your Mac or compromise your privacy." Its buttons are **Done** and **Move to Bin** (**Move to Trash** in US English). Click **Done**. Then, as [Apple documents](https://support.apple.com/en-us/102445): open System Settings, click Privacy & Security, scroll down and click **Open Anyway**. When the warning reappears, click **Open**. macOS saves this as an exception. Wording may differ on other macOS versions.
 4. Click a playback control on the Home tab's Now Playing card. macOS asks whether DropNotch may control Music or Spotify; allow it. Without that, the title and artist show but the controls, artwork and seeking don't. To change your answer later, use System Settings › Privacy & Security › Automation.
