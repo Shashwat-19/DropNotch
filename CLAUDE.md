@@ -105,3 +105,8 @@ See TASK.md.
 - New logic has tests; anything only verifiable on a real notched Mac is listed for manual checking
 - code-reviewer verdict is Approve, or Approve with changes and the changes are made
 - docs/DECISIONS.md, README and docs/ARCHITECTURE.md updated if behaviour, setup or structure changed
+
+<!-- claude-reflect: learned rules (saved from the band; edit freely) -->
+## Learned rules
+- Before planning new features, search maintained Swift packages under MIT, BSD or Apache-2.0; report licence, maintenance, size, saved work. Never GPL; user approves each package.
+<!-- end claude-reflect -->
