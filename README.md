@@ -1,116 +1,339 @@
+<div align="center">
+
 # DropNotch
 
-Turns the MacBook notch into a productivity surface.
+**Turns the MacBook notch into a productivity surface.**
 
-[![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue)](LICENSE)
-[![Platform: macOS 14+](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey)](#requirements)
-[![Latest release](https://img.shields.io/github/v/release/Shashwat-19/DropNotch)](https://github.com/Shashwat-19/DropNotch/releases/latest)
-[![Swift 5](https://img.shields.io/badge/swift-5-F05138)](project.yml)
+Music, calendar, files, clipboard, notes and a terminal, one hover away.
 
-[![Download DropNotch](https://img.shields.io/badge/Download-DropNotch-2ea44f)](https://github.com/Shashwat-19/DropNotch/releases/latest)
+[![Release](https://img.shields.io/github/v/release/Shashwat-19/DropNotch?style=flat-square&label=release)](https://github.com/Shashwat-19/DropNotch/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Shashwat-19/DropNotch/total?style=flat-square&label=downloads)](https://github.com/Shashwat-19/DropNotch/releases)
+[![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue?style=flat-square)](LICENSE)
+[![Platform](https://img.shields.io/badge/macOS-14%2B-black?style=flat-square&logo=apple)](#requirements)
+[![Swift](https://img.shields.io/badge/Swift-SwiftUI%20%2B%20AppKit-F05138?style=flat-square&logo=swift&logoColor=white)](#architecture)
+[![Homebrew tap](https://img.shields.io/badge/brew-shashwat--19%2Ftap-FBB040?style=flat-square&logo=homebrew&logoColor=white)](https://github.com/Shashwat-19/homebrew-tap)
+[![Stars](https://img.shields.io/github/stars/Shashwat-19/DropNotch?style=flat-square)](https://github.com/Shashwat-19/DropNotch/stargazers)
+[![Issues](https://img.shields.io/github/issues/Shashwat-19/DropNotch?style=flat-square)](https://github.com/Shashwat-19/DropNotch/issues)
+[![Last commit](https://img.shields.io/github/last-commit/Shashwat-19/DropNotch?style=flat-square)](https://github.com/Shashwat-19/DropNotch/commits/main)
 
-Not yet notarised. Follow the first-launch steps under [Install](#install).
+[**Download**](https://github.com/Shashwat-19/DropNotch/releases/latest) ·
+[Install](#install) ·
+[Features](#features) ·
+[Privacy](#privacy-and-permissions) ·
+[Architecture](#architecture) ·
+[Roadmap](#roadmap) ·
+[Contributing](#contributing)
 
-<!-- TODO(screenshots): no images exist in docs/ or assets/ yet. Add a screenshot or GIF of the open notch here
-     (suggested: docs/images/notch-open.png), and one of the DMG window, once they are captured. -->
+</div>
 
-DropNotch is an open-source macOS utility. The notch opens when you hover over it, or when you press ⌃⌥N, and stays minimal otherwise. Moving the pointer away closes it: after 0.5 s while it has keyboard focus (the terminal, a note or Clipboard search), otherwise after 0.1 s, and never while you are dragging with the button held.
+> Not yet notarised. macOS shows a "Not Opened" warning on first launch; the [install steps](#install) take about 30 seconds.
+
+<!-- TODO: add docs/images/home.png (Home tab, Large size) and docs/images/demo.gif (hover, music, terminal). Do not link files that do not exist. -->
+
+---
+
+## Contents
+
+- [Features](#features)
+- [Install](#install)
+- [Usage](#usage)
+- [Privacy and permissions](#privacy-and-permissions)
+- [Architecture](#architecture)
+- [Requirements](#requirements)
+- [Build from source](#build-from-source)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [Acknowledgements](#acknowledgements)
+- [Licence](#licence)
+
+---
 
 ## Features
 
-- **Home tab,** the first tab: cards side by side, chosen and ordered in Settings › Modules.
-  - **Now Playing** for Apple Music and Spotify: title, artist, artwork, a progress bar you can seek with the elapsed and total time under it, and play/pause, next and previous. While music plays, the closed notch widens to show the artwork and small animated bars (decorative).
-  - **Calendar:** today's all-day events and the events still to come, then tomorrow's first event once today's are over. A click opens Calendar. Until you give access, the card shows Allow Calendar (see [Privacy and permissions](#privacy-and-permissions)).
-  - **Battery,** off until you turn it on, and only on Macs with a battery: the charge in a ring, Charging or On power, and a warning colour below 20 %.
-- **Notes:** one plain-text note, saved automatically about a second after you stop typing.
-- **File tray:** drop files on the notch, drag them out again, or send them with AirDrop or Share. Most dropped files stay where they are and the tray keeps a link to them; items with no file behind them, such as an image dragged from Photos or Mail, are copied into the tray.
-- **Clipboard history:** off until you turn it on. Keeps the last 25 text, link and image items, with search; click an item or press Return to copy it back.
-- **Terminal:** off until you turn it on. Your login shell in the notch, like Terminal.app. The shell starts only when you open it on purpose (a click on the tab, its ⌘ number, ⌃⌥N on the Terminal tab, or Start Session), never when the notch opens on hover. It keeps running while the notch is closed and ends with End Session. The terminal takes your keys after a click in it, a click on its tab, its ⌘ number or ⌃⌥N. Settings › Terminal › Type as soon as the notch opens also gives it the keys on hover (off by default, as a stray Return can run a command); even then a hover doesn't start the shell. Font size and scrollback are in Settings › Terminal.
-- **Hotkey:** ⌃⌥N opens and closes the notch with keyboard focus, and can be changed in Settings. While the notch has keyboard focus, ⌘1, ⌘2… switch tabs and ⌘, opens Settings. On Home's Now Playing card, in Tray and in Clipboard, Tab moves between controls and Space or Return presses them. The arrow keys also step through Now Playing's controls and the tray's files and buttons (only Tab reaches Clear All), and ↑/↓ choose a clipboard item.
-- **Notch size:** Standard (the default), or Large in Settings › General: 40 pt taller and 80 pt wider, with larger text, artwork and controls on every tab (the terminal keeps its own font size and gets more rows and columns).
-- **Customisable modules:** in Settings, turn tabs and Home cards on or off, reorder them, choose what fills each side of the closed notch, set launch at login, and choose the built-in or main display.
+| Tab | What it does |
+|---|---|
+| **Home** | Dashboard of cards: Now Playing, Calendar, and an optional Battery ring |
+| **Notes** | Quick notes without leaving what you are doing |
+| **Tray** | Drop files in, drag them out, send them with AirDrop |
+| **Clipboard** | History of recent text, links and images; click to copy back. Off until you turn it on |
+| **Terminal** | A real shell inside the notch. Off until you turn it on |
+
+**Everywhere**
+
+- Now Playing for **Music** and **Spotify**: play, pause, skip, seek, artwork, track times
+- Calendar card with the next events, read from your calendars (no events are changed)
+- Global hotkey **⌃⌥N** opens the notch with the keyboard ready
+- **Standard** and **Large** notch sizes (Settings › General)
+- Turn modules on or off and reorder them in Settings › Modules
+- Full keyboard access and VoiceOver labels
+
+### Notch sizes
+
+| Size | Open notch (five or more tabs) | Artwork | Terminal grid |
+|---|---|---|---|
+| Standard | 596 × 190 pt | 89 pt | 80 × 11 |
+| Large | 676 × 230 pt | 124 pt | 92 × 14 |
+
+With fewer than five tabs on, the notch is 60 pt narrower. Sizes are measured on a MacBook Air with a 208 pt notch.
+
+<!-- TODO: screenshots per tab once docs/images exists. -->
+
+---
 
 ## Install
 
-With [Homebrew](https://brew.sh):
+### Homebrew
 
-```sh
+```bash
 brew install --cask shashwat-19/tap/dropnotch
 ```
 
-Then follow step 3 below for the first launch. Or install the DMG by hand:
+This adds the tap and installs in one step. After the tap is added, `brew upgrade` and `brew uninstall --cask dropnotch` work with the short name.
 
-1. Download `DropNotch-0.2.0.dmg` and `DropNotch-0.2.0.dmg.sha256` from the [latest release](https://github.com/Shashwat-19/DropNotch/releases/latest). If you are updating, quit DropNotch from its menu-bar item first.
-2. Open the DMG and drag **DropNotch** onto **Applications** (replace the old copy if asked).
-3. Open DropNotch. It is not notarised, so macOS blocks the first launch. On macOS 27.0.1 the dialog is titled "“DropNotch.app” Not Opened" and says "Apple could not verify “DropNotch.app” is free of malware that may harm your Mac or compromise your privacy." Its buttons are **Done** and **Move to Bin** (**Move to Trash** in US English). Click **Done**. Then, as [Apple documents](https://support.apple.com/en-us/102445): open System Settings, click Privacy & Security, scroll down and click **Open Anyway**. When the warning reappears, click **Open**. macOS saves this as an exception. Wording may differ on other macOS versions.
-4. Click a playback control on the Home tab's Now Playing card. macOS asks whether DropNotch may control Music or Spotify; allow it. Without that, the title and artist show but the controls, artwork and seeking don't. To change your answer later, use System Settings › Privacy & Security › Automation.
+### DMG
 
-Updating from 0.1.0: this build isn't signed with a Developer ID, so macOS may treat it as a new app and ask again for Music or Spotify control. If the controls stop working, turn DropNotch back on in System Settings › Privacy & Security › Automation.
+1. Download `DropNotch-<version>.dmg` from the [latest release](https://github.com/Shashwat-19/DropNotch/releases/latest).
+2. Open it and drag **DropNotch** into **Applications**.
+3. Open DropNotch. macOS says **"DropNotch.app" Not Opened**: click **Done**, not Move to Bin.
+4. Open **System Settings › Privacy & Security**, scroll to **Security**, click **Open Anyway**, then **Open** when the warning appears.
+5. Allow **Automation** for Music or Spotify the first time you use a playback control, and **Calendars** when you turn the Calendar card on.
 
-DropNotch has no Dock icon. Look for it in the menu bar, hover over the notch, or press ⌃⌥N. To uninstall, quit it from the menu-bar item and move it from Applications to the Bin (Trash in US English). Its data is in `~/Library/Application Support/DropNotch` and its settings in `~/Library/Preferences/com.shashwat.DropNotch.plist`; remove those too. Its privacy permissions stay in System Settings until you reset them with `tccutil reset All com.shashwat.DropNotch`, and commands you typed in the Terminal tab stay in your shell's history.
+Verify the download (the `.sha256` file is on the same release page):
 
-### Verify the download
-
-Keep both downloaded files in one folder and run:
-
-```sh
-cd ~/Downloads && shasum -a 256 -c DropNotch-0.2.0.dmg.sha256
+```bash
+shasum -a 256 -c DropNotch-<version>.dmg.sha256
 ```
 
-It must print `DropNotch-0.2.0.dmg: OK`. While releases are unsigned, this is the only check that the file is the one published.
+```mermaid
+flowchart TD
+    A[Download DMG or brew install] --> B[Drag to Applications]
+    B --> C[First launch]
+    C --> D{macOS says<br/>Not Opened?}
+    D -- Yes --> E[Click Done]
+    E --> F[System Settings › Privacy & Security › Open Anyway]
+    F --> G[Open]
+    D -- No --> G
+    G --> H[Notch appears]
+    H --> I[Click a playback control]
+    I --> J[Allow Automation for Music or Spotify]
+```
 
-## Requirements
+The warning exists because the build is not yet notarised by Apple. A Developer ID build is planned for 1.0.
 
-- macOS 14.0 or later.
-- A MacBook with a notch is recommended. On a display without one, DropNotch draws a pill at the top of the screen instead.
-- Tested only on Apple silicon. The build also contains an Intel (x86_64) slice, which has not been tested.
-- Measured for 0.1.0 on one Mac with the Release build, notch closed and clipboard history on, over 60 seconds: 0.0 % CPU, a 21 MB memory footprint and no network traffic. Not measured again for 0.2.0, and other states, such as the notch open while music plays or an idle terminal session, have not been measured yet.
+---
+
+## Usage
+
+| Action | How |
+|---|---|
+| Open the notch | Hover the notch, or press **⌃⌥N** |
+| Close | Move the pointer away, press **Esc**, or click another app |
+| Switch tab | Click its icon, or press **⌘1**, **⌘2** and so on |
+| Open Settings | The gear in the top row, or **⌘,** |
+| Type in the terminal | Click the Terminal tab (keys go to the shell straight away), or open with **⌃⌥N** |
+
+**Closing delays.** After a plain hover the notch closes about 0.1 s after the pointer leaves. If it has keyboard focus (terminal, notes, clipboard search) it waits 0.5 s, so a brief drift does not send your next keystrokes to another app.
+
+**Terminal.** Hovering never starts a shell. The session keeps running when the notch closes. **End Session**, turning the tab off or quitting DropNotch stops it. An optional setting, *Type as soon as the notch opens*, gives an already-running shell your keys on hover.
+
+---
 
 ## Privacy and permissions
 
-- No analytics or telemetry. The only network request DropNotch itself makes is Spotify's cover image over HTTPS from `i.scdn.co`, made when a new Spotify track starts. Turn it off in Settings › Privacy. Music's artwork needs no network, and calendar events never leave the Mac. (The GitHub link in Settings › About opens your browser.) Commands you run in the Terminal tab can use the network like any other terminal.
-- Clipboard history is off until you turn it on in its tab. It skips items that password managers and other apps mark as concealed or transient. It stays in memory, unless you turn on Keep history after quitting in Settings › Privacy, which saves text and links (not images) to `~/Library/Application Support/DropNotch/clipboard.json`. Logs never contain clipboard contents, file names, track details, event titles or anything typed or shown in the terminal. The open Clipboard tab shows your history to anyone who can see your screen.
-- DropNotch's data folder, `~/Library/Application Support/DropNotch`, can be opened only by your account, and the tray list and note can be read only by you.
-- **Terminal:** the first time you turn it on, Settings shows what it can use and asks you to confirm; Cancel leaves it off. Settings › Terminal keeps showing the same text. Commands you run in the Terminal tab use DropNotch's permissions, as they would in the terminal in VS Code or iTerm: Calendars (full access, which can change events), the Desktop, Documents and Downloads folders, and controlling other apps, wherever you've allowed them. If a command needs something else, macOS asks in DropNotch's name, and what you allow stays allowed for DropNotch. Your shell's setup files and the tools they run get the same permissions every time a session starts, and jobs you start with `nohup` or `disown` keep running, with those permissions, after the session ends and after DropNotch quits. To stop this, turn Terminal off in Settings › Modules and end any jobs you left running. Programs in the terminal can't read or change your clipboard; ⌘C and ⌘V work as usual. While the terminal has your keys, secure keyboard entry is on, so other apps can't read what you type; text expanders and other tools that watch the keyboard pause until you click elsewhere. DropNotch never records what you type or what the terminal shows; your shell keeps its own history (for zsh, `~/.zsh_history`). The open tab shows its output to anyone who can see your screen. If you keep typing after the pointer has been off the notch for more than 0.5 s, the notch closes and your typing goes to the app in front. A paste of several lines into a program that hasn't asked for bracketed paste runs each line, as in other terminals.
-- The tray keeps a link to each file it doesn't copy, and the link includes the path. Removing an item or Clear All deletes only the tray's own copies, never your originals.
-- DropNotch is **not sandboxed** ([D4](docs/DECISIONS.md)). It runs with the hardened runtime and two entitlements: `com.apple.security.automation.apple-events`, which lets it send commands to Music and Spotify, and `com.apple.security.personal-information.calendars`, which lets the Calendar card read your upcoming events: today's, and tomorrow's first one ([D44](docs/DECISIONS.md)).
-- The Calendar card shows every calendar, including ones you hid in Calendar. The open card shows event titles to anyone who can see your screen; turn off Show event titles in Settings › Privacy before sharing it.
-- macOS asks for a permission only when you first use the feature that needs it, never at launch:
-  - Automation (Music, Spotify): the first time you use a playback control or the progress bar. A command in the Terminal tab that controls another app causes its own Automation prompt.
-  - Calendars: when you click Allow Calendar on the Home tab's Calendar card, or turn the card on in Settings. macOS calls it full access; the Calendar card only reads, and Settings › Privacy can hide event titles, but commands in the Terminal tab can also add, change or delete events.
-  - Desktop, Documents or Downloads: when the tray first accesses a file in one of them, or a command in the Terminal tab does.
-  - Paste from Other Apps: if you turn on clipboard history. Under Always Allow it reads automatically; otherwise the tab offers Add Clipboard and macOS asks when you click it.
-  - Login Items: if you turn on Launch at login.
-  - Local Network: only if a command in the Terminal tab looks for devices on your network. DropNotch itself never uses your local network.
+DropNotch is not sandboxed. It has two entitlements and asks for permissions only when you use the feature that needs them.
 
-  The Calendars, Desktop, Documents, Downloads and Automation prompts mention the Terminal tab, because a command run there may be the one asking. Not every prompt has been checked on a device yet.
+| Permission | Used for | When it is asked |
+|---|---|---|
+| Automation (Apple Events) | Reading and controlling Music and Spotify | First click on a playback control |
+| Calendars (full access) | Reading today's events for the Calendar card | When you press **Allow** on the card or turn it on in Settings |
+| Files and folders | Keeping a link to files you drop in the Tray | When you drop files |
+
+- **Network:** none while idle. Spotify artwork is fetched over HTTPS from `i.scdn.co` only.
+- **No analytics, no accounts, no telemetry.**
+- **Clipboard history** is off until you turn it on. Concealed types such as password-manager entries are skipped.
+- **Calendar:** the card never adds, changes or deletes events. Event titles can be hidden (Settings › Privacy › Show event titles). Titles are never logged.
+- **Terminal runs with DropNotch's permissions.** Commands you run there, and your shell's setup files, can use everything DropNotch is allowed to use, without asking again, as in the terminals of VS Code or iTerm. Jobs started with `nohup` or `disown` keep running after you end the session. Turn the tab off in Settings › Modules to stop all of this.
+- Programs inside the terminal cannot read or change your clipboard.
+
+```mermaid
+flowchart LR
+    U([You]) -->|click Allow / use control| D[DropNotch]
+    D -->|Apple Events| M[Music · Spotify]
+    D -->|EventKit read| C[Calendar data]
+    D -.->|HTTPS, artwork only| S[i.scdn.co]
+    D -->|PTY| T[Your login shell]
+    T -. inherits DropNotch's permissions .-> D
+```
+
+---
+
+## Architecture
+
+DropNotch is a Swift app (SwiftUI inside an AppKit panel). Every feature is a **module** that the registry enables, orders and shows as a tab or a Home card.
+
+```mermaid
+flowchart TB
+    subgraph Window["Notch window (NSPanel, non-activating, all Spaces)"]
+        P[Fixed-size canvas in clipped container]
+        H[Hover state machine]
+    end
+    subgraph Core
+        R[Module registry<br/>enabled flags · order]
+        S[Settings]
+        K[Hotkey ⌃⌥N]
+    end
+    subgraph Modules
+        NP[Now Playing]
+        CAL[Calendar]
+        BAT[Battery]
+        NOTE[Notes]
+        TRAY[Tray]
+        CLIP[Clipboard]
+        TERM[Terminal]
+    end
+    subgraph Services
+        PN[Player notifications<br/>+ Apple Events]
+        EK[EventKit]
+        PS[Power sources]
+        PB[Pasteboard poll]
+        PTY[PTY + login shell]
+    end
+    H --> P
+    K --> H
+    S --> R
+    R --> Modules
+    P --> Modules
+    NP --> PN
+    CAL --> EK
+    BAT --> PS
+    CLIP --> PB
+    TERM --> PTY
+```
+
+### Hover state machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> Closed
+    Closed --> Peek: pointer enters notch area
+    Peek --> Open: open delay (0.12 s) or click
+    Peek --> Closed: pointer leaves
+    Open --> Closed: pointer leaves<br/>(0.1 s, or 0.5 s with keyboard focus)
+    Open --> Closed: Esc · click in another app
+    Open --> Open: pointer back in time · drag in progress
+    Closed --> Open: ⌃⌥N
+```
+
+### Now Playing data flow
+
+```mermaid
+sequenceDiagram
+    participant Player as Music / Spotify
+    participant App as DropNotch
+    participant Card as Now Playing card
+    Player-->>App: playback notification (track, state)
+    App->>Player: Apple Event: position, artwork (running app only)
+    Player-->>App: reply
+    App->>Card: update title, artist, bar, artwork
+    Card->>App: play / pause / skip / seek
+    App->>Player: Apple Event command
+```
+
+Key decisions are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md); the full design is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+### Project layout
+
+```text
+DropNotch/            app source (App, Modules, Notch, Services, Settings, Support)
+DropNotchTests/       unit tests
+docs/                 ARCHITECTURE, DECISIONS, FEATURE_MATRIX, RISKS, RELEASING, mock-ups
+scripts/              make-dmg.sh, app icon and DMG background generators
+project.yml           XcodeGen spec (source of truth; the .xcodeproj is generated)
+```
+
+---
+
+## Requirements
+
+- macOS 14 (Sonoma) or later
+- A MacBook with a notch is the target; other Macs get a compact pill at the top of the screen
+- Tested on Apple silicon only. The build is universal, but the Intel slice has not been run
+
+---
 
 ## Build from source
 
-You need Xcode 27 or later and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`). `DropNotch.xcodeproj` is generated from `project.yml` and is not committed.
+You need Xcode, [XcodeGen](https://github.com/yonaskolb/XcodeGen) and Homebrew.
 
-```sh
+```bash
+git clone https://github.com/Shashwat-19/DropNotch.git
+cd DropNotch
+brew install xcodegen
 xcodegen generate
-xcodebuild -scheme DropNotch -destination 'platform=macOS' -skipPackagePluginValidation build test
+xcodebuild -project DropNotch.xcodeproj -scheme DropNotch -configuration Release \
+  -derivedDataPath build/DerivedData -skipPackagePluginValidation build
+open build/DerivedData/Build/Products/Release/DropNotch.app
 ```
 
-Run `xcodegen generate` again after adding or removing files. The first build fetches the KeyboardShortcuts and SwiftTerm packages. SwiftTerm runs a small build plugin, so `xcodebuild` needs `-skipPackagePluginValidation` and Xcode asks you to "Trust & Enable" it once. Local builds are ad-hoc signed. To make the release DMG, run `brew install create-dmg` once, then `scripts/make-dmg.sh`. It first checks that every package resolved to the commit listed in `scripts/Package.resolved.expected`, builds only those versions, and writes `build/DropNotch-<version>.dmg` and its `.sha256` file.
+Run the tests:
+
+```bash
+xcodebuild test -project DropNotch.xcodeproj -scheme DropNotch \
+  -destination 'platform=macOS' -skipPackagePluginValidation
+```
+
+`-skipPackagePluginValidation` is needed because SwiftTerm runs a build plugin. In Xcode, click **Trust & Enable** once.
+
+Never edit `DropNotch.xcodeproj` by hand; change `project.yml` and run `xcodegen generate`. Debug builds do not use the hardened runtime, so test entitlement changes on a Release build. To make a DMG, see [`docs/RELEASING.md`](docs/RELEASING.md).
+
+---
 
 ## Roadmap
 
-0.2.0 added the Home tab with Now Playing, Calendar and Battery cards, the Terminal tab and the Large notch size. Still planned, with no version set: Developer ID signing and notarisation (they need an Apple Developer account), and automatic updates, which need signing first. Until then, check [GitHub Releases](https://github.com/Shashwat-19/DropNotch/releases) for new versions. Other ideas and their status are in [docs/FEATURE_MATRIX.md](docs/FEATURE_MATRIX.md).
+```mermaid
+timeline
+    title DropNotch releases
+    v0.1.0 : Now Playing (Music, Spotify) : Notes : Tray + AirDrop : Clipboard history : Hotkey
+    v0.2.0 : Home dashboard : Calendar and Battery cards : Embedded terminal : Standard and Large sizes
+    v0.3 (planned) : Stats tab (CPU, memory, GPU) : Timer : Live lyrics (opt-in)
+    1.0 (planned) : Developer ID signing and notarisation : Sparkle updates : Official Homebrew cask
+```
+
+| Status | Item |
+|---|---|
+| Done | Home, Now Playing, Calendar, Battery, Notes, Tray, Clipboard, Terminal, sizes |
+| Planned | Stats, Timer, live lyrics |
+| Planned | Signed and notarised builds; automatic updates |
+| Under evaluation | AirPods and Bluetooth headphone battery (no stable public API found) |
+
+Dates are not promised. Open an issue to vote or suggest.
+
+---
 
 ## Contributing
 
-Commit messages follow Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`), one feature per branch named `feat/<name>`. Decisions are recorded in [docs/DECISIONS.md](docs/DECISIONS.md), and the structure is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Do not copy code, assets or UI text from GPL-licensed apps (see the clean-room statement below). Maintainers: [docs/RELEASING.md](docs/RELEASING.md).
+Issues and pull requests are welcome.
 
-## Licence
+1. Open an issue first for anything larger than a bug fix.
+2. Branch from `main` (`feat/...` or `fix/...`).
+3. Keep changes small, add tests, and make sure `xcodebuild test` passes.
+4. Read [`CLAUDE.md`](CLAUDE.md) for the project rules: no private APIs, no new entitlements without a decision entry in `docs/DECISIONS.md`.
 
-DropNotch is released under the MIT licence. See [LICENSE](LICENSE).
+**Clean-room rule.** DropNotch is original work. Do not copy code from other notch apps, and do not paste code from projects with an incompatible licence. Features inspired by other apps are written from behaviour descriptions only.
+
+Report security problems privately through GitHub's *Report a vulnerability* button on the Security tab, not in a public issue.
+
+---
 
 ## Acknowledgements
 
-- [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) 3.1.0 by Sindre Sorhus (MIT) powers the hotkey recorder.
-- [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm) 1.99.3 by Miguel de Icaza and contributors (MIT) powers the Terminal tab.
-- Both licences are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-- Clean-room statement: DropNotch's code is original. The GPL-3.0 apps Atoll and Boring Notch were read only to learn which APIs and techniques notch apps use, and no code, assets or UI text was copied from them. Canopy is closed source; only its public web pages were used. Technique notes written in our own words are in [docs/research/](docs/research/).
+- [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) (MIT): global hotkey
+- [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm) (MIT): terminal view
+
+Full notices are in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+
+---
+
+## Licence
+
+[MIT](LICENSE). Copyright (c) 2026 Shashwat.
