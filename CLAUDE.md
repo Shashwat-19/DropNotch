@@ -27,6 +27,7 @@ DropNotch/           # app sources (layout in docs/ARCHITECTURE.md §2)
 DropNotchTests/      # unit tests
 docs/                # FEATURE_MATRIX, ARCHITECTURE, RISKS, DECISIONS, RELEASING, research/
 scripts/             # app-icon generator, make-dmg.sh release DMG and its dmg-background (run by hand; not in the app target)
+website/             # landing page (static index.html on Vercel), launch plan, download counter (D51)
 reference/           # cloned reference apps: gitignored, never built, never copied from
 .claude/agents/      # sub-agents for this repo
 TASK.md              # the current task; replaced as work moves on
