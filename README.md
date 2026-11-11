@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/images/banner.svg" alt="DropNotch: the open notch showing a Now Playing card and a Calendar card (illustration)" width="100%">
+
 # DropNotch
 
 **Turns the MacBook notch into a productivity surface.**

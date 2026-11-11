@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="t d">
+  <title id="t">DropNotch</title>
+  <desc id="d">Illustration of the DropNotch open notch showing a Now Playing card, a Calendar card and a Battery ring.</desc>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="0%" r="95%">
+      <stop offset="0" stop-color="#1d2433"/>
+      <stop offset="0.55" stop-color="#0e1118"/>
+      <stop offset="1" stop-color="#07080c"/>
+    </radialGradient>
+    <linearGradient id="art" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff9a4a"/>
+      <stop offset="1" stop-color="#d63a7a"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff9a4a"/>
+      <stop offset="1" stop-color="#ff5c8a"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#050506"/>
+      <stop offset="1" stop-color="#0c0c0f"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="160%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+    <style>
+      text { font-family: -apple-system, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif; }
+    </style>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#bg)"/>
+
+  <!-- soft glow under the panel -->
+  <ellipse cx="640" cy="215" rx="330" ry="46" fill="#ff7a59" opacity="0.22" filter="url(#glow)"/>
+
+  <!-- menu bar strip -->
+  <rect x="0" y="0" width="1280" height="32" fill="#ffffff" opacity="0.05"/>
+  <rect x="26" y="11" width="54" height="10" rx="5" fill="#ffffff" opacity="0.18"/>
+  <rect x="94" y="11" width="38" height="10" rx="5" fill="#ffffff" opacity="0.12"/>
+  <rect x="146" y="11" width="44" height="10" rx="5" fill="#ffffff" opacity="0.12"/>
+  <rect x="1130" y="11" width="30" height="10" rx="5" fill="#ffffff" opacity="0.14"/>
+  <rect x="1174" y="11" width="64" height="10" rx="5" fill="#ffffff" opacity="0.18"/>
+
+  <!-- open notch panel 676 x 230 -->
+  <path d="M302 0 H978 V196 Q978 230 944 230 H336 Q302 230 302 196 Z" fill="url(#panel)" stroke="#ffffff" stroke-opacity="0.08"/>
+  <!-- camera housing -->
+  <rect x="536" y="0" width="208" height="32" rx="0" fill="#000"/>
+  <circle cx="640" cy="14" r="4" fill="#15171c"/>
+
+  <!-- top row: tabs left, gear right -->
+  <g fill="none" stroke="#ffffff" stroke-opacity="0.7" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M352 20 l9 -8 l9 8 v9 h-18 z"/>
+    <rect x="392" y="11" width="16" height="18" rx="3" opacity="0.55"/>
+    <path d="M432 22 h18 M432 17 h18 M434 27 h14" opacity="0.55"/>
+    <rect x="474" y="12" width="14" height="17" rx="3" opacity="0.55"/>
+    <rect x="514" y="12" width="16" height="16" rx="3" opacity="0.55"/>
+    <circle cx="940" cy="20" r="8" opacity="0.55"/>
+  </g>
+  <rect x="340" y="6" width="32" height="28" rx="9" fill="#ffffff" opacity="0.08"/>
+
+  <!-- Now Playing card -->
+  <rect x="326" y="48" width="400" height="158" rx="20" fill="#16171b"/>
+  <rect x="344" y="66" width="122" height="122" rx="14" fill="url(#art)"/>
+  <circle cx="405" cy="127" r="26" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="3"/>
+  <circle cx="405" cy="127" r="7" fill="#ffffff" opacity="0.8"/>
+  <text x="486" y="92" font-size="19" font-weight="700" fill="#ffffff">Evening Drive</text>
+  <text x="486" y="114" font-size="14" fill="#ffffff" opacity="0.55">Example Artist</text>
+  <rect x="486" y="132" width="216" height="5" rx="2.5" fill="#ffffff" opacity="0.18"/>
+  <rect x="486" y="132" width="118" height="5" rx="2.5" fill="url(#accent)"/>
+  <text x="486" y="154" font-size="11" fill="#ffffff" opacity="0.5">1:42</text>
+  <text x="702" y="154" font-size="11" fill="#ffffff" opacity="0.5" text-anchor="end">3:08</text>
+  <g fill="#ffffff">
+    <path d="M520 172 l14 -9 v18 z M520 163 v18" opacity="0.9"/>
+    <rect x="583" y="163" width="5" height="18" rx="1.5"/>
+    <rect x="593" y="163" width="5" height="18" rx="1.5"/>
+    <path d="M648 163 l14 9 l-14 9 z" opacity="0.9"/>
+  </g>
+
+  <!-- Calendar card -->
+  <rect x="734" y="48" width="220" height="158" rx="20" fill="#16171b"/>
+  <text x="752" y="72" font-size="12" font-weight="700" fill="#ff5c5c" letter-spacing="1.2">WEDNESDAY</text>
+  <text x="752" y="118" font-size="46" font-weight="700" fill="#ffffff">11</text>
+  <rect x="752" y="136" width="3" height="20" rx="1.5" fill="#4aa3ff"/>
+  <text x="764" y="143" font-size="11" fill="#ffffff" opacity="0.55">10:30</text>
+  <text x="764" y="155" font-size="13" font-weight="600" fill="#ffffff">Stand-up</text>
+  <rect x="752" y="166" width="3" height="20" rx="1.5" fill="#43d17a"/>
+  <text x="764" y="173" font-size="11" fill="#ffffff" opacity="0.55">14:00</text>
+  <text x="764" y="185" font-size="13" font-weight="600" fill="#ffffff">Design review</text>
+
+  <!-- title block -->
+  <text x="640" y="352" font-size="92" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="-2">DropNotch</text>
+  <text x="640" y="410" font-size="30" fill="#ffffff" opacity="0.7" text-anchor="middle">Turns the MacBook notch into a productivity surface.</text>
+
+  <!-- feature pills -->
+  <g font-size="17" font-weight="600" text-anchor="middle" fill="#ffffff">
+    <rect x="228" y="458" width="132" height="40" rx="20" fill="#ffffff" opacity="0.08"/>
+    <text x="294" y="484">Now Playing</text>
+    <rect x="372" y="458" width="112" height="40" rx="20" fill="#ffffff" opacity="0.08"/>
+    <text x="428" y="484">Calendar</text>
+    <rect x="496" y="458" width="146" height="40" rx="20" fill="#ffffff" opacity="0.08"/>
+    <text x="569" y="484">Tray + AirDrop</text>
+    <rect x="654" y="458" width="112" height="40" rx="20" fill="#ffffff" opacity="0.08"/>
+    <text x="710" y="484">Clipboard</text>
+    <rect x="778" y="458" width="90" height="40" rx="20" fill="#ffffff" opacity="0.08"/>
+    <text x="823" y="484">Notes</text>
+    <rect x="880" y="458" width="104" height="40" rx="20" fill="#ffffff" opacity="0.08"/>
+    <text x="932" y="484">Terminal</text>
+  </g>
+  <text x="640" y="566" font-size="18" fill="url(#accent)" text-anchor="middle" font-weight="700" letter-spacing="3">NATIVE macOS  ·  SWIFT  ·  OPEN SOURCE  ·  MIT</text>
+</svg>
