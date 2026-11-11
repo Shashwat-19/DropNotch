@@ -32,6 +32,14 @@ DropNotch is an open-source macOS utility. The notch opens when you hover over i
 
 ## Install
 
+With [Homebrew](https://brew.sh):
+
+```sh
+brew install --cask shashwat-19/tap/dropnotch
+```
+
+Then follow step 3 below for the first launch. Or install the DMG by hand:
+
 1. Download `DropNotch-0.2.0.dmg` and `DropNotch-0.2.0.dmg.sha256` from the [release page](https://github.com/Shashwat-19/DropNotch/releases/tag/v0.2.0). If you are updating, quit DropNotch from its menu-bar item first.
 2. Open the DMG and drag **DropNotch** onto **Applications** (replace the old copy if asked).
 3. Open DropNotch. It is not notarised, so macOS blocks the first launch. On macOS 27.0.1 the dialog is titled "“DropNotch.app” Not Opened" and says "Apple could not verify “DropNotch.app” is free of malware that may harm your Mac or compromise your privacy." Its buttons are **Done** and **Move to Bin** (**Move to Trash** in US English). Click **Done**. Then, as [Apple documents](https://support.apple.com/en-us/102445): open System Settings, click Privacy & Security, scroll down and click **Open Anyway**. When the warning reappears, click **Open**. macOS saves this as an exception. Wording may differ on other macOS versions.

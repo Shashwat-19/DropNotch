@@ -1208,3 +1208,18 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - ⌃⌥N cancels a pending exit debounce when it opens, so a press just after the pointer left isn't undone 100 ms later. Opened by ⌃⌥N with the pointer elsewhere, the notch stays open until the pointer has passed through it, or Escape, ⌃⌥N or a click elsewhere.
 - While the notch has keyboard focus (the terminal, a note, Clipboard's search, ⌃⌥N), the exit debounce is 0.5 s instead of 0.1 s, cancelled if the pointer comes back (Shash, 2026-11-10, after checks 107–109; 1 s at first, which felt slow on check 110): a password typed in the terminal shouldn't land in the app in front because the pointer drifted. Hover-only opens keep 0.1 s. Typing on after the pointer has been away longer than 0.5 s still goes to the app in front. Keys still need a click (or ⌃⌥N): hover never gives the terminal, a note or the search field the keyboard.
 
+---
+
+## D50. Homebrew install from our own tap
+
+**Date:** 2026-11-11 · **Status:** Accepted (Shash, 2026-11-11).
+
+**Decision:**
+- DropNotch installs with `brew install --cask shashwat-19/tap/dropnotch`, from our own tap, [Shashwat-19/homebrew-tap](https://github.com/Shashwat-19/homebrew-tap) (MIT). The cask downloads the release DMG from GitHub, so it only works while this repository is public. The full `shashwat-19/tap/dropnotch` name adds the tap and trusts the cask in one step, so users need no `brew tap` or `brew trust` first.
+- Not in the official homebrew/cask yet. `brew audit --cask --new` fails on two of its rules: the app isn't notarised ("not signed by a distributor that meets the system Gatekeeper requirements"), and the repository is below its notability threshold (30 forks, 30 watchers or 75 stars). Neither stops installs from our tap. Revisit once DropNotch is notarised and the repository passes the threshold.
+- Bumping `version` and `sha256` in the cask is a release step (RELEASING.md step 9); the hash comes from the release's `.sha256` asset.
+- The cask's caveats give the same first-launch route as the README: Done, then System Settings › Privacy & Security › Open Anyway. Neither suggests `--no-quarantine` or removing the quarantine attribute: that skips Gatekeeper's check for every user, and `brew install --help` no longer lists the flag (Homebrew 7.0.13).
+- The cask's `livecheck` uses `:github_releases` with a block that keeps pre-releases and skips only drafts. Without the block, `:github_releases` and `:github_latest` both skip pre-releases, and RELEASING.md step 6 publishes with `--prerelease`. (v0.1.0 and v0.2.0 are currently full releases.)
+- `zap` removes `~/Library/Application Support/DropNotch` (`PrivateFolder.applicationSupport`) and `~/Library/Preferences/com.shashwat.DropNotch.plist`, the paths the README's uninstall note gives.
+
+**Alternatives:** submitting to homebrew/cask now (fails the audit above); DMG only (no one-line install or `brew upgrade`); `--no-quarantine` in the install line (bypasses Gatekeeper; no longer in Homebrew).

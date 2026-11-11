@@ -35,3 +35,9 @@ Before you start: the device checks in TASK.md's Release checklist are done, `xc
      --description "Turns the MacBook notch into a productivity surface"
    ```
    This is hard to undo: the repository, its history and the release become visible and may be cached or forked.
+9. **Update the Homebrew cask.** After every release, bump `version` and `sha256` in `Casks/dropnotch.rb` in [Shashwat-19/homebrew-tap](https://github.com/Shashwat-19/homebrew-tap). Take the hash from the release's `.sha256` asset. Copy the edited cask into the tapped copy (`$(brew --repo shashwat-19/tap)/Casks/`) or push and `brew update` first, then check:
+   ```sh
+   brew livecheck --cask shashwat-19/tap/dropnotch   # prints 0.1.0 ==> 0.1.0 when the cask matches the newest release
+   brew style shashwat-19/tap && brew audit --cask shashwat-19/tap/dropnotch
+   ```
+   Commit and push the tap. `brew audit --cask --new` also fails because the app isn't notarised and the repository is below Homebrew's notability threshold (D50); those rules apply only to the official homebrew/cask.
