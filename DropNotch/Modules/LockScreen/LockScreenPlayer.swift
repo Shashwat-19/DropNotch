@@ -34,7 +34,9 @@ final class LockScreenPlayer {
     convenience init(nowPlaying: NowPlayingModule) {
         let space = SkyLightLockScreenSpace()
         self.init(nowPlaying: nowPlaying, locks: DistributedLockStateSource(),
-                  surface: LockScreenPlayerWindow(space: space) { AnyView(FullScreenPlayerView(module: nowPlaying)) },
+                  surface: LockScreenPlayerWindow(space: space) { presentation in
+                      AnyView(LockScreenPlayerRoot(module: nowPlaying, presentation: presentation))
+                  },
                   isAvailable: space.isAvailable)
     }
 

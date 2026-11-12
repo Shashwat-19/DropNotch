@@ -10,23 +10,27 @@ protocol LockScreenSurface: AnyObject {
     var isShown: Bool { get }
 }
 
-/// The lock-screen player's window (D55, D57): the full-screen player across the whole screen, in a panel that never
-/// becomes key, so it can't take a single keystroke from the password field, moved into the lock-screen space the
-/// first time it shows. Clicks reach its controls without activating DropNotch; its clear bottom lets clicks through
-/// to the password field [I: device check 149].
+/// The lock-screen player's window (D55, D58): one panel that never becomes key, so it can't take a keystroke from the
+/// password field, moved into the lock-screen space the first time it shows. Compact, it is only as big as the small
+/// player, so the rest of the lock screen (clock, avatar, password prompt) is the system's; expanded, it covers the
+/// screen until its × collapses it. Clicks reach its controls without activating DropNotch.
 @MainActor
 final class LockScreenPlayerWindow: LockScreenSurface {
-    /// The share of the screen it covers, from the top. The rest stays the system's: the avatar and password field sit
-    /// in the lower part of the lock screen, and covering the whole screen hid them (Shash, 2026-11-13).
-    nonisolated static let coverage: CGFloat = 0.70
+    /// The compact player's size, and where its centre sits as a share of the screen's height from the top: above the
+    /// avatar and password prompt [I: tuned from Shash's photo, 2026-11-13; device check 153].
+    nonisolated static let compactSize = CGSize(width: 320, height: 132)
+    nonisolated static let compactCentreFromTop: CGFloat = 0.66
+
+    let presentation = LockScreenPresentation()
     private let space: any LockScreenSpace
-    private let content: () -> AnyView
+    private let content: (LockScreenPresentation) -> AnyView
     private var panel: Panel?
     private var attached = false
 
-    init(space: any LockScreenSpace, content: @escaping () -> AnyView) {
+    init(space: any LockScreenSpace, content: @escaping (LockScreenPresentation) -> AnyView) {
         self.space = space
         self.content = content
+        presentation.onChange = { [weak self] expanded in self?.resize(expanded: expanded) }
     }
 
     var isShown: Bool { panel?.isVisible ?? false }
@@ -34,9 +38,10 @@ final class LockScreenPlayerWindow: LockScreenSurface {
     func show() -> Bool {
         // The menu-bar screen: the lock screen's password field is on it [I: device check with a second display].
         guard let screen = NSScreen.screens.first else { return false }
+        presentation.reset()
         let panel = self.panel ?? makePanel()
         self.panel = panel
-        panel.setFrame(Self.frame(on: screen.frame), display: false)
+        panel.setFrame(Self.compactFrame(on: screen.frame), display: false)
         panel.orderFrontRegardless()
         if !attached {
             attached = space.attach(windowNumber: panel.windowNumber)
@@ -50,17 +55,25 @@ final class LockScreenPlayerWindow: LockScreenSurface {
 
     func hide() {
         panel?.orderOut(nil)
+        presentation.reset()
     }
 
-    /// The top `coverage` of the screen (AppKit's y runs up, so the window starts above the bottom 30 %). Pure, for tests.
-    nonisolated static func frame(on screen: CGRect) -> CGRect {
-        let height = (screen.height * coverage).rounded()
-        return CGRect(x: screen.minX, y: screen.maxY - height, width: screen.width, height: height)
+    private func resize(expanded: Bool) {
+        guard let panel, let screen = NSScreen.screens.first else { return }
+        let frame = expanded ? screen.frame : Self.compactFrame(on: screen.frame)
+        // AppKit's own frame animation; none under Reduce Motion.
+        panel.setFrame(frame, display: true, animate: !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+    }
+
+    /// Centred, `compactCentreFromTop` down the screen, on whole points. AppKit's y runs up. Pure, for tests.
+    nonisolated static func compactFrame(on screen: CGRect) -> CGRect {
+        let centreY = screen.maxY - screen.height * compactCentreFromTop
+        return CGRect(x: (screen.midX - compactSize.width / 2).rounded(), y: (centreY - compactSize.height / 2).rounded(),
+                      width: compactSize.width, height: compactSize.height)
     }
 
     private func makePanel() -> Panel {
-        let panel = Panel(contentRect: Self.frame(on: NSScreen.screens.first?.frame ?? .zero),
-                          styleMask: [.borderless, .nonactivatingPanel],
+        let panel = Panel(contentRect: CGRect(origin: .zero, size: Self.compactSize), styleMask: [.borderless, .nonactivatingPanel],
                           backing: .buffered, defer: false)
         panel.isReleasedWhenClosed = false
         panel.isOpaque = false
@@ -71,7 +84,7 @@ final class LockScreenPlayerWindow: LockScreenSurface {
         // The lock screen's own level; on its own this stays under the shield, the space puts it above (D55).
         panel.level = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()))
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
-        panel.contentView = FirstClickHostingView(rootView: content())
+        panel.contentView = FirstClickHostingView(rootView: content(presentation))
         return panel
     }
 

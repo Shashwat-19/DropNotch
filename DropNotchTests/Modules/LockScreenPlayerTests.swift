@@ -129,3 +129,30 @@ final class LockScreenPlayerTests: XCTestCase {
         XCTAssertFalse(SkyLightLockScreenSpace().attach(windowNumber: 0), "no window, nothing attached")
     }
 }
+
+@MainActor
+final class LockScreenPresentationTests: XCTestCase {
+    func testCompactSitsCentredAboveThePasswordPrompt() {
+        let screen = CGRect(x: 0, y: 0, width: 1470, height: 956)
+        let frame = LockScreenPlayerWindow.compactFrame(on: screen)
+        XCTAssertEqual(frame.size, LockScreenPlayerWindow.compactSize)
+        XCTAssertEqual(frame.midX, 735)
+        // 66 % down from the top: AppKit's y counts from the bottom.
+        XCTAssertEqual(screen.maxY - frame.midY, 956 * LockScreenPlayerWindow.compactCentreFromTop, accuracy: 1)
+    }
+
+    func testExpandAndCollapseReportEachChangeOnce() {
+        let presentation = LockScreenPresentation()
+        var changes: [Bool] = []
+        presentation.onChange = { changes.append($0) }
+        XCTAssertFalse(presentation.isExpanded, "every lock starts compact")
+        presentation.expand()
+        presentation.expand()
+        presentation.collapse()
+        XCTAssertEqual(changes, [true, false])
+        presentation.expand()
+        presentation.reset()
+        XCTAssertFalse(presentation.isExpanded)
+        XCTAssertEqual(changes, [true, false, true], "reset doesn't resize a window that's going away")
+    }
+}
