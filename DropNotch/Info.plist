@@ -24,6 +24,8 @@
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>DropNotch uses this to show what's playing in Music and Spotify and to send play, pause, skip and seek from the notch. If you're using DropNotch's Terminal tab, a command you ran there may be the one asking: commands there use DropNotch's access.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>DropNotch reads the battery level of headphones such as AirPods when they connect, to show it in the notch. It never connects to, changes or records any device.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>DropNotch shows your upcoming events on the Home tab; the Calendar card only reads them. Commands you run in DropNotch's Terminal tab get this access too, and they can add, change or delete events. Nothing leaves your Mac unless a command you run sends it.</string>
 	<key>NSDesktopFolderUsageDescription</key>

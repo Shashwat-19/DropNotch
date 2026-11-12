@@ -18,6 +18,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// The HUD when the Mac is plugged in (D52); nil without a battery, like the Battery card (D43).
     lazy var chargingAlert: ChargingAlert? = PowerSourceBatterySource.hasInternalBattery
         ? ChargingAlert(source: PowerSourceBatterySource(), registry: registry) : nil
+    /// The HUD when headphones connect (D54); off until turned on in Settings.
+    lazy var headphoneAlert = HeadphoneAlert(source: IOBluetoothHeadphoneSource(), registry: registry)
     private var screenObserver: ScreenObserver?
 
     /// Unit tests run inside the app, so it launches for them too. Xcode sets this variable for the
@@ -36,6 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             TerminalNotice.enforce(on: registry)
             registry.start()
             chargingAlert?.refresh()
+            headphoneAlert.refresh()
             // Inherits the main actor. The stream ends only with the app.
             Task { [notchState] in
                 for await _ in KeyboardShortcuts.events(.keyDown, for: .toggleNotch) {
@@ -74,6 +77,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         registry.stop()
         chargingAlert?.stop()
+        headphoneAlert.stop()
     }
 }
 

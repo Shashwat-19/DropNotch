@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-11-13):** v0.3 started (D52, D53): see "v0.3" at the end. Branch 1, `feat/screen-corners`, is built (device checks 114–116 open); branch 2, `feat/charging-hud`, is built (checks 117–120 open); branch 3, `feat/weather`, is built (checks 121–125 open); branch 4, `feat/lyrics`, is built (checks 126–129 open); branch 5, `feat/liquid-glass`, is built (checks 130–132 open). Next: probes for AirPods battery, the equaliser and the lock screen.
+**Status (2026-11-13):** v0.3 started (D52, D53): see "v0.3" at the end. Branch 1, `feat/screen-corners`, is built (device checks 114–116 open); branch 2, `feat/charging-hud`, is built (checks 117–120 open); branch 3, `feat/weather`, is built (checks 121–125 open); branch 4, `feat/lyrics`, is built (checks 126–129 open); branch 5, `feat/liquid-glass`, is built (checks 130–132 open); branch 6, `feat/airpods-battery`, is built (D54 proposed; checks 133–136 open). Next: the equaliser and lock-screen probes, which need Shash at the Mac (see branch 7 and 8).
 
 **Status (2026-11-10):** v0.2.0 is released as a pre-release (tag v0.2.0 at e5568a6; DMG SHA-256 4a970ba8a50f20f9d0b13ae8f9ee46dacbf40ee708eecdfb2a6d1e3778141fe9; the repository is still private). v0.1.0 is released. v0.2 (Home dashboard, D42–D45) is in progress in speed mode: see "v0.2" at the end. Branch 1, `feat/home`, is merged to main (2026-11-09). Branch 2, `feat/battery-card`, is merged to main (2026-11-09). Branch 3, `feat/calendar-card`, and branch 3b, `feat/home-layout` (D46), are merged to main (2026-11-09; device checks 84–94 passed on one Release build). Branch 4, `feat/quick-commands`, was built but set aside unmerged (Shash, 2026-11-10); branch 4b, `feat/terminal` (D48), is merged to main (2026-11-10; device checks 95–100 passed). `feat/notch-size` (D49) is merged (checks 101–113 passed). Next: `release/v0.2.0`.
 
@@ -553,3 +553,18 @@ Settings › General › Look: Black (default) or Liquid Glass, shown only on ma
 130. **Glass.** Look › Liquid Glass. Open the notch over a bright wallpaper and over a dark window: glass with the wallpaper softly visible, text and controls still easy to read on every tab; closed, the notch is black as before. If the glass around the camera housing looks wrong, say so: the tint is one number.
 131. **Motion.** Open and close several times: no flash between black and glass beyond the shape growing; the tab switch cross-fade is unchanged.
 132. **Accessibility.** System Settings › Accessibility › Display › Reduce transparency on: the open notch is black. Increase contrast: the card edges show on glass too.
+
+### Branch 6: `feat/airpods-battery` (D54 proposed; branched from `feat/liquid-glass`; Release build: done)
+Probe first (2026-11-13; D54): IOBluetooth's private per-bud keys answer in-process (left 36, right 35, case 0); the IORegistry route didn't. Built: `HeadphoneBattery`, `IOBluetoothHeadphoneSource` (connect notification, one read 2 s later, every key guarded by `responds(to:)`), `HeadphoneAlert` (HUD, off by default), `NSBluetoothAlwaysUsageDescription`. Settings › General › "Show headphone battery when they connect".
+
+**Status (2026-11-13):** built; 648 tests, 0 failures (4 new). Release build succeeded (ad hoc, hardened runtime, entitlements unchanged); not launched. Device checks (MacBook Air, **Release build**):
+133. **Prompt.** Turn the setting on: macOS asks for Bluetooth access with the D54 text. Before that, with it off, no prompt ever appears.
+134. **Connect.** Put the AirPods in the case and close it, wait, take them out: within about 2–3 s a HUD shows the AirPods symbol and the lower bud's percentage, with a tap. Compare with Control Centre's figures. If it shows nothing, the 2 s wait may be too short; say so.
+135. **Already connected.** Quit and relaunch with the AirPods connected: no HUD. Other headphones (if you have any): the headphones symbol and one figure.
+136. **VoiceOver.** It says "AirPods connected, left …, right …" (and the case when open).
+
+### Branch 7: `feat/equaliser` (D52; not started: needs a probe with Shash)
+Probe to run with Shash at the Mac (throwaway, outside the repo): a Core Audio process tap (`CATapDescription` for one process, muted while tapped) on an aggregate device, passing audio through unchanged, then through one `AVAudioUnitEQ`-style biquad. Measure: the audio-capture permission prompt and its text; added latency; CPU at idle and while playing; and the D2 risk: does tapping Spotify still break the AirPods pause gesture? Then D55 with the per-app design (which apps, presets or bands, where it lives in Settings).
+
+### Branch 8: `feat/lock-screen` (D52, reopens D3; not started: needs a probe with Shash)
+Probe to run with Shash at the Mac (throwaway): a window moved to a private SkyLight space at an absolute level above the lock screen's shield, as research/atoll-media-lockscreen.md describes the technique (clean-room; no code copied). Shash locks the Mac (⌃⌘Q) and reports: is the window visible above the password field; does the password field still take focus and typing; does anything remain after unlocking; does it survive sleep and wake. security-auditor and dependency-manager review the route before D56. The wallpaper route stays ruled out.

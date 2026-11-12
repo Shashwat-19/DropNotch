@@ -1270,3 +1270,21 @@ The island on Macs without a notch is not on the list: the pill shipped in v0.1.
 **Alternatives:** CoreLocation approximate location (a prompt, a new entitlement and usage string; follows the user when travelling; not chosen); WeatherKit (needs a paid Apple Developer Program membership, FEATURE_MATRIX); a fixed refresh timer (rejected: energy rule); NetEase as a lyrics fallback (undocumented API, FEATURE_MATRIX).
 
 **Why:** a typed city sends no more than the user chose to share and adds no permission. Off by default because both send data off the Mac (ARCHITECTURE §10).
+
+---
+
+## D54. AirPods battery: IOBluetooth's per-bud keys, read on connect, shown as a HUD; off by default
+
+**Date:** 2026-11-13 · **Status:** Proposed (meets D52's conditions; awaiting Shash's review of the defaults below)
+
+**Probe (2026-11-13, MacBook Air M3, macOS 27.2.1, AirPods connected; throwaway script, not committed):** `IOBluetoothDevice.pairedDevices()` listed 3 devices, 1 connected (major class 4, audio). On it, `responds(to:)` was true for `batteryPercentLeft`, `batteryPercentRight`, `batteryPercentCase`, `batteryPercentSingle` and `batteryPercentCombined`; KVC read left 36, right 35, case 0 (case closed), single 0, combined 0. The IORegistry `AppleDeviceManagementHIDEventService` route had one service, not the AirPods, with no `BatteryPercent`. [V: probe output]
+
+**Decision:**
+- `IOBluetoothHeadphoneSource` behind `HeadphoneBatterySource` (Services/): IOBluetooth's documented connect registration (`register(forConnectNotifications:selector:)`), then one read 2 s later [I: the fields fill after connecting; device check], of the private keys above through KVC, each guarded by `responds(to:)` so a macOS that drops them gives no reading instead of an exception. Audio-class devices only. 0 means unknown and is shown as nothing. No polling, no subprocesses (D52).
+- What shows: a 3 s HUD (D52's `NotchHUD`) when headphones connect: an AirPods or headphones symbol and the lower bud's percentage (or the single figure); VoiceOver hears both buds and the case when known. Device names are never shown, logged or kept.
+- Settings › General › "Show headphone battery when they connect": **off by default**, because the first IOBluetooth access asks for Bluetooth permission (`NSBluetoothAlwaysUsageDescription` added). Devices already connected when it starts don't trigger a HUD.
+- Not in this decision: a headphones line on the Battery card, listening mode (FEATURE_MATRIX: Skip).
+
+**Alternatives:** `pmset -g accps` or `system_profiler` (subprocess parsing; ruled out by D52); CoreBluetooth Battery Service (AirPods don't usually expose it, research A3 [I]); polling the keys (energy rule).
+
+**Risk:** private keys: High on macOS updates (FEATURE_MATRIX). The `responds(to:)` guard is the fallback. Bluetooth usage string and prompt need a Release build and launch (D11).

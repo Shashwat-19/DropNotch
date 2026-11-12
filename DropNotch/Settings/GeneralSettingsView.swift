@@ -9,6 +9,7 @@ struct GeneralSettingsView: View {
     let screenCorners: ScreenCornersController
     /// Nil on a Mac without a battery: no charging alert to offer (D43).
     let chargingAlert: ChargingAlert?
+    let headphoneAlert: HeadphoneAlert
 
     /// Read from the system, never saved by DropNotch: the user can change it in System Settings › Login Items.
     /// Waiting for approval shows as on, so the toggle can withdraw it (security-auditor L4).
@@ -18,6 +19,7 @@ struct GeneralSettingsView: View {
     @AppStorage(ScreenCorners.key) private var roundCorners = false
     @AppStorage(ChargingAlert.key) private var chargingAlertOn = true
     @AppStorage(Haptics.key) private var hapticsOn = true
+    @AppStorage(HeadphoneAlert.key) private var headphoneAlertOn = false
     @AppStorage(NotchAppearance.key) private var appearance = NotchAppearance.black
 
     var body: some View {
@@ -68,9 +70,11 @@ struct GeneralSettingsView: View {
                     Toggle("Show an alert when the Mac starts charging", isOn: $chargingAlertOn)
                         .onChange(of: chargingAlertOn) { chargingAlert.refresh() }
                 }
+                Toggle("Show headphone battery when they connect", isOn: $headphoneAlertOn)
+                    .onChange(of: headphoneAlertOn) { headphoneAlert.refresh() }
                 Toggle("Haptic feedback", isOn: $hapticsOn)
             } footer: {
-                Text("A light tap on the trackpad when the notch shows an alert. You feel it only with a finger on the trackpad.")
+                Text("Headphone battery asks for Bluetooth access the first time; DropNotch only reads AirPods and other headphones' levels. A light tap on the trackpad comes with each alert, felt only with a finger on the trackpad.")
                     .foregroundStyle(.secondary)
             }
             Section {

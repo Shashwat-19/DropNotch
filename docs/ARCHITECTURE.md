@@ -36,7 +36,8 @@ DropNotch/
                   TrayItemDragSource (drag out), TrayShareMenu (share picker) (D32, D40)
     Clipboard/    ClipboardModule (poll, access states, history), ClipboardItem, ClipboardExpandedView (D7c, D33)
     Notes/        NotesModule (load and save), NotesExpandedView (D31)
-    Battery/      BatteryModule, BatteryCardView: the narrow Home card (D43); ChargingAlert: the plug-in HUD, not a module (D52)
+    Battery/      BatteryModule, BatteryCardView: the narrow Home card (D43); ChargingAlert: the plug-in HUD, not a module (D52);
+                  HeadphoneAlert: the headphones-connect HUD, off by default (D54)
     Calendar/     CalendarModule, CalendarCardView: the medium Home card (D44)
     Weather/      WeatherModule, WeatherCardView: the narrow Home card, off by default (D53)
     Terminal/     TerminalModule, TerminalExpandedView, TerminalTopRowView, TerminalSettings: the Terminal tab, off by
@@ -55,6 +56,8 @@ DropNotch/
                   Weather (D53): WeatherSource, WeatherPlace, WeatherReading (with WeatherCondition, AirQualityLevel),
                   OpenMeteoClient (geocoding, forecast, air quality; ephemeral session, no redirects).
                   Lyrics (D53): LyricsSource, SyncedLyrics (pure LRC parser), LRCLibClient. ServiceError for both.
+                  Headphones (D54): HeadphoneBattery (with the HeadphoneBatterySource protocol), IOBluetoothHeadphoneSource
+                  (connect notification, then private per-bud keys guarded by responds(to:)).
                   Planned: MediaRemote (v0.2), BluetoothBatteryProvider (deferred, D43), …
   Settings/       SettingsView with General, Modules, Privacy and About tabs (D34). Planned: per-module settings
   Support/        Logger categories, small shared helpers (FourCharCode+Code), Haptics (trackpad tap, D52). Planned: file locations (section 5)
@@ -188,7 +191,7 @@ Target: zero wake-ups while idle, apart from the clipboard poll. Intervals below
 | Settings | `UserDefaults`/Observation changes |
 | Screen sleep, lock, wake | `NSWorkspace` screens-did-sleep/wake notifications [V: https://developer.apple.com/documentation/appkit/nsworkspace/screensdidsleepnotification]; they close the notch, which removes its open content (D19) and so stops the progress animation, and pause the clipboard poll (D33). No screen-lock notification is in Apple's NSWorkspace reference; the documented session notifications cover user switching [V: https://developer.apple.com/documentation/appkit/nsworkspace/sessiondidresignactivenotification], so the MVP pauses on screen sleep only |
 | v0.2: battery | IOKit power-source run-loop source [V] |
-| v0.2: Bluetooth connect | IOBluetooth connect/disconnect registration [V: documented API exists; Atoll doesn't use it] |
+| Headphone battery (D54) | IOBluetooth connect registration, then one read 2 s later (one-shot, per connection); nothing between connections |
 | v0.2: calendar | EventKit store-changed notification [V] |
 
 ### Timers that genuinely need to exist

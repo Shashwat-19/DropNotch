@@ -13,7 +13,8 @@ struct DropNotchApp: App {
         }
         Settings {
             SettingsView(registry: appDelegate.registry, notchState: appDelegate.notchState,
-                         screenCorners: appDelegate.screenCorners, chargingAlert: appDelegate.chargingAlert)
+                         screenCorners: appDelegate.screenCorners, chargingAlert: appDelegate.chargingAlert,
+                         headphoneAlert: appDelegate.headphoneAlert)
         }
     }
 }
