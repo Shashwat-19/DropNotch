@@ -23,8 +23,8 @@ packages:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.2.0"
-    CURRENT_PROJECT_VERSION: "2"
+    MARKETING_VERSION: "0.3.0"
+    CURRENT_PROJECT_VERSION: "4"
     CODE_SIGN_IDENTITY: "-"
 targets:
   DropNotch:
@@ -58,6 +58,8 @@ targets:
         NSDesktopFolderUsageDescription: "DropNotch uses this to keep files you drop on the notch in the tray. If you're using DropNotch's Terminal tab, a command you ran there may be the one asking: commands there use DropNotch's access."
         NSDocumentsFolderUsageDescription: "DropNotch uses this to keep files you drop on the notch in the tray. If you're using DropNotch's Terminal tab, a command you ran there may be the one asking: commands there use DropNotch's access."
         NSDownloadsFolderUsageDescription: "DropNotch uses this to keep files you drop on the notch in the tray. If you're using DropNotch's Terminal tab, a command you ran there may be the one asking: commands there use DropNotch's access."
+        # Asked only when "Show headphone battery when they connect" is turned on (D54): IOBluetooth reads need it.
+        NSBluetoothAlwaysUsageDescription: "DropNotch reads the battery level of headphones such as AirPods when they connect, to show it in the notch. It never connects to, changes or records any device."
         # Only a command in the Terminal tab can cause this prompt: DropNotch itself never uses the local network (D48).
         NSLocalNetworkUsageDescription: "A command you ran in DropNotch's Terminal tab wants to find or connect to devices on your local network. DropNotch itself never uses your local network."
     # No App Sandbox (D4). Under the hardened runtime, sending Apple Events to other apps

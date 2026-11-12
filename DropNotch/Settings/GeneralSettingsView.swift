@@ -3,15 +3,27 @@ import os
 import ServiceManagement
 import SwiftUI
 
-/// Launch at login, the notch size, the hotkey and the notch's display (D30, D34, D49).
+/// Launch at login, the notch size, rounded screen corners, alerts, the hotkey and the notch's display (D30, D34, D49, D52).
 struct GeneralSettingsView: View {
     let notchState: NotchState
+    let screenCorners: ScreenCornersController
+    /// Nil on a Mac without a battery: no charging alert to offer (D43).
+    let chargingAlert: ChargingAlert?
+    let headphoneAlert: HeadphoneAlert
+    /// Nil only without a Now Playing module.
+    let lockScreenPlayer: LockScreenPlayer?
 
     /// Read from the system, never saved by DropNotch: the user can change it in System Settings › Login Items.
     /// Waiting for approval shows as on, so the toggle can withdraw it (security-auditor L4).
     @State private var loginStatus = SMAppService.mainApp.status
     @State private var loginError = false
     @AppStorage(NotchDisplay.key) private var display = NotchDisplay.builtIn
+    @AppStorage(ScreenCorners.key) private var roundCorners = false
+    @AppStorage(ChargingAlert.key) private var chargingAlertOn = true
+    @AppStorage(Haptics.key) private var hapticsOn = true
+    @AppStorage(HeadphoneAlert.key) private var headphoneAlertOn = false
+    @AppStorage(LockScreenPlayer.key) private var lockScreenPlayerOn = false
+    @AppStorage(NotchAppearance.key) private var appearance = NotchAppearance.black
 
     var body: some View {
         Form {
@@ -37,6 +49,48 @@ struct GeneralSettingsView: View {
                 }
             } footer: {
                 Text("Large is taller and wider, with larger text and controls on every tab. The terminal keeps its own font size.").foregroundStyle(.secondary)
+            }
+            if NotchAppearance.isGlassAvailable {
+                Section {
+                    Picker("Look", selection: $appearance) {
+                        Text("Black").tag(NotchAppearance.black)
+                        Text("Liquid Glass").tag(NotchAppearance.liquidGlass)
+                    }
+                } footer: {
+                    Text("Liquid Glass applies to the open notch; closed, it stays black to match the camera. With Reduce Transparency on, it's black.")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Section {
+                Toggle("Round the bottom corners of the screen", isOn: $roundCorners)
+                    .onChange(of: roundCorners) { screenCorners.refresh() }
+            } footer: {
+                Text("Matches the rounded top corners of the built-in display. Clicks in the corners still reach what's underneath.")
+                    .foregroundStyle(.secondary)
+            }
+            if let lockScreenPlayer {
+                Section {
+                    Toggle("Show the player on the lock screen", isOn: $lockScreenPlayerOn)
+                        .disabled(!lockScreenPlayer.isAvailable)
+                        .onChange(of: lockScreenPlayerOn) { lockScreenPlayer.refresh() }
+                } footer: {
+                    Text(lockScreenPlayer.isAvailable
+                         ? "While your Mac is locked and Music or Spotify has a track loaded, the artwork fills the lock screen with the player and lyrics. Anyone at your Mac can see the track and use play, pause, skip and seek. It uses private parts of macOS, so an update may turn it off."
+                         : "Not available on this version of macOS.")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Section {
+                if let chargingAlert {
+                    Toggle("Show an alert when the Mac starts charging", isOn: $chargingAlertOn)
+                        .onChange(of: chargingAlertOn) { chargingAlert.refresh() }
+                }
+                Toggle("Show headphone battery when they connect", isOn: $headphoneAlertOn)
+                    .onChange(of: headphoneAlertOn) { headphoneAlert.refresh() }
+                Toggle("Haptic feedback", isOn: $hapticsOn)
+            } footer: {
+                Text("Headphone battery asks for Bluetooth access the first time; DropNotch only reads AirPods and other headphones' levels. A light tap on the trackpad comes with each alert, felt only with a finger on the trackpad.")
+                    .foregroundStyle(.secondary)
             }
             Section {
                 KeyboardShortcuts.Recorder("Open and close the notch", name: .toggleNotch)

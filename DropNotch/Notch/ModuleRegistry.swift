@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 import Observation
 import os
 
@@ -22,6 +22,9 @@ final class ModuleRegistry {
     /// Modules are started only while the registry runs, so `setEnabled` before `start()`
     /// (or after `stop()`) changes the flag but runs nothing.
     @ObservationIgnored private var isRunning = false
+    /// The timed peek showing in the closed notch, if any (D52). It takes both wings while it lasts.
+    private(set) var hud: NotchHUD?
+    @ObservationIgnored private var hudDismissal: Task<Void, Never>?
 
     init(modules: [any NotchModule], defaults: UserDefaults = .standard) {
         precondition(Set(modules.map(\.id)).count == modules.count, "Module ids must be unique")
@@ -78,7 +81,28 @@ final class ModuleRegistry {
     }
 
     /// The compact slots with something to show; the closed notch widens on those sides only (D28, D36).
-    var compactWings: Set<CompactSlot> { Set([CompactSlot.left, .right].filter { compactModule(for: $0) != nil }) }
+    /// A HUD takes both sides while it shows (D52).
+    var compactWings: Set<CompactSlot> {
+        hud != nil ? [.left, .right] : Set([CompactSlot.left, .right].filter { compactModule(for: $0) != nil })
+    }
+
+    /// Shows `hud` in the closed notch for `duration`, replacing one already showing, and asks VoiceOver to read its
+    /// announcement. One one-shot task removes it (ARCHITECTURE.md §9, "Peek dismissal").
+    func showHUD(_ hud: NotchHUD, for duration: Duration = NotchHUD.duration) {
+        self.hud = hud
+        hudDismissal?.cancel()
+        // Inherits the main actor.
+        hudDismissal = Task { [weak self] in
+            try? await Task.sleep(for: duration)
+            guard !Task.isCancelled, self?.hud == hud else { return }
+            self?.hud = nil
+        }
+        if let app = NSApp {
+            NSAccessibility.post(element: app, notification: .announcementRequested,
+                                 userInfo: [.announcement: hud.announcement,
+                                            .priority: NSAccessibilityPriorityLevel.medium.rawValue])
+        }
+    }
 
     /// Starts every enabled module.
     func start() {

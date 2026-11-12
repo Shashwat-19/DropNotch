@@ -1286,3 +1286,95 @@ The island on Macs without a notch is not on the list: the pill shipped in v0.1.
 **Alternatives:** CoreLocation approximate location (a prompt, a new entitlement and usage string; follows the user when travelling; not chosen); WeatherKit (needs a paid Apple Developer Program membership, FEATURE_MATRIX); a fixed refresh timer (rejected: energy rule); NetEase as a lyrics fallback (undocumented API, FEATURE_MATRIX).
 
 **Why:** a typed city sends no more than the user chose to share and adds no permission. Off by default because both send data off the Mac (ARCHITECTURE §10).
+
+---
+
+## D54. AirPods battery: IOBluetooth's per-bud keys, read on connect, shown as a HUD; off by default
+
+**Date:** 2026-11-13 · **Status:** Proposed (meets D52's conditions; awaiting Shash's review of the defaults below)
+
+**Probe (2026-11-13, MacBook Air M3, macOS 27.2.1, AirPods connected; throwaway script, not committed):** `IOBluetoothDevice.pairedDevices()` listed 3 devices, 1 connected (major class 4, audio). On it, `responds(to:)` was true for `batteryPercentLeft`, `batteryPercentRight`, `batteryPercentCase`, `batteryPercentSingle` and `batteryPercentCombined`; KVC read left 36, right 35, case 0 (case closed), single 0, combined 0. The IORegistry `AppleDeviceManagementHIDEventService` route had one service, not the AirPods, with no `BatteryPercent`. [V: probe output]
+
+**Decision:**
+- `IOBluetoothHeadphoneSource` behind `HeadphoneBatterySource` (Services/): IOBluetooth's documented connect registration (`register(forConnectNotifications:selector:)`), then one read 2 s later [I: the fields fill after connecting; device check], of the private keys above through KVC, each guarded by `responds(to:)` so a macOS that drops them gives no reading instead of an exception. Audio-class devices only. 0 means unknown and is shown as nothing. No polling, no subprocesses (D52).
+- What shows: a 3 s HUD (D52's `NotchHUD`) when headphones connect: an AirPods or headphones symbol and the lower bud's percentage (or the single figure); VoiceOver hears both buds and the case when known. Device names are never shown, logged or kept.
+- Settings › General › "Show headphone battery when they connect": **off by default**, because the first IOBluetooth access asks for Bluetooth permission (`NSBluetoothAlwaysUsageDescription` added). Devices already connected when it starts don't trigger a HUD.
+- Not in this decision: a headphones line on the Battery card, listening mode (FEATURE_MATRIX: Skip).
+
+**Alternatives:** `pmset -g accps` or `system_profiler` (subprocess parsing; ruled out by D52); CoreBluetooth Battery Service (AirPods don't usually expose it, research A3 [I]); polling the keys (energy rule).
+
+**Risk:** private keys: High on macOS updates (FEATURE_MATRIX). The `responds(to:)` guard is the fallback. Bluetooth usage string and prompt need a Release build and launch (D11).
+
+---
+
+## D55. Lock-screen player: a private SkyLight space at level 400, the system's lock notifications, opt-in
+
+**Date:** 2026-11-13 · **Status:** Accepted for build (Shash, 2026-11-13: "just want the lock-screen player now"; probe passed with him at the Mac). Reopens D3 under D52's conditions. security-auditor and dependency-manager reviews still to run before release.
+
+**Probe (2026-11-13, MacBook Air M3, macOS 27.2.1; throwaway binary in /tmp, not committed; written from general platform knowledge, not from Atoll or the SkyLightWindow package):** the five SkyLight symbols (`SLSMainConnectionID`, `SLSSpaceCreate`, `SLSSpaceSetAbsoluteLevel`, `SLSShowSpaces`, `SLSSpaceAddWindowsAndRemoveFromSpaces`) resolved with `dlsym`. A borderless window at `CGShieldingWindowLevel()` moved into a new space at absolute level 400 showed above the lock screen (Shash saw it). The log: `com.apple.screenIsLocked` at 01:04:27, five clicks on the window's button while locked (01:04:29–30), `com.apple.screenIsUnlocked` at 01:04:31, and unlocking worked. [V: probe log and Shash]
+
+**Decision:**
+- `SkyLightLockScreenSpace` behind `LockScreenSpace` (Services/): symbols looked up at run time, never linked; any missing → `isAvailable` false, the setting greys out with "Not available on this version of macOS". No third-party package (Atoll's is on a branch, research §9): our own ~60 lines.
+- `DistributedLockStateSource`: the two lock notifications, nothing else. No poll while locked (Atoll polls every 500 ms; energy rule). Risk: a missed unlock leaves the player up until the next lock or unlock; device checks look for it.
+- `LockScreenPlayer` (not a module) shows `LockScreenPlayerWindow` only while locked **and** a track is loaded **and** Settings › General › "Show the player on the lock screen" is on (**off by default**). Content is the Home tab's Now Playing card on a dark rounded panel: artwork, title, artist, the lyric line if lyrics are on (D53: the card is on screen, so its rule holds), bar and controls.
+- The window is a non-activating panel that can never become key or main, so it can't take keystrokes from the password field; clicks work through `acceptsFirstMouse`.
+- Placed on the menu-bar screen, centred, at 42 % of its height (above the password field) [I: tune on device].
+
+**Security and privacy:** with the setting on, anyone at the locked Mac sees the track and can play, pause, skip and seek: the same as an iPhone's lock screen and Canopy's. Nothing else is reachable: no text fields, links or Settings. The Settings footer says so.
+
+**Alternatives:** the wallpaper route (ruled out, D3); a public-level window (sits under the shield, research §9); the SkyLightWindow package (branch-pinned, unreviewed licence); polling the session dictionary for lock state (energy rule).
+
+**Risk:** High on macOS updates (private symbols; the level could change). The fallback is the `isAvailable` check; a level that stops working fails silently (the window stays under the shield), so it's on every release's device checklist.
+
+---
+
+## D56. Full-screen player, v1: a click on the Now Playing card's artwork
+
+**Date:** 2026-11-13 · **Status:** Accepted for build (Shash, 2026-11-13: "when I click the Home card it will show like this… keep lyrics… make it v1", with a screenshot of Canopy's homepage). Layout taken from Canopy's public homepage image only (CLAUDE.md); no assets copied.
+
+**Decision:**
+- Clicking the artwork on the Home tab's Now Playing card opens a borderless panel over the menu-bar screen at `.mainMenu` level (over the menu bar and Dock; the notch, at `.statusBar`, stays above). Not on the lock-screen card (D55).
+- Layout, as shares of the screen's height: the artwork scaled past the edges, blurred (60 pt) and darkened 30 %; the date and a large rounded clock (11.5 % of the height), tinted with the artwork's average colour lifted 70 % to white; the artwork at 36 %; a 300 pt compact player under it (title, artist, an animated waveform, the bar between elapsed and remaining time with tap-to-seek, previous / play-pause / next, and a headphones button that opens Sound settings [I: undocumented URL]); the lyrics under that.
+- Lyrics: the line before and after dimmed, the current line lit word by word. LRCLIB gives line times only, so v1 spreads a line's words evenly over its time (D53's lookup rules unchanged; with lyrics off the section says where to turn them on). Word-level timing is a later version.
+- Closes on Escape, the close button, a click on the background, another app coming forward (the panel resigning key), or the track going. Key without activating DropNotch.
+- Artwork thumbnails grow from 128 to 640 px (about 1.6 MB per track in memory), so the centre artwork is sharp.
+
+**Energy:** while open only: the clock redraws once a minute; the lyric highlight at 15 fps while playing (paused otherwise); the bar and times as in the card (ARCHITECTURE §9). Nothing runs while it's closed.
+
+**Revision (Shash, 2026-11-13, after the first device runs):**
+- **Note from Shash: this full-screen player is meant for the lock screen only.** The Home-card click is how it opens for now; moving it to the lock screen (in place of, or growing from, D55's card) is the next step, and a decision of its own.
+- Lyrics are hidden until the player's lyrics button (left of the controls) is clicked; they then open in a panel on the right, with the artwork and player moving left. Nothing is looked up until the panel is open.
+- It covers the open notch too (`.statusBar + 1`): the notch sat on the clock. Fixed-height blocks, so nothing runs off the screen.
+- The background is blurred once per track with Core Image (96 px, then scaled) and kept for the last 4 tracks, made before the window shows: a live 60 pt blur made it stutter, and a background made after opening arrived late.
+
+**Alternatives:** a real macOS full-screen window (its own Space and animation; slower to open and close, and the notch would need to follow it); the clock in a fixed colour (didn't match the screenshot); estimating word times from syllables (more code for little gain over even spacing in v1).
+
+---
+
+## D57. The full-screen player is the lock-screen player; no desktop version
+
+**Date:** 2026-11-13 · **Status:** Accepted (Shash, 2026-11-13: "this feature is only for the lock screen… yes please go ahead"). Revises D55 (its small card) and D56 (the Home-card click).
+
+**Decision:**
+- While locked, the lock-screen player (D55's window, space and triggers) shows D56's full-screen player instead of the Now Playing card: the blurred artwork, date and clock, artwork, compact player, and the lyrics button with its right-hand panel.
+- The window covers the **top 70 %** of the screen and fades out over its last tenth. The system's own avatar and password field, in the lower part of the lock screen, are never covered: the first full-screen version covered the whole screen and hid them (Shash, 2026-11-13). Its clock replaces the system's, which sits under it.
+- Layout, in shares of the screen's height: clock 14 %, artwork 26 %, player about 12.5 %, gaps 9 %, ending by about 62 % [V: offscreen render at 1470 × 956, 2026-11-13].
+- The Home card's artwork no longer opens anything; the desktop full-screen panel (`FullScreenPlayer`) and the small lock card (`LockScreenPlayerView`) are removed. No close button or Escape: unlocking closes it.
+
+**Alternatives:** keeping the whole screen with a transparent band at the bottom (rejected: it hid the password field on device, and the field's place isn't documented); keeping the desktop version as well (Shash: lock screen only).
+
+---
+
+## D58. Lock-screen player in two states: compact above the password, expanded with lyrics
+
+**Date:** 2026-11-13 · **Status:** Accepted (Shash, 2026-11-13: a video of the look he wants; "perfect" on device). Revises D57.
+
+**Why the change:** probes with Shash at the Mac (2026-11-13) showed that a window in a private space at absolute level 1 or 100 never appears on the lock screen, and at 200, 300 or 400 it appears above the lock screen's clock, avatar and password. Nothing can sit between the lock screen's wallpaper and its own UI. The look in Shash's video (and Canopy's) is two states, not artwork under the system UI. Swapping the wallpaper was rejected: macOS reported a wallpaper file that no longer exists, so it couldn't be restored without rewriting the private wallpaper store (D3).
+
+**Decision:**
+- **Compact** (every lock starts here): a 320 × 132 glass player centred 66 % down the screen, above the avatar and password prompt [I: from Shash's photo; tune on other Macs]: artwork, title, artist, waveform, bar, controls, a lyrics button and an output button. The rest of the lock screen is the system's.
+- **Expanded** (the artwork, the title or the lyrics button): the whole screen: the artwork blurred and darkened 55 %, date and clock, the artwork on the left with the player under it, lyrics on the right; the lyrics button hides them and centres the artwork; × top left goes back to compact. It covers the password prompt; Touch ID and typing the password still unlock.
+- Two fixed windows, compact and full-screen, each moved into the lock-screen space once, swapped on expand and collapse. Neither is resized, and the hosting views never size their windows (`sizingOptions = []`). Lyrics move by an offset from measured line heights, with a spring; no scroll view. Resizing a window inside the private space, and scrolling in it, crashed DropNotch in an AppKit update-constraints loop twice (02:13, 02:17); the crash reports pointed at `NSHostingView.updateConstraints` → `updateTransform`.
+- Lyrics: the current line fills word by word (each word over its share of the line's time, so the fill is smooth), the next and previous lines dimmed, the column fading out at its top and bottom.
+
+**Alternatives:** the wallpaper swap (rejected above); one window resized between the two states (crashed); a scroll view for the lyrics (crashed).

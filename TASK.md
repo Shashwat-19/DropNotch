@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-11-13):** v0.3 started (D52, D53): see "v0.3" at the end. Branch 1, `feat/screen-corners`, is in progress.
+**Status (2026-11-13):** v0.3 started (D52, D53): see "v0.3" at the end. Branch 1, `feat/screen-corners`, is built (device checks 114–116 open); branch 2, `feat/charging-hud`, is built (checks 117–120 open); branch 3, `feat/weather`, is built (checks 121–125 open); branch 4, `feat/lyrics`, is built (checks 126–129 open); branch 5, `feat/liquid-glass`, is built (checks 130–132 open); branch 6, `feat/airpods-battery`, is built (D54 proposed; checks 133–136 open). Branch 8, `feat/lock-screen`, is built (D55; probe passed with Shash; checks 137–142 open). Shash asked for it ahead of the equaliser (2026-11-13), which waits.
 
 **Status (2026-11-10):** v0.2.0 is released as a pre-release (tag v0.2.0 at e5568a6; DMG SHA-256 4a970ba8a50f20f9d0b13ae8f9ee46dacbf40ee708eecdfb2a6d1e3778141fe9; the repository is still private). v0.1.0 is released. v0.2 (Home dashboard, D42–D45) is in progress in speed mode: see "v0.2" at the end. Branch 1, `feat/home`, is merged to main (2026-11-09). Branch 2, `feat/battery-card`, is merged to main (2026-11-09). Branch 3, `feat/calendar-card`, and branch 3b, `feat/home-layout` (D46), are merged to main (2026-11-09; device checks 84–94 passed on one Release build). Branch 4, `feat/quick-commands`, was built but set aside unmerged (Shash, 2026-11-10); branch 4b, `feat/terminal` (D48), is merged to main (2026-11-10; device checks 95–100 passed). `feat/notch-size` (D49) is merged (checks 101–113 passed). Next: `release/v0.2.0`.
 
@@ -509,3 +509,103 @@ Speed mode as in v0.2. Branches from `main`, one feature each, in this order:
 9. `release/v0.3.0`: performance-optimizer, accessibility-auditor, security-auditor (network, private APIs), docs-writer, changelog-agent.
 
 Not in v0.3: the pill on Macs without a notch already shipped in v0.1.0.
+
+### Branch 1: `feat/screen-corners` (D52)
+Two click-through borderless windows (black quarter-disc masks, `.statusBar` level, every Space) at the bottom corners of each screen with a notch; Settings › General › Round the bottom corners, off by default; rebuilt on every screen change. 10 pt radius [I].
+
+**Status (2026-11-13):** built; 611 tests, 0 failures (6 new). Device checks (MacBook Air, Release build of `feat/screen-corners`):
+114. **Corners.** Settings › General › Round the bottom corners on: both bottom corners of the built-in display are rounded, close to the top corners' curve (if not, say bigger or smaller). Off: they go at once.
+115. **Click-through and layering.** With the Dock at the bottom, click its first and last icons near the corners; drag a window into a corner and click there: every click reaches what's underneath. The corners stay over the Dock, a full-screen app (Safari ⌃⌘F) and after switching Spaces.
+116. **Displays.** With an external display connected, it has no corners; close the lid (clamshell) and reopen: the built-in display's corners come back. Screen sleep and wake: still there.
+
+### Branch 2: `feat/charging-hud` (D52; branched from `feat/screen-corners`)
+`NotchHUD` and `ModuleRegistry.showHUD`: a 3 s peek that takes both wings of the closed notch and tells VoiceOver. `ChargingAlert` (not a module) follows `BatterySource` and shows a bolt (or a plug when full) and the percentage when power connects; never on the first reading. `Haptics.tap()` (`.alignment`). Settings › General: "Show an alert when the Mac starts charging" (on; not shown without a battery) and "Haptic feedback" (on).
+
+**Status (2026-11-13):** built; 616 tests, 0 failures (5 new). Device checks (MacBook Air, Release build):
+117. **Plug in.** Unplug, wait a moment, plug in with the notch closed: within about a second the closed notch widens to both sides with a green bolt left and the percentage right, for about 3 s, then shrinks back. A finger resting on the trackpad feels one light tap. Plug in at 100 % (or at a charge limit): a plug icon instead of the bolt.
+118. **With music.** Play a track (wings showing artwork and bars), plug in: the HUD replaces the wings for 3 s, then artwork and bars come back. Hover-open during the HUD: the notch opens as usual.
+119. **Settings.** Turn off "Show an alert…": plugging in shows nothing. Turn off "Haptic feedback" with the alert on: the HUD shows, no tap. Launch DropNotch while plugged in: no HUD.
+120. **VoiceOver.** With VoiceOver on, plug in: it says "Charging, 82 %" (or "On power").
+
+### Branch 3: `feat/weather` (D53; branched from `feat/charging-hud`)
+`WeatherModule` (narrow Home card, off by default), `OpenMeteoClient` (geocoding, forecast, air quality; response shapes checked with curl, 2026-11-13), Settings › Weather (card on/off, city search, privacy text). Temperature in the locale's unit without the scale letter; US AQI with its band in words. `HomeLayout` keeps a wide card at 30 % or more of the row, so four cards still leave Now Playing room.
+
+**Status (2026-11-13):** built; 633 tests, 0 failures (17 new). Device checks (MacBook Air, Release build):
+121. **Choose a city.** Settings › Weather: search "Bengaluru", pick "Bengaluru, Karnataka, India"; it shows as the city. Search "zzzz": "No city matches". Wi-Fi off, search: "Couldn't search…".
+122. **Card.** Turn the card on, open the notch on Home: a spinner, then the symbol, temperature (°C), "Bengaluru", H/L and "AQI n Moderate" (or its band). Compare with the Weather app: within a degree or two. VoiceOver reads it as one sentence.
+123. **No polling.** In Terminal.app, `log stream --predicate 'subsystem == "com.shashwat.DropNotch" AND category == "Weather"'` and Little Snitch or `nettop -p DropNotch` if you have them: opening and closing the notch repeatedly within 30 minutes makes no new requests; with the notch closed, none at all.
+124. **Four cards.** Battery and Weather on with Calendar and Now Playing: the Now Playing card stays readable (about 150 pt); the narrow cards' text shrinks but isn't cut off. At Large too.
+125. **Off.** Card off: Home as before; Remove City: the card asks for a city.
+
+### Branch 4: `feat/lyrics` (D53; branched from `feat/weather`)
+`SyncedLyrics` (LRC parser, binary-search line lookup), `LRCLibClient` (`/api/get`, 404 = none; checked with curl, 2026-11-13), `NowPlayingModule.loadLyrics` (once per track per session, failures retried, cache cleared on stop), `LyricLineView` (`TimelineView(.explicit)` at line starts; ♪ for gaps), Settings › Privacy › Show synced lyrics (off). `WeatherError` renamed `ServiceError` and shared.
+
+**Status (2026-11-13):** built; 642 tests, 0 failures (9 new). Device checks (MacBook Air, Release build):
+126. **On.** Settings › Privacy › Show synced lyrics on. Play a well-known track in Music, open the notch on Home: a lyric line appears under the artist and changes in time with the song (within about half a second); gaps show ♪. Pause: the line holds; play: it carries on. Seek with the bar: it jumps to the right line.
+127. **Spotify and tracks without lyrics.** Same in Spotify. A track LRCLIB doesn't have, or an instrumental: no line, nothing else changes.
+128. **Requests.** `log stream --predicate 'subsystem == "com.shashwat.DropNotch" AND category == "NowPlaying"' --level debug`: no track names. With the notch closed through several tracks, nothing is fetched (Little Snitch / `nettop`); opening fetches for the current track only; reopening on the same track fetches nothing.
+129. **Off.** Turn it off with the card showing: the line goes at once.
+
+### Branch 5: `feat/liquid-glass` (D52; branched from `feat/lyrics`)
+Settings › General › Look: Black (default) or Liquid Glass, shown only on macOS 26+. Glass (`glassEffect`, tinted black at 50 % [I]) on the open shape only; closed and peek stay black for the camera housing; Reduce Transparency forces black.
+
+**Status (2026-11-13):** built; 644 tests, 0 failures (2 new). Device checks (MacBook Air, macOS 27, Release build):
+130. **Glass.** Look › Liquid Glass. Open the notch over a bright wallpaper and over a dark window: glass with the wallpaper softly visible, text and controls still easy to read on every tab; closed, the notch is black as before. If the glass around the camera housing looks wrong, say so: the tint is one number.
+131. **Motion.** Open and close several times: no flash between black and glass beyond the shape growing; the tab switch cross-fade is unchanged.
+132. **Accessibility.** System Settings › Accessibility › Display › Reduce transparency on: the open notch is black. Increase contrast: the card edges show on glass too.
+
+### Branch 6: `feat/airpods-battery` (D54 proposed; branched from `feat/liquid-glass`; Release build: done)
+Probe first (2026-11-13; D54): IOBluetooth's private per-bud keys answer in-process (left 36, right 35, case 0); the IORegistry route didn't. Built: `HeadphoneBattery`, `IOBluetoothHeadphoneSource` (connect notification, one read 2 s later, every key guarded by `responds(to:)`), `HeadphoneAlert` (HUD, off by default), `NSBluetoothAlwaysUsageDescription`. Settings › General › "Show headphone battery when they connect".
+
+**Status (2026-11-13):** built; 648 tests, 0 failures (4 new). Release build succeeded (ad hoc, hardened runtime, entitlements unchanged); not launched. Device checks (MacBook Air, **Release build**):
+133. **Prompt.** Turn the setting on: macOS asks for Bluetooth access with the D54 text. Before that, with it off, no prompt ever appears.
+134. **Connect.** Put the AirPods in the case and close it, wait, take them out: within about 2–3 s a HUD shows the AirPods symbol and the lower bud's percentage, with a tap. Compare with Control Centre's figures. If it shows nothing, the 2 s wait may be too short; say so.
+135. **Already connected.** Quit and relaunch with the AirPods connected: no HUD. Other headphones (if you have any): the headphones symbol and one figure.
+136. **VoiceOver.** It says "AirPods connected, left …, right …" (and the case when open).
+
+### Branch 7: `feat/equaliser` (D52; not started: needs a probe with Shash)
+Probe to run with Shash at the Mac (throwaway, outside the repo): a Core Audio process tap (`CATapDescription` for one process, muted while tapped) on an aggregate device, passing audio through unchanged, then through one `AVAudioUnitEQ`-style biquad. Measure: the audio-capture permission prompt and its text; added latency; CPU at idle and while playing; and the D2 risk: does tapping Spotify still break the AirPods pause gesture? Then D55 with the per-app design (which apps, presets or bands, where it lives in Settings).
+
+### Branch 8: `feat/lock-screen` (D55; branched from `feat/airpods-battery`; Release build: done)
+**Built 2026-11-13.** Probe passed with Shash at the Mac (D55): a window in a level-400 SkyLight space showed above the lock screen and took clicks; the lock and unlock notifications fired. Built: `SkyLightLockScreenSpace` (dlsym), `DistributedLockStateSource`, `LockScreenPlayer`, `LockScreenPlayerWindow` (never key), `LockScreenPlayerView` (the Now Playing card on a dark panel), Settings › General toggle (off). 654 tests, 0 failures (6 new). security-auditor and dependency-manager not yet run.
+
+First device run (Shash, 2026-11-13, Release 81493f0): the card shows above the password field, play/pause/skip work while locked, unlocking removes it. Checks 137–138 passed at that level; 139–142 still to run.
+
+Device checks (MacBook Air, **Release build**; Music playing):
+137. **Shows.** Turn on "Show the player on the lock screen". Lock (⌃⌘Q): the card is above the password field with artwork, title, artist, bar and controls. Say if it should sit higher or lower, or be bigger.
+138. **Controls while locked.** Pause, play, next, previous and a seek on the bar all work while locked; the card follows the track change.
+139. **Password and Touch ID.** Type the password with the card showing: every key goes to the password field, none is lost. Touch ID unlock: the card goes at once.
+140. **Nothing loaded.** Quit Music, lock: no card. Lock, then start Music from… (not possible while locked: skip) — instead, lock with Music paused but loaded: the card shows, paused.
+141. **Sleep.** Lock, close the lid for a minute, open: the card is still there (or say if it's gone); unlock: gone. No card ever left on the desktop after unlock.
+142. **Off.** Turn the setting off and lock: no card.
+
+Original plan (kept):
+Probe to run with Shash at the Mac (throwaway): a window moved to a private SkyLight space at an absolute level above the lock screen's shield, as research/atoll-media-lockscreen.md describes the technique (clean-room; no code copied). Shash locks the Mac (⌃⌘Q) and reports: is the window visible above the password field; does the password field still take focus and typing; does anything remain after unlocking; does it survive sleep and wake. security-auditor and dependency-manager review the route before D56. The wallpaper route stays ruled out.
+
+### Branch 9: `feat/full-screen-player` (D56, "v1"; branched from `feat/lock-screen`)
+Click the Now Playing card's artwork: blurred artwork over the whole screen, date and clock tinted from the artwork, the artwork, a compact player and word-by-word lyrics (even spacing across each line). Artwork thumbnails 128 → 640 px.
+
+**Note from Shash (2026-11-13): this feature is only for the lock screen.** For now it opens from the Home card; moving it to the lock screen is next (D56 revision).
+
+**Revised (2026-11-13) after Shash's runs:** smoother after the background blur moved out of the draw loop (Shash: "way better and smoother"); covers the notch; lyrics behind a button, in a right-hand panel; background ready before the first frame. 658 tests, 0 failures.
+
+**Status (2026-11-13):** built; 657 tests, 0 failures (3 new). Device checks (MacBook Air, Release build, Music playing, lyrics on):
+143. **Open and look.** Hover-open the notch on Home, click the artwork: the screen fills with the blurred artwork, the date and time on top, sharp artwork in the middle, the player under it and lyrics under that. Compare with Canopy's screenshot; say what to move.
+144. **Controls.** Play/pause, previous, next, a click on the bar: all work; the times count; the waveform moves while playing.
+145. **Close.** Escape, the × button, a click on the background, and ⌘Tab each close it. Quitting Music closes it.
+146. **Track change.** Next track: the background, artwork, clock tint and lyrics follow.
+147. **Lyrics.** Hidden at first. The lyrics button (left of previous) opens a panel on the right and the artwork moves left; words light left to right roughly with the singing; clicking it again closes the panel. Lyrics off in Settings: the panel shows the hint.
+
+### Branch 10: `feat/lock-screen-art` (D57; branched from `feat/full-screen-player`)
+The full-screen player becomes the lock-screen player: a window over the top 70 % of the screen fading into the system's lock screen, so the avatar and password field stay visible. The Home-card click and the small lock card are removed. Layout checked with an offscreen render at 1470 × 956 (password-field area clear) before the device run.
+
+Device checks (MacBook Air, Release build, Music playing, lock-screen player on):
+148. **Lock.** ⌃⌘Q: blurred artwork, date and clock, artwork and player in the top part, fading out above your avatar and password field, which look and work as usual.
+149. **Password and Touch ID.** Type the password: every key lands; Touch ID works; unlocking removes the player at once.
+150. **Controls and lyrics while locked.** Play/pause, next, previous, a click on the bar; the lyrics button opens the right-hand panel and closes it.
+151. **Home card.** Clicking the artwork on the Home card does nothing (lock screen only).
+
+### Branch 10 revised: two-state lock-screen player (D58; on `feat/lock-screen-art`)
+Compact glass player above the password when locked; the artwork, title or lyrics button expands to full screen (artwork left, lyrics right, × back). Two fixed windows swapped, never resized; lyrics moved by offset. Two crashes on the way (AppKit update-constraints loop from resizing and scrolling inside the lock-screen space), fixed and checked with a real-window test that swaps the states three times. 658 tests, 0 failures.
+
+**Status (2026-11-13):** Shash on device, Release build 1257617: "perfect". Still to check: Touch ID and typed password with the expanded view up (149), sleep while locked (141), a second display.

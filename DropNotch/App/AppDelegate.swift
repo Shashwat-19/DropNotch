@@ -7,11 +7,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Internal so the Settings scene can reach them.
     let notchState = NotchState()
     /// A Mac without a battery gets no Battery card at all (D43).
-    let registry = ModuleRegistry(modules: [HomeModule(), NowPlayingModule(source: ScriptablePlayersSource()),
+    let registry = ModuleRegistry(modules: [HomeModule(), NowPlayingModule(source: ScriptablePlayersSource(), lyricsSource: LRCLibClient()),
                                             CalendarModule(source: EventKitCalendarSource())]
         + (PowerSourceBatterySource.hasInternalBattery ? [BatteryModule(source: PowerSourceBatterySource())] : [])
+        + [WeatherModule(source: OpenMeteoClient())]
         + [NotesModule(), FileTrayModule(), ClipboardModule(),
             TerminalModule { fontSize, scrollback in SwiftTermSession(fontSize: fontSize, scrollback: scrollback) }])
+    /// Rounded bottom corners on the notched display (D52). Internal so the Settings scene can reach it.
+    let screenCorners = ScreenCornersController()
+    /// The HUD when the Mac is plugged in (D52); nil without a battery, like the Battery card (D43).
+    lazy var chargingAlert: ChargingAlert? = PowerSourceBatterySource.hasInternalBattery
+        ? ChargingAlert(source: PowerSourceBatterySource(), registry: registry) : nil
+    /// The HUD when headphones connect (D54); off until turned on in Settings.
+    lazy var headphoneAlert = HeadphoneAlert(source: IOBluetoothHeadphoneSource(), registry: registry)
+    /// Now Playing above the lock screen (D55); off until turned on in Settings.
+    lazy var lockScreenPlayer: LockScreenPlayer? = registry.modules.lazy.compactMap { $0 as? NowPlayingModule }.first
+        .map { LockScreenPlayer(nowPlaying: $0) }
     private var screenObserver: ScreenObserver?
 
     /// Unit tests run inside the app, so it launches for them too. Xcode sets this variable for the
@@ -29,6 +40,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             PrivateFolder.secureApplicationSupport()
             TerminalNotice.enforce(on: registry)
             registry.start()
+            chargingAlert?.refresh()
+            headphoneAlert.refresh()
+            lockScreenPlayer?.refresh()
             // Inherits the main actor. The stream ends only with the app.
             Task { [notchState] in
                 for await _ in KeyboardShortcuts.events(.keyDown, for: .toggleNotch) {
@@ -39,7 +53,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         followTabCount()
         notchState.screensChanged()
         followCompactContent()
-        screenObserver = ScreenObserver { [notchState] in notchState.screensChanged() }
+        // A test run shows no windows of its own beyond the panel.
+        if !Self.isTestHost { screenCorners.refresh() }
+        screenObserver = ScreenObserver { [notchState, screenCorners] in
+            notchState.screensChanged()
+            if !Self.isTestHost { screenCorners.refresh() }
+        }
     }
 
     /// Widens the closed notch on each side where a module fills a compact slot (D28, D36). Observation reports one change and
@@ -61,6 +80,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         registry.stop()
+        chargingAlert?.stop()
+        headphoneAlert.stop()
+        lockScreenPlayer?.stop()
     }
 }
 

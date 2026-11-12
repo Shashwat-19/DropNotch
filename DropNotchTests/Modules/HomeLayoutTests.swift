@@ -16,6 +16,12 @@ final class HomeLayoutTests: XCTestCase {
         XCTAssertEqual(HomeLayout.widths([.wide, .medium, .narrow], total: 432, spacing: 8), [150, 173, 93])
     }
 
+    // Calendar, Battery and Weather all on (D53): 464 free; the fixed cards would leave 59 pt, under the 146 pt minimum
+    // (30 % of 488), so they scale by 318 / 405.
+    func testFourCardsKeepTheWideCardAtItsMinimum() {
+        XCTAssertEqual(HomeLayout.widths([.wide, .medium, .narrow, .narrow], total: 488, spacing: 8), [147, 153, 82, 82])
+    }
+
     func testNoCardsHaveNoWidths() {
         XCTAssertEqual(HomeLayout.widths([], total: 488, spacing: 8), [])
     }
