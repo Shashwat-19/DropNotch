@@ -27,7 +27,9 @@ struct CompactLockPlayerView: View {
 
     var body: some View {
         if let info = module.shown {
-            FullScreenControlsView(module: module, info: info, leading: .expand(expand), artworkSize: 40, onHeaderTap: expand)
+            // The lyrics button opens the full screen, where the lyrics are (Shash, 2026-11-13).
+            FullScreenControlsView(module: module, info: info, leading: .lyrics(isOn: false, toggle: expand), artworkSize: 40,
+                                   onHeaderTap: expand)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
@@ -40,6 +42,9 @@ struct FullScreenPlayerView: View {
     let module: NowPlayingModule
     let collapse: () -> Void
     @AppStorage(LRCLibClient.enabledKey) private var lyricsOn = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The lyrics on the right; the lyrics button hides them and centres the artwork. Shown when it opens.
+    @State private var showsLyrics = true
 
     var body: some View {
         GeometryReader { proxy in
@@ -54,22 +59,27 @@ struct FullScreenPlayerView: View {
                     VStack(spacing: height * 0.03) {
                         NowPlayingArtworkView(artwork: info.artwork, player: info.player, size: height * 0.34)
                             .shadow(color: .black.opacity(0.45), radius: 24, y: 10)
-                        FullScreenControlsView(module: module, info: info, leading: .none)
+                        FullScreenControlsView(module: module, info: info,
+                                               leading: .lyrics(isOn: showsLyrics, toggle: { showsLyrics.toggle() }))
                     }
                     .frame(width: width * 0.40)
-                    .position(x: width * 0.31, y: height * 0.55)
+                    .position(x: width * (showsLyrics ? 0.31 : 0.5), y: height * 0.55)
                     // Right: the lyrics.
-                    lyrics(info)
-                        .frame(width: width * 0.36, height: height * 0.52)
-                        .position(x: width * 0.68, y: height * 0.56)
+                    if showsLyrics {
+                        lyrics(info)
+                            .frame(width: width * 0.36, height: height * 0.6)
+                            .position(x: width * 0.68, y: height * 0.56)
+                            .transition(.opacity.combined(with: .move(edge: .trailing)))
+                    }
                 }
                 collapseButton
                     .padding(24)
             }
         }
-        // Lyrics are looked up only while expanded, and then by D53's rules: once per track, with the setting on.
-        .task(id: LyricsKey(trackID: module.shown?.trackID, on: lyricsOn)) {
-            if lyricsOn { await module.loadLyrics() }
+        .animation(reduceMotion ? nil : .spring(duration: 0.45, bounce: 0), value: showsLyrics)
+        // Lyrics are looked up only while shown here, and then by D53's rules: once per track, with the setting on.
+        .task(id: LyricsKey(trackID: module.shown?.trackID, on: lyricsOn && showsLyrics)) {
+            if lyricsOn && showsLyrics { await module.loadLyrics() }
         }
     }
 
@@ -119,7 +129,7 @@ struct FullScreenPlayerView: View {
                 Text("Turn on synced lyrics in Settings › Privacy to see them here.")
                     .foregroundStyle(.white.opacity(0.55))
             } else if let current = module.lyrics, current.trackID == info.trackID {
-                LyricWordsView(lyrics: current.lyrics, info: info, before: 2, after: 3, alignment: .leading)
+                LyricWordsView(lyrics: current.lyrics, info: info)
             } else {
                 // Loading, or LRCLIB has none for this track.
                 Text("No synced lyrics for this track.")
@@ -153,7 +163,8 @@ struct FullScreenPlayerView: View {
 struct FullScreenControlsView: View {
     enum Leading {
         case none
-        case expand(() -> Void)
+        /// The lyrics button: filled while the lyrics show.
+        case lyrics(isOn: Bool, toggle: () -> Void)
     }
 
     let module: NowPlayingModule
@@ -227,14 +238,14 @@ struct FullScreenControlsView: View {
         switch leading {
         case .none:
             Color.clear.frame(height: 1)
-        case .expand(let expand):
-            Button(action: expand) {
-                Image(systemName: "arrow.up.left.and.arrow.down.right").font(.system(size: 12))
+        case let .lyrics(isOn, toggle):
+            Button(action: toggle) {
+                Image(systemName: isOn ? "quote.bubble.fill" : "quote.bubble").font(.system(size: 13))
             }
             .buttonStyle(.plain)
-            .foregroundStyle(.white.opacity(0.7))
-            .help("Full screen with lyrics")
-            .accessibilityLabel(Text("Show full screen with lyrics"))
+            .foregroundStyle(.white.opacity(isOn ? 1 : 0.75))
+            .help(isOn ? "Hide lyrics" : "Show lyrics")
+            .accessibilityLabel(Text(isOn ? "Hide lyrics" : "Show lyrics"))
         }
     }
 

@@ -9,9 +9,9 @@ final class FullScreenPlayerTests: XCTestCase {
         XCTAssertEqual(LyricWordsView.progress(elapsed: 20, start: 10, end: 14), 1)
         XCTAssertEqual(LyricWordsView.progress(elapsed: 5, start: 10, end: 14), 0)
         XCTAssertEqual(LyricWordsView.progress(elapsed: 10, start: 10, end: 10), 1, "a zero-length line is lit")
-        XCTAssertEqual(LyricWordsView.litWords(count: 4, progress: 0), 1, "the first word lights as the line starts")
-        XCTAssertEqual(LyricWordsView.litWords(count: 4, progress: 0.5), 3)
-        XCTAssertEqual(LyricWordsView.litWords(count: 4, progress: 1), 4)
+        XCTAssertEqual(LyricWordsView.wordFill(count: 4, progress: 0), [0, 0, 0, 0])
+        XCTAssertEqual(LyricWordsView.wordFill(count: 4, progress: 0.375), [1, 0.5, 0, 0], "the second word half lit")
+        XCTAssertEqual(LyricWordsView.wordFill(count: 4, progress: 1), [1, 1, 1, 1])
     }
 
     func testClockTakesALightTintOfTheArtwork() throws {
