@@ -4,6 +4,39 @@ All notable changes to DropNotch are recorded in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and DropNotch uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-11-13
+
+A lock-screen player, synced lyrics, a weather card and a few touches from Canopy's list; still an early, unsigned build for macOS 14 or later, tested on Apple silicon.
+
+New permissions and network use. As before, macOS asks only when you first turn on the feature that needs it, and every new feature that talks to the internet is off until you turn it on:
+- **Bluetooth (new):** only when you turn on Settings › General › Show headphone battery when they connect. DropNotch only reads the battery levels of AirPods and other headphones; it never connects to or changes a device.
+- **Weather (off by default):** searching for a city sends what you type to Open-Meteo's geocoding service; after that, only the city's coordinates, rounded to about 1 km, go to Open-Meteo's weather and air-quality services, when the Weather card shows and its reading is more than 30 minutes old. No account and no Location permission.
+- **Synced lyrics (off by default):** sends the track's title, artist and length to LRCLIB (lrclib.net) once per track, only while the Now Playing card or the lock-screen player shows them. Lyrics stay in memory and are never saved or logged.
+- **Lock-screen player (off by default):** while your Mac is locked, anyone at it can see what's playing and use play, pause, skip and seek. It uses private parts of macOS to draw over the lock screen, so a macOS update may turn it off.
+- Updating from 0.2.0: this build isn't signed with a Developer ID, so macOS may ask again for Music or Spotify control.
+
+### Added
+- Lock-screen player, off by default (Settings › General): a small glass player above your avatar and password while the Mac is locked and a track is loaded. Click the artwork, the title or the lyrics button for the full screen: the artwork, the player and the lyrics; × goes back to the small player.
+- Synced lyrics from LRCLIB, off by default (Settings › Privacy): the current line in the Now Playing card, and the full lyrics on the lock screen, lighting word by word.
+- Weather card on Home, off by default: temperature in your unit, today's high and low, and air quality (US AQI) in words, for a city you choose in the new Settings › Weather.
+- Charging alert: the closed notch shows a bolt and the charge for 3 seconds when you plug in (Settings › General; on by default on Macs with a battery).
+- Headphone battery alert, off by default: the closed notch shows your AirPods' battery when they connect.
+- Haptic feedback: a light tap on the trackpad with each alert, if a finger is on it (Settings › General).
+- Round the bottom corners of the screen, off by default (Settings › General), to match the built-in display's rounded top corners. Clicks in the corners still reach what's underneath.
+- Settings › General › Look: Liquid Glass for the open notch on macOS 26 or later. The closed notch stays black; Reduce Transparency keeps it black.
+- VoiceOver announces alerts in the notch.
+
+### Changed
+- With Calendar, Battery and Weather all on, the Home cards shrink so the Now Playing card keeps at least 30 % of the row.
+- Artwork is kept at a higher resolution, so it's sharp on the lock screen.
+
+### Known issues
+- This build still isn't signed with an Apple Developer ID or notarised, so macOS blocks it the first time you open it; follow the Open Anyway steps in [README › Install](README.md#install).
+- The full-screen lock-screen view covers the password prompt; collapse it with × or unlock with Touch ID.
+- The lock-screen player's position was tuned on a MacBook Air; on other Macs or with a second display it may sit too high or low.
+- Lyrics light word by word at an even pace across each line, as LRCLIB gives line timings only.
+- DropNotch needs macOS 14 or later. It has only been tested on Apple silicon Macs.
+
 ## [0.2.0] - 2026-11-10
 
 A Home tab with cards, an optional Terminal tab, a taller notch and a Large size; still an early, unsigned build for macOS 14 or later, tested on Apple silicon.
@@ -85,5 +118,6 @@ macOS asks for each permission only when you first use the feature that needs it
 - Now Playing relies on notifications that Music and Spotify don't document, so a player update could stop track details appearing; the controls would still work.
 - There are no automatic updates yet: check GitHub Releases for new versions.
 
+[0.3.0]: https://github.com/Shashwat-19/DropNotch/releases/tag/v0.3.0
 [0.2.0]: https://github.com/Shashwat-19/DropNotch/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Shashwat-19/DropNotch/releases/tag/v0.1.0
