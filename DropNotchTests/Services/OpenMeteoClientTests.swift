@@ -59,7 +59,7 @@ final class OpenMeteoClientTests: XCTestCase {
                 _ = try await client().places(matching: query)
                 XCTFail("should throw")
             } catch {
-                XCTAssertEqual(error as? WeatherError, .invalidQuery)
+                XCTAssertEqual(error as? ServiceError, .invalidQuery)
             }
         }
         XCTAssertTrue(Stub.requests.isEmpty)
@@ -98,7 +98,7 @@ final class OpenMeteoClientTests: XCTestCase {
             _ = try await client().reading(at: place)
             XCTFail("should throw")
         } catch {
-            XCTAssertEqual(error as? WeatherError, .badResponse(status: 429))
+            XCTAssertEqual(error as? ServiceError, .badResponse(status: 429))
         }
     }
 

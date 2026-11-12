@@ -14,6 +14,8 @@ struct NowPlayingExpandedView: View {
     @FocusState private var focus: Focus?
     @Environment(\.notchHasKeyboardFocus) private var hasKeyboardFocus
     @Environment(\.notchSize) private var size
+    /// Settings › Privacy › Show synced lyrics (D53).
+    @AppStorage(LRCLibClient.enabledKey) private var lyricsOn = false
 
     var body: some View {
         if let info = module.shown {
@@ -52,6 +54,11 @@ struct NowPlayingExpandedView: View {
                                 .foregroundStyle(.secondary)
                                 .opacity(textOpacity)
                         }
+                        if lyricsOn, let current = module.lyrics, current.trackID == info.trackID {
+                            LyricLineView(lyrics: current.lyrics, info: info)
+                                .font(.notch(.subheadline, size).weight(.medium))
+                                .padding(.top, 2)
+                        }
                     }
                     .padding(.top, 2)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -80,6 +87,8 @@ struct NowPlayingExpandedView: View {
                 module.didOpen()
             }
             .onChange(of: TrackText(info)) { fadeToCurrentText() }
+            // On appearing and on each track change while the card shows; cancelled when the notch closes (D53).
+            .task(id: LyricsRequest(trackID: info.trackID, on: lyricsOn)) { await module.loadLyrics() }
         } else {
             NotchEmptyState("Nothing playing in Music or Spotify", systemImage: "music.note")
         }
@@ -161,6 +170,11 @@ struct NowPlayingExpandedView: View {
             case .playPause, .seek: self = .playPause
             }
         }
+    }
+
+    private struct LyricsRequest: Equatable {
+        var trackID: String?
+        var on: Bool
     }
 
     /// The title and artist lines, compared to tell when a new track's text should fade in.

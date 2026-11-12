@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-11-13):** v0.3 started (D52, D53): see "v0.3" at the end. Branch 1, `feat/screen-corners`, is built (device checks 114–116 open); branch 2, `feat/charging-hud`, is built (checks 117–120 open); branch 3, `feat/weather`, is built (checks 121–125 open).
+**Status (2026-11-13):** v0.3 started (D52, D53): see "v0.3" at the end. Branch 1, `feat/screen-corners`, is built (device checks 114–116 open); branch 2, `feat/charging-hud`, is built (checks 117–120 open); branch 3, `feat/weather`, is built (checks 121–125 open); branch 4, `feat/lyrics`, is built (checks 126–129 open).
 
 **Status (2026-11-10):** v0.2.0 is released as a pre-release (tag v0.2.0 at e5568a6; DMG SHA-256 4a970ba8a50f20f9d0b13ae8f9ee46dacbf40ee708eecdfb2a6d1e3778141fe9; the repository is still private). v0.1.0 is released. v0.2 (Home dashboard, D42–D45) is in progress in speed mode: see "v0.2" at the end. Branch 1, `feat/home`, is merged to main (2026-11-09). Branch 2, `feat/battery-card`, is merged to main (2026-11-09). Branch 3, `feat/calendar-card`, and branch 3b, `feat/home-layout` (D46), are merged to main (2026-11-09; device checks 84–94 passed on one Release build). Branch 4, `feat/quick-commands`, was built but set aside unmerged (Shash, 2026-11-10); branch 4b, `feat/terminal` (D48), is merged to main (2026-11-10; device checks 95–100 passed). `feat/notch-size` (D49) is merged (checks 101–113 passed). Next: `release/v0.2.0`.
 
@@ -536,3 +536,12 @@ Two click-through borderless windows (black quarter-disc masks, `.statusBar` lev
 123. **No polling.** In Terminal.app, `log stream --predicate 'subsystem == "com.shashwat.DropNotch" AND category == "Weather"'` and Little Snitch or `nettop -p DropNotch` if you have them: opening and closing the notch repeatedly within 30 minutes makes no new requests; with the notch closed, none at all.
 124. **Four cards.** Battery and Weather on with Calendar and Now Playing: the Now Playing card stays readable (about 150 pt); the narrow cards' text shrinks but isn't cut off. At Large too.
 125. **Off.** Card off: Home as before; Remove City: the card asks for a city.
+
+### Branch 4: `feat/lyrics` (D53; branched from `feat/weather`)
+`SyncedLyrics` (LRC parser, binary-search line lookup), `LRCLibClient` (`/api/get`, 404 = none; checked with curl, 2026-11-13), `NowPlayingModule.loadLyrics` (once per track per session, failures retried, cache cleared on stop), `LyricLineView` (`TimelineView(.explicit)` at line starts; ♪ for gaps), Settings › Privacy › Show synced lyrics (off). `WeatherError` renamed `ServiceError` and shared.
+
+**Status (2026-11-13):** built; 642 tests, 0 failures (9 new). Device checks (MacBook Air, Release build):
+126. **On.** Settings › Privacy › Show synced lyrics on. Play a well-known track in Music, open the notch on Home: a lyric line appears under the artist and changes in time with the song (within about half a second); gaps show ♪. Pause: the line holds; play: it carries on. Seek with the bar: it jumps to the right line.
+127. **Spotify and tracks without lyrics.** Same in Spotify. A track LRCLIB doesn't have, or an instrumental: no line, nothing else changes.
+128. **Requests.** `log stream --predicate 'subsystem == "com.shashwat.DropNotch" AND category == "NowPlaying"' --level debug`: no track names. With the notch closed through several tracks, nothing is fetched (Little Snitch / `nettop`); opening fetches for the current track only; reopening on the same track fetches nothing.
+129. **Off.** Turn it off with the card showing: the line goes at once.

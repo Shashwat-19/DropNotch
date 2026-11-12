@@ -25,8 +25,15 @@ final class NowPlayingModule: NotchModule {
     let homeCard: HomeCardSize? = .wide
     /// The compact slots show (D28): while playing, and for `compactGrace` after it stops with a track loaded.
     private(set) var hasCompactContent = false
+    /// Synced lyrics for the track on screen, while Settings › Privacy › Show synced lyrics is on (D53). Memory only.
+    private(set) var lyrics: TrackLyrics?
 
     private let source: any NowPlayingSource
+    @ObservationIgnored private let lyricsSource: (any LyricsSource)?
+    @ObservationIgnored private let defaults: UserDefaults
+    /// Per track id, for the session (D53): nil inside means looked up, none found. Failures aren't kept, so the next
+    /// open tries again. Cleared by `stop()`.
+    @ObservationIgnored private var lyricsCache: [String: SyncedLyrics?] = [:]
     // Not UI state, so Observation should skip it (`@Observable` only tracks `var`s).
     @ObservationIgnored private var task: Task<Void, Never>?
     /// Numbers each click. `stop()` and newer clicks move it on, so a reply that arrives late (the
@@ -42,10 +49,13 @@ final class NowPlayingModule: NotchModule {
     @ObservationIgnored private let compactGrace: Duration
     @ObservationIgnored private var compactGraceTask: Task<Void, Never>?
 
-    /// `settleDelay`, `artworkHold` and `compactGrace` are internal for tests.
-    init(source: any NowPlayingSource, settleDelay: Duration = .seconds(1), artworkHold: Duration = .seconds(2),
-         compactGrace: Duration = .seconds(2)) {
+    /// `settleDelay`, `artworkHold`, `compactGrace` and `defaults` are internal for tests. Without `lyricsSource` there
+    /// are never lyrics.
+    init(source: any NowPlayingSource, lyricsSource: (any LyricsSource)? = nil, defaults: UserDefaults = .standard,
+         settleDelay: Duration = .seconds(1), artworkHold: Duration = .seconds(2), compactGrace: Duration = .seconds(2)) {
         self.source = source
+        self.lyricsSource = lyricsSource
+        self.defaults = defaults
         self.settleDelay = settleDelay
         self.artworkHold = artworkHold
         self.compactGrace = compactGrace
@@ -83,6 +93,38 @@ final class NowPlayingModule: NotchModule {
         compactGraceTask?.cancel()
         compactGraceTask = nil
         currentClick += 1
+        lyrics = nil
+        lyricsCache = [:]
+    }
+
+    /// The setting (D53), read each time so turning it off applies at once.
+    var lyricsEnabled: Bool { lyricsSource != nil && defaults.bool(forKey: LRCLibClient.enabledKey) }
+
+    /// Looks up lyrics for the track on screen: once per track per session, only while the setting is on. The card calls
+    /// it when it appears and when the track changes while it shows, so nothing is sent while the notch is closed.
+    func loadLyrics() async {
+        guard lyricsEnabled, let lyricsSource, let info = shown, let id = info.trackID, let title = info.title,
+              let artist = info.artist else {
+            lyrics = nil
+            return
+        }
+        if lyrics?.trackID == id { return }
+        if let cached = lyricsCache[id] {
+            lyrics = cached.map { TrackLyrics(trackID: id, lyrics: $0) }
+            return
+        }
+        lyrics = nil
+        do {
+            let found = try await lyricsSource.lyrics(title: title, artist: artist, duration: info.duration)
+            guard !Task.isCancelled else { return }
+            // A bound on a long session's memory; the next open of an evicted track asks again.
+            if lyricsCache.count >= 200 { lyricsCache.removeAll() }
+            lyricsCache[id] = .some(found)
+            guard shown?.trackID == id, lyricsEnabled else { return }
+            lyrics = found.map { TrackLyrics(trackID: id, lyrics: $0) }
+        } catch {
+            // Shown as no lyrics; the status code is logged by the client.
+        }
     }
 
     private func receive(_ info: NowPlayingInfo?) {

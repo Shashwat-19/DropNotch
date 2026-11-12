@@ -33,7 +33,7 @@ struct OpenMeteoClient: WeatherSource {
 
     func places(matching name: String) async throws -> [WeatherPlace] {
         let query = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard (1...100).contains(query.count) else { throw WeatherError.invalidQuery }
+        guard (1...100).contains(query.count) else { throw ServiceError.invalidQuery }
         let language = Locale.current.language.languageCode?.identifier ?? "en"
         let url = Self.url(Self.geocodingHost, "/v1/search", ["name": query, "count": "5", "language": language,
                                                                "format": "json"])
@@ -77,9 +77,9 @@ struct OpenMeteoClient: WeatherSource {
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard status == 200 else {
             Logger.weather.error("Open-Meteo replied \(status) from \(url.host() ?? "?", privacy: .public)")
-            throw WeatherError.badResponse(status: status)
+            throw ServiceError.badResponse(status: status)
         }
-        guard data.count <= Self.maxBytes else { throw WeatherError.tooLarge }
+        guard data.count <= Self.maxBytes else { throw ServiceError.tooLarge }
         return try JSONDecoder().decode(Reply.self, from: data)
     }
 

@@ -1,10 +1,11 @@
 import SwiftUI
 
-/// Network, clipboard, calendar and tray data (D7, D25, D33, D34, D44).
+/// Network, clipboard, calendar and tray data (D7, D25, D33, D34, D44, D53).
 struct PrivacySettingsView: View {
     let registry: ModuleRegistry
 
     @AppStorage(ArtworkDownloader.downloadsOnKey) private var artworkDownloads = true
+    @AppStorage(LRCLibClient.enabledKey) private var lyricsOn = false
 
     var body: some View {
         Form {
@@ -12,6 +13,12 @@ struct PrivacySettingsView: View {
                 Toggle("Download Spotify artwork", isOn: $artworkDownloads)
             } footer: {
                 Text("One image per track from Spotify's image server, i.scdn.co. When it's off, the notch shows Spotify's icon. Music artwork never uses the network.")
+                    .foregroundStyle(.secondary)
+            }
+            Section {
+                Toggle("Show synced lyrics", isOn: $lyricsOn)
+            } footer: {
+                Text("Sends the track's title, artist and length to LRCLIB (lrclib.net) once per track, only while the Now Playing card is on screen. Lyrics stay in memory until DropNotch quits and are never logged or saved.")
                     .foregroundStyle(.secondary)
             }
             if let clipboard {

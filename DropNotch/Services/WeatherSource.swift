@@ -5,9 +5,3 @@ protocol WeatherSource: Sendable {
     /// Current weather and today's high and low at `place`, with air quality when available.
     func reading(at place: WeatherPlace) async throws -> WeatherReading
 }
-
-enum WeatherError: Error, Equatable {
-    case badResponse(status: Int)
-    case tooLarge
-    case invalidQuery
-}

@@ -9,7 +9,7 @@ final class WeatherModuleTests: XCTestCase {
         func places(matching name: String) async throws -> [WeatherPlace] { [] }
         func reading(at place: WeatherPlace) async throws -> WeatherReading {
             readings += 1
-            if fails { throw WeatherError.badResponse(status: 500) }
+            if fails { throw ServiceError.badResponse(status: 500) }
             return WeatherReading(temperature: 20, high: 25, low: 15, code: 0, isDay: true, airQuality: 40)
         }
     }

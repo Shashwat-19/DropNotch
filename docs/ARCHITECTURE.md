@@ -30,7 +30,7 @@ DropNotch/
     Home/         HomeModule, HomeView, HomeLayout: the first tab, the Home cards in one row (D42)
     NowPlaying/   NowPlayingModule, NowPlayingExpandedView (the wide Home card, D42), NowPlayingArtworkView, PlaybackProgressBar,
                   PlaybackProgressView, NowPlayingControlStyle, NowPlayingCompactView, CompactWaveform
-                  (D22–D28). Planned: settings view
+                  (D22–D28); TrackLyrics, LyricLineView: synced lyrics in the card (D53). Planned: settings view
     FileTray/     FileTrayModule (list, bookmarks, copies), TrayItem, FileTrayExpandedView,
                   TrayItemDragSource (drag out), TrayShareMenu (share picker) (D32, D40)
     Clipboard/    ClipboardModule (poll, access states, history), ClipboardItem, ClipboardExpandedView (D7c, D33)
@@ -53,6 +53,7 @@ DropNotch/
                   the clipboard), NotchTerminalView, LoginShell (pure), TerminalHangUp (pure).
                   Weather (D53): WeatherSource, WeatherPlace, WeatherReading (with WeatherCondition, AirQualityLevel),
                   OpenMeteoClient (geocoding, forecast, air quality; ephemeral session, no redirects).
+                  Lyrics (D53): LyricsSource, SyncedLyrics (pure LRC parser), LRCLibClient. ServiceError for both.
                   Planned: MediaRemote (v0.2), BluetoothBatteryProvider (deferred, D43), …
   Settings/       SettingsView with General, Modules, Privacy and About tabs (D34). Planned: per-module settings
   Support/        Logger categories, small shared helpers (FourCharCode+Code), Haptics (trackpad tap, D52). Planned: file locations (section 5)
@@ -208,6 +209,7 @@ Target: zero wake-ups while idle, apart from the clipboard poll. Intervals below
 | Decorative waveform (D28) | No app timer: Core Animation repeating animations, capped at 15 fps | Compact view visible **and** playing **and** display awake **and** not Low Power Mode **and** not Reduce Motion | Animation; the render server draws it, as the progress bar. Still bars otherwise. |
 | Terminal hang-up (D48) | One-shot 2 s after End Session | A session ended while it ran | SIGKILL for what SIGHUP didn't end; no signal says a process ignored SIGHUP. At quit, the wait is up to 1 s inline instead, since a later timer would never run. |
 | Terminal output (D48) | No app timer: SwiftTerm reads the pty on its own I/O thread and draws through an `NSView` display link that runs only while output is pending and the view is on screen, pausing after 8 idle frames; the caret is steady, not blinking | A session is running | A busy program (`top`, `tail -f`) is still parsed while the notch is closed, in proportion to its output, as in any terminal. Idle wake-ups with a shell at its prompt: unmeasured, on the release checklist. |
+| Lyric line (D53) | No app timer: a SwiftUI `TimelineView(.explicit)` at each upcoming line's start, worked out from the position anchor (D26) | Card on screen **and** playing **and** lyrics on; nothing while paused or closed | A line has to change when it starts; one redraw per line (a few dozen per song), as the Calendar card does for event ends. |
 | Calendar card event ends (D44) | No app timer: a SwiftUI `TimelineView(.explicit)` at the end times of today's remaining events | Card on screen (notch open on Home) | An event that ends while the notch is open drops off; closed, the next open recomputes the list anyway. |
 
 The Now Playing source adds no timers and no polling; the open view adds the two rows above (D26). Music's bursts of two states are not debounced; a one-shot 150 ms debounce would be added here only if device check 10 shows a flicker (D24).
@@ -217,7 +219,7 @@ Not allowed: any repeating timer while idle, a hover polling loop, a memory watc
 ## 10. Logging and privacy
 
 - `os.Logger(subsystem: "com.shashwat.DropNotch", category: "<Module>")` [V: CLAUDE.md]. Never log clipboard content, file names or track info. Dynamic strings and objects are redacted by default, but integers, floats and booleans are not [V: https://developer.apple.com/documentation/os/generating-log-messages-from-your-code], so mark anything sensitive `privacy: .private` explicitly.
-- One network request in the MVP: Spotify artwork, one HTTPS GET per track to `i.scdn.co` only, ephemeral session, no cookies or disk cache, never logged (D25). Weather (D53, off by default): a city search to Open-Meteo's geocoding service from Settings, then the city's coordinates, rounded to about 1 km, to its forecast and air-quality services when the card shows a stale reading; ephemeral session, no redirects, never logged beyond status codes. Lyrics and updates are later features, and each one comes with privacy copy that says what it sends.
+- One network request in the MVP: Spotify artwork, one HTTPS GET per track to `i.scdn.co` only, ephemeral session, no cookies or disk cache, never logged (D25). Weather (D53, off by default): a city search to Open-Meteo's geocoding service from Settings, then the city's coordinates, rounded to about 1 km, to its forecast and air-quality services when the card shows a stale reading; ephemeral session, no redirects, never logged beyond status codes. Lyrics (D53, off by default): the track's title, artist and length to LRCLIB once per track per session, only while the Now Playing card is on screen; the same session rules; lyrics in memory only. Updates are a later feature, with privacy copy that says what it sends.
 - Each permission is requested when its feature is first enabled, never at launch. Now Playing is on by default (D21), so its Automation prompt comes on the first click on a control (D23). The Calendar card is on by default too, so its prompt comes only from its Allow button or from turning it on in Settings (D44).
 - Terminal (D48): nothing typed and nothing shown is logged, nor titles, folders, the environment or the shell's path; logs carry session starts and ends, exit statuses and signal counts. Scrollback is in memory only and goes with the session. SwiftTerm's host logging is never turned on; in Debug builds it may print parser diagnostics, including bits of output, to the Xcode console (not the unified log). The shell itself keeps its history (~/.zsh_history), as in any terminal.
 - Calendar (D44): event titles, times and calendar names are never logged or saved; logs carry access states, counts and error codes. Titles live in memory and `stop()` clears them; Settings › Privacy › Show event titles off shows times only.
