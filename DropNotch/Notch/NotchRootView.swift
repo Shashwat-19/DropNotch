@@ -174,7 +174,8 @@ struct NotchRootView: View {
     }
 
     private func compactSlot(_ slot: CompactSlot, _ geometry: NotchGeometry) -> some View {
-        registry.slotModule(for: slot)?.compactView(slot: slot)
+        // A HUD shows in place of the slot's module while it lasts (D52).
+        (registry.hud.map { slot == .left ? $0.leading : $0.trailing } ?? registry.slotModule(for: slot)?.compactView(slot: slot))
             // Even padding on all sides of a square wing.
             .padding(geometry.wingWidth * 0.2)
             .frame(width: geometry.wingWidth, height: geometry.closedFrame.height)

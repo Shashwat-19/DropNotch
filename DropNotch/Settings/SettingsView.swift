@@ -5,10 +5,11 @@ struct SettingsView: View {
     let registry: ModuleRegistry
     let notchState: NotchState
     let screenCorners: ScreenCornersController
+    let chargingAlert: ChargingAlert?
 
     var body: some View {
         TabView {
-            GeneralSettingsView(notchState: notchState, screenCorners: screenCorners)
+            GeneralSettingsView(notchState: notchState, screenCorners: screenCorners, chargingAlert: chargingAlert)
                 .tabItem { Label("General", systemImage: "gearshape") }
             ModulesSettingsView(registry: registry)
                 .tabItem { Label("Modules", systemImage: "square.grid.2x2") }

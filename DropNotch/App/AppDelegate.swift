@@ -14,6 +14,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             TerminalModule { fontSize, scrollback in SwiftTermSession(fontSize: fontSize, scrollback: scrollback) }])
     /// Rounded bottom corners on the notched display (D52). Internal so the Settings scene can reach it.
     let screenCorners = ScreenCornersController()
+    /// The HUD when the Mac is plugged in (D52); nil without a battery, like the Battery card (D43).
+    lazy var chargingAlert: ChargingAlert? = PowerSourceBatterySource.hasInternalBattery
+        ? ChargingAlert(source: PowerSourceBatterySource(), registry: registry) : nil
     private var screenObserver: ScreenObserver?
 
     /// Unit tests run inside the app, so it launches for them too. Xcode sets this variable for the
@@ -31,6 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             PrivateFolder.secureApplicationSupport()
             TerminalNotice.enforce(on: registry)
             registry.start()
+            chargingAlert?.refresh()
             // Inherits the main actor. The stream ends only with the app.
             Task { [notchState] in
                 for await _ in KeyboardShortcuts.events(.keyDown, for: .toggleNotch) {
@@ -68,6 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         registry.stop()
+        chargingAlert?.stop()
     }
 }
 

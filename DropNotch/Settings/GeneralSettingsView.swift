@@ -3,10 +3,12 @@ import os
 import ServiceManagement
 import SwiftUI
 
-/// Launch at login, the notch size, rounded screen corners, the hotkey and the notch's display (D30, D34, D49, D52).
+/// Launch at login, the notch size, rounded screen corners, alerts, the hotkey and the notch's display (D30, D34, D49, D52).
 struct GeneralSettingsView: View {
     let notchState: NotchState
     let screenCorners: ScreenCornersController
+    /// Nil on a Mac without a battery: no charging alert to offer (D43).
+    let chargingAlert: ChargingAlert?
 
     /// Read from the system, never saved by DropNotch: the user can change it in System Settings › Login Items.
     /// Waiting for approval shows as on, so the toggle can withdraw it (security-auditor L4).
@@ -14,6 +16,8 @@ struct GeneralSettingsView: View {
     @State private var loginError = false
     @AppStorage(NotchDisplay.key) private var display = NotchDisplay.builtIn
     @AppStorage(ScreenCorners.key) private var roundCorners = false
+    @AppStorage(ChargingAlert.key) private var chargingAlertOn = true
+    @AppStorage(Haptics.key) private var hapticsOn = true
 
     var body: some View {
         Form {
@@ -45,6 +49,16 @@ struct GeneralSettingsView: View {
                     .onChange(of: roundCorners) { screenCorners.refresh() }
             } footer: {
                 Text("Matches the rounded top corners of the built-in display. Clicks in the corners still reach what's underneath.")
+                    .foregroundStyle(.secondary)
+            }
+            Section {
+                if let chargingAlert {
+                    Toggle("Show an alert when the Mac starts charging", isOn: $chargingAlertOn)
+                        .onChange(of: chargingAlertOn) { chargingAlert.refresh() }
+                }
+                Toggle("Haptic feedback", isOn: $hapticsOn)
+            } footer: {
+                Text("A light tap on the trackpad when the notch shows an alert. You feel it only with a finger on the trackpad.")
                     .foregroundStyle(.secondary)
             }
             Section {

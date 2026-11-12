@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-11-13):** v0.3 started (D52, D53): see "v0.3" at the end. Branch 1, `feat/screen-corners`, is in progress.
+**Status (2026-11-13):** v0.3 started (D52, D53): see "v0.3" at the end. Branch 1, `feat/screen-corners`, is built (device checks 114–116 open); branch 2, `feat/charging-hud`, is built (checks 117–120 open).
 
 **Status (2026-11-10):** v0.2.0 is released as a pre-release (tag v0.2.0 at e5568a6; DMG SHA-256 4a970ba8a50f20f9d0b13ae8f9ee46dacbf40ee708eecdfb2a6d1e3778141fe9; the repository is still private). v0.1.0 is released. v0.2 (Home dashboard, D42–D45) is in progress in speed mode: see "v0.2" at the end. Branch 1, `feat/home`, is merged to main (2026-11-09). Branch 2, `feat/battery-card`, is merged to main (2026-11-09). Branch 3, `feat/calendar-card`, and branch 3b, `feat/home-layout` (D46), are merged to main (2026-11-09; device checks 84–94 passed on one Release build). Branch 4, `feat/quick-commands`, was built but set aside unmerged (Shash, 2026-11-10); branch 4b, `feat/terminal` (D48), is merged to main (2026-11-10; device checks 95–100 passed). `feat/notch-size` (D49) is merged (checks 101–113 passed). Next: `release/v0.2.0`.
 
@@ -517,3 +517,12 @@ Two click-through borderless windows (black quarter-disc masks, `.statusBar` lev
 114. **Corners.** Settings › General › Round the bottom corners on: both bottom corners of the built-in display are rounded, close to the top corners' curve (if not, say bigger or smaller). Off: they go at once.
 115. **Click-through and layering.** With the Dock at the bottom, click its first and last icons near the corners; drag a window into a corner and click there: every click reaches what's underneath. The corners stay over the Dock, a full-screen app (Safari ⌃⌘F) and after switching Spaces.
 116. **Displays.** With an external display connected, it has no corners; close the lid (clamshell) and reopen: the built-in display's corners come back. Screen sleep and wake: still there.
+
+### Branch 2: `feat/charging-hud` (D52; branched from `feat/screen-corners`)
+`NotchHUD` and `ModuleRegistry.showHUD`: a 3 s peek that takes both wings of the closed notch and tells VoiceOver. `ChargingAlert` (not a module) follows `BatterySource` and shows a bolt (or a plug when full) and the percentage when power connects; never on the first reading. `Haptics.tap()` (`.alignment`). Settings › General: "Show an alert when the Mac starts charging" (on; not shown without a battery) and "Haptic feedback" (on).
+
+**Status (2026-11-13):** built; 616 tests, 0 failures (5 new). Device checks (MacBook Air, Release build):
+117. **Plug in.** Unplug, wait a moment, plug in with the notch closed: within about a second the closed notch widens to both sides with a green bolt left and the percentage right, for about 3 s, then shrinks back. A finger resting on the trackpad feels one light tap. Plug in at 100 % (or at a charge limit): a plug icon instead of the bolt.
+118. **With music.** Play a track (wings showing artwork and bars), plug in: the HUD replaces the wings for 3 s, then artwork and bars come back. Hover-open during the HUD: the notch opens as usual.
+119. **Settings.** Turn off "Show an alert…": plugging in shows nothing. Turn off "Haptic feedback" with the alert on: the HUD shows, no tap. Launch DropNotch while plugged in: no HUD.
+120. **VoiceOver.** With VoiceOver on, plug in: it says "Charging, 82 %" (or "On power").
