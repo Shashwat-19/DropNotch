@@ -18,6 +18,7 @@ struct GeneralSettingsView: View {
     @AppStorage(ScreenCorners.key) private var roundCorners = false
     @AppStorage(ChargingAlert.key) private var chargingAlertOn = true
     @AppStorage(Haptics.key) private var hapticsOn = true
+    @AppStorage(NotchAppearance.key) private var appearance = NotchAppearance.black
 
     var body: some View {
         Form {
@@ -43,6 +44,17 @@ struct GeneralSettingsView: View {
                 }
             } footer: {
                 Text("Large is taller and wider, with larger text and controls on every tab. The terminal keeps its own font size.").foregroundStyle(.secondary)
+            }
+            if NotchAppearance.isGlassAvailable {
+                Section {
+                    Picker("Look", selection: $appearance) {
+                        Text("Black").tag(NotchAppearance.black)
+                        Text("Liquid Glass").tag(NotchAppearance.liquidGlass)
+                    }
+                } footer: {
+                    Text("Liquid Glass applies to the open notch; closed, it stays black to match the camera. With Reduce Transparency on, it's black.")
+                        .foregroundStyle(.secondary)
+                }
             }
             Section {
                 Toggle("Round the bottom corners of the screen", isOn: $roundCorners)

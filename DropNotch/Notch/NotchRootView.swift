@@ -8,6 +8,8 @@ struct NotchRootView: View {
 
     @Environment(\.openSettings) private var openSettings
     @Environment(\.colorSchemeContrast) private var contrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @AppStorage(NotchAppearance.key) private var appearance = NotchAppearance.black
 
     var body: some View {
         // The panel's frame, not the shape's: the shape fills the 1 pt strip above the screen too, so its top
@@ -19,8 +21,8 @@ struct NotchRootView: View {
         let offset = frame.minX - (state.geometry?.panelFrame(for: .open).minX ?? frame.minX)
         let shape = NotchShape(shoulder: NotchGeometry.shoulder(for: phase, wings: wings),
                                bottomRadius: phase == .open ? 18 : 10)
-        shape
-            .fill(.black)
+        // Glass only while open (D52): closed and peeking, the shape has to match the black camera housing.
+        NotchBackground(shape: shape, glass: phase == .open && appearance.usesGlass(reduceTransparency: reduceTransparency))
             .frame(width: frame.width, height: frame.height)
             .overlay(alignment: .top) {
                 if phase != .open, !wings.isEmpty, let geometry = state.geometry {

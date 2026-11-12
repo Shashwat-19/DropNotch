@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-11-13):** v0.3 started (D52, D53): see "v0.3" at the end. Branch 1, `feat/screen-corners`, is built (device checks 114–116 open); branch 2, `feat/charging-hud`, is built (checks 117–120 open); branch 3, `feat/weather`, is built (checks 121–125 open); branch 4, `feat/lyrics`, is built (checks 126–129 open).
+**Status (2026-11-13):** v0.3 started (D52, D53): see "v0.3" at the end. Branch 1, `feat/screen-corners`, is built (device checks 114–116 open); branch 2, `feat/charging-hud`, is built (checks 117–120 open); branch 3, `feat/weather`, is built (checks 121–125 open); branch 4, `feat/lyrics`, is built (checks 126–129 open); branch 5, `feat/liquid-glass`, is built (checks 130–132 open). Next: probes for AirPods battery, the equaliser and the lock screen.
 
 **Status (2026-11-10):** v0.2.0 is released as a pre-release (tag v0.2.0 at e5568a6; DMG SHA-256 4a970ba8a50f20f9d0b13ae8f9ee46dacbf40ee708eecdfb2a6d1e3778141fe9; the repository is still private). v0.1.0 is released. v0.2 (Home dashboard, D42–D45) is in progress in speed mode: see "v0.2" at the end. Branch 1, `feat/home`, is merged to main (2026-11-09). Branch 2, `feat/battery-card`, is merged to main (2026-11-09). Branch 3, `feat/calendar-card`, and branch 3b, `feat/home-layout` (D46), are merged to main (2026-11-09; device checks 84–94 passed on one Release build). Branch 4, `feat/quick-commands`, was built but set aside unmerged (Shash, 2026-11-10); branch 4b, `feat/terminal` (D48), is merged to main (2026-11-10; device checks 95–100 passed). `feat/notch-size` (D49) is merged (checks 101–113 passed). Next: `release/v0.2.0`.
 
@@ -545,3 +545,11 @@ Two click-through borderless windows (black quarter-disc masks, `.statusBar` lev
 127. **Spotify and tracks without lyrics.** Same in Spotify. A track LRCLIB doesn't have, or an instrumental: no line, nothing else changes.
 128. **Requests.** `log stream --predicate 'subsystem == "com.shashwat.DropNotch" AND category == "NowPlaying"' --level debug`: no track names. With the notch closed through several tracks, nothing is fetched (Little Snitch / `nettop`); opening fetches for the current track only; reopening on the same track fetches nothing.
 129. **Off.** Turn it off with the card showing: the line goes at once.
+
+### Branch 5: `feat/liquid-glass` (D52; branched from `feat/lyrics`)
+Settings › General › Look: Black (default) or Liquid Glass, shown only on macOS 26+. Glass (`glassEffect`, tinted black at 50 % [I]) on the open shape only; closed and peek stay black for the camera housing; Reduce Transparency forces black.
+
+**Status (2026-11-13):** built; 644 tests, 0 failures (2 new). Device checks (MacBook Air, macOS 27, Release build):
+130. **Glass.** Look › Liquid Glass. Open the notch over a bright wallpaper and over a dark window: glass with the wallpaper softly visible, text and controls still easy to read on every tab; closed, the notch is black as before. If the glass around the camera housing looks wrong, say so: the tint is one number.
+131. **Motion.** Open and close several times: no flash between black and glass beyond the shape growing; the tab switch cross-fade is unchanged.
+132. **Accessibility.** System Settings › Accessibility › Display › Reduce transparency on: the open notch is black. Increase contrast: the card edges show on glass too.
