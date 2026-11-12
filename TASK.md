@@ -569,6 +569,8 @@ Probe to run with Shash at the Mac (throwaway, outside the repo): a Core Audio p
 ### Branch 8: `feat/lock-screen` (D55; branched from `feat/airpods-battery`; Release build: done)
 **Built 2026-11-13.** Probe passed with Shash at the Mac (D55): a window in a level-400 SkyLight space showed above the lock screen and took clicks; the lock and unlock notifications fired. Built: `SkyLightLockScreenSpace` (dlsym), `DistributedLockStateSource`, `LockScreenPlayer`, `LockScreenPlayerWindow` (never key), `LockScreenPlayerView` (the Now Playing card on a dark panel), Settings › General toggle (off). 654 tests, 0 failures (6 new). security-auditor and dependency-manager not yet run.
 
+First device run (Shash, 2026-11-13, Release 81493f0): the card shows above the password field, play/pause/skip work while locked, unlocking removes it. Checks 137–138 passed at that level; 139–142 still to run.
+
 Device checks (MacBook Air, **Release build**; Music playing):
 137. **Shows.** Turn on "Show the player on the lock screen". Lock (⌃⌘Q): the card is above the password field with artwork, title, artist, bar and controls. Say if it should sit higher or lower, or be bigger.
 138. **Controls while locked.** Pause, play, next, previous and a seek on the bar all work while locked; the card follows the track change.
