@@ -191,6 +191,8 @@ extension EnvironmentValues {
     @Entry var requestNotchKeyboardFocus = NotchFocusRequest {}
     /// Closes a keyboard-opened notch and hands focus back; does nothing to a hover-opened one.
     @Entry var dismissNotch = NotchFocusRequest {}
+    /// Whether the Now Playing card's artwork opens the full-screen player (D56); off on the lock screen (D55).
+    @Entry var allowsFullScreenPlayer = true
 }
 
 /// A struct rather than a bare closure, so SwiftUI can compare it and skip redrawing the views that read it.

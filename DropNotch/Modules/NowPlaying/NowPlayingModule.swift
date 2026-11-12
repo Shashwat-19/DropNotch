@@ -25,6 +25,9 @@ final class NowPlayingModule: NotchModule {
     let homeCard: HomeCardSize? = .wide
     /// The compact slots show (D28): while playing, and for `compactGrace` after it stops with a track loaded.
     private(set) var hasCompactContent = false
+    /// Opens the full-screen player (D56); set by `AppDelegate`, nil in tests. A callback, so the module doesn't know
+    /// the window.
+    @ObservationIgnored var openFullScreen: (() -> Void)?
     /// Synced lyrics for the track on screen, while Settings › Privacy › Show synced lyrics is on (D53). Memory only.
     private(set) var lyrics: TrackLyrics?
 

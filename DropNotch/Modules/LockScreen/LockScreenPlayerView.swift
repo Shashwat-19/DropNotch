@@ -14,6 +14,7 @@ struct LockScreenPlayerView: View {
             .background(shape.fill(.ultraThinMaterial))
             .clipShape(shape)
             .environment(\.colorScheme, .dark)
+            .environment(\.allowsFullScreenPlayer, false)
             .accessibilityElement(children: .contain)
             .accessibilityLabel(Text("Now Playing"))
     }

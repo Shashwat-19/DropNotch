@@ -7,8 +7,9 @@ struct NowPlayingArtwork: Equatable {
     let trackID: String
     let image: CGImage
 
-    /// Longest side in pixels: the 56 pt artwork at 2×, with room to spare.
-    static let maxPixelSize = 128
+    /// Longest side in pixels: the full-screen player's artwork, about 340 pt, at about 2× (D56). Was 128 for the
+    /// 56 pt card artwork alone; a 640 px thumbnail is 1.6 MB in memory, one per track.
+    static let maxPixelSize = 640
     /// ImageIO recognises formats from the bytes, whatever the label said. Only these two are decoded:
     /// artwork is JPEG or PNG [V: both probes], and other decoders are attack surface (security-auditor M1).
     static let formats: Set<String> = ["public.jpeg", "public.png"]

@@ -1309,3 +1309,20 @@ The island on Macs without a notch is not on the list: the pill shipped in v0.1.
 **Alternatives:** the wallpaper route (ruled out, D3); a public-level window (sits under the shield, research §9); the SkyLightWindow package (branch-pinned, unreviewed licence); polling the session dictionary for lock state (energy rule).
 
 **Risk:** High on macOS updates (private symbols; the level could change). The fallback is the `isAvailable` check; a level that stops working fails silently (the window stays under the shield), so it's on every release's device checklist.
+
+---
+
+## D56. Full-screen player, v1: a click on the Now Playing card's artwork
+
+**Date:** 2026-11-13 · **Status:** Accepted for build (Shash, 2026-11-13: "when I click the Home card it will show like this… keep lyrics… make it v1", with a screenshot of Canopy's homepage). Layout taken from Canopy's public homepage image only (CLAUDE.md); no assets copied.
+
+**Decision:**
+- Clicking the artwork on the Home tab's Now Playing card opens a borderless panel over the menu-bar screen at `.mainMenu` level (over the menu bar and Dock; the notch, at `.statusBar`, stays above). Not on the lock-screen card (D55).
+- Layout, as shares of the screen's height: the artwork scaled past the edges, blurred (60 pt) and darkened 30 %; the date and a large rounded clock (11.5 % of the height), tinted with the artwork's average colour lifted 70 % to white; the artwork at 36 %; a 300 pt compact player under it (title, artist, an animated waveform, the bar between elapsed and remaining time with tap-to-seek, previous / play-pause / next, and a headphones button that opens Sound settings [I: undocumented URL]); the lyrics under that.
+- Lyrics: the line before and after dimmed, the current line lit word by word. LRCLIB gives line times only, so v1 spreads a line's words evenly over its time (D53's lookup rules unchanged; with lyrics off the section says where to turn them on). Word-level timing is a later version.
+- Closes on Escape, the close button, a click on the background, another app coming forward (the panel resigning key), or the track going. Key without activating DropNotch.
+- Artwork thumbnails grow from 128 to 640 px (about 1.6 MB per track in memory), so the centre artwork is sharp.
+
+**Energy:** while open only: the clock redraws once a minute; the lyric highlight at 15 fps while playing (paused otherwise); the bar and times as in the card (ARCHITECTURE §9). Nothing runs while it's closed.
+
+**Alternatives:** a real macOS full-screen window (its own Space and animation; slower to open and close, and the notch would need to follow it); the clock in a fixed colour (didn't match the screenshot); estimating word times from syllables (more code for little gain over even spacing in v1).
