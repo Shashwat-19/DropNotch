@@ -22,6 +22,8 @@ extension Logger {
     static let terminal = Logger(subsystem: subsystem, category: "Terminal")
     /// Status codes and hosts only: never the city, coordinates or a reading (D53).
     static let weather = Logger(subsystem: subsystem, category: "Weather")
+    /// Availability and lock or unlock only: never what is playing (D55).
+    static let lockScreen = Logger(subsystem: subsystem, category: "LockScreen")
     /// Error domains and codes only.
     static let settings = Logger(subsystem: subsystem, category: "Settings")
 }

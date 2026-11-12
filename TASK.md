@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-11-13):** v0.3 started (D52, D53): see "v0.3" at the end. Branch 1, `feat/screen-corners`, is built (device checks 114–116 open); branch 2, `feat/charging-hud`, is built (checks 117–120 open); branch 3, `feat/weather`, is built (checks 121–125 open); branch 4, `feat/lyrics`, is built (checks 126–129 open); branch 5, `feat/liquid-glass`, is built (checks 130–132 open); branch 6, `feat/airpods-battery`, is built (D54 proposed; checks 133–136 open). Next: the equaliser and lock-screen probes, which need Shash at the Mac (see branch 7 and 8).
+**Status (2026-11-13):** v0.3 started (D52, D53): see "v0.3" at the end. Branch 1, `feat/screen-corners`, is built (device checks 114–116 open); branch 2, `feat/charging-hud`, is built (checks 117–120 open); branch 3, `feat/weather`, is built (checks 121–125 open); branch 4, `feat/lyrics`, is built (checks 126–129 open); branch 5, `feat/liquid-glass`, is built (checks 130–132 open); branch 6, `feat/airpods-battery`, is built (D54 proposed; checks 133–136 open). Branch 8, `feat/lock-screen`, is built (D55; probe passed with Shash; checks 137–142 open). Shash asked for it ahead of the equaliser (2026-11-13), which waits.
 
 **Status (2026-11-10):** v0.2.0 is released as a pre-release (tag v0.2.0 at e5568a6; DMG SHA-256 4a970ba8a50f20f9d0b13ae8f9ee46dacbf40ee708eecdfb2a6d1e3778141fe9; the repository is still private). v0.1.0 is released. v0.2 (Home dashboard, D42–D45) is in progress in speed mode: see "v0.2" at the end. Branch 1, `feat/home`, is merged to main (2026-11-09). Branch 2, `feat/battery-card`, is merged to main (2026-11-09). Branch 3, `feat/calendar-card`, and branch 3b, `feat/home-layout` (D46), are merged to main (2026-11-09; device checks 84–94 passed on one Release build). Branch 4, `feat/quick-commands`, was built but set aside unmerged (Shash, 2026-11-10); branch 4b, `feat/terminal` (D48), is merged to main (2026-11-10; device checks 95–100 passed). `feat/notch-size` (D49) is merged (checks 101–113 passed). Next: `release/v0.2.0`.
 
@@ -566,5 +566,16 @@ Probe first (2026-11-13; D54): IOBluetooth's private per-bud keys answer in-proc
 ### Branch 7: `feat/equaliser` (D52; not started: needs a probe with Shash)
 Probe to run with Shash at the Mac (throwaway, outside the repo): a Core Audio process tap (`CATapDescription` for one process, muted while tapped) on an aggregate device, passing audio through unchanged, then through one `AVAudioUnitEQ`-style biquad. Measure: the audio-capture permission prompt and its text; added latency; CPU at idle and while playing; and the D2 risk: does tapping Spotify still break the AirPods pause gesture? Then D55 with the per-app design (which apps, presets or bands, where it lives in Settings).
 
-### Branch 8: `feat/lock-screen` (D52, reopens D3; not started: needs a probe with Shash)
+### Branch 8: `feat/lock-screen` (D55; branched from `feat/airpods-battery`; Release build: done)
+**Built 2026-11-13.** Probe passed with Shash at the Mac (D55): a window in a level-400 SkyLight space showed above the lock screen and took clicks; the lock and unlock notifications fired. Built: `SkyLightLockScreenSpace` (dlsym), `DistributedLockStateSource`, `LockScreenPlayer`, `LockScreenPlayerWindow` (never key), `LockScreenPlayerView` (the Now Playing card on a dark panel), Settings › General toggle (off). 654 tests, 0 failures (6 new). security-auditor and dependency-manager not yet run.
+
+Device checks (MacBook Air, **Release build**; Music playing):
+137. **Shows.** Turn on "Show the player on the lock screen". Lock (⌃⌘Q): the card is above the password field with artwork, title, artist, bar and controls. Say if it should sit higher or lower, or be bigger.
+138. **Controls while locked.** Pause, play, next, previous and a seek on the bar all work while locked; the card follows the track change.
+139. **Password and Touch ID.** Type the password with the card showing: every key goes to the password field, none is lost. Touch ID unlock: the card goes at once.
+140. **Nothing loaded.** Quit Music, lock: no card. Lock, then start Music from… (not possible while locked: skip) — instead, lock with Music paused but loaded: the card shows, paused.
+141. **Sleep.** Lock, close the lid for a minute, open: the card is still there (or say if it's gone); unlock: gone. No card ever left on the desktop after unlock.
+142. **Off.** Turn the setting off and lock: no card.
+
+Original plan (kept):
 Probe to run with Shash at the Mac (throwaway): a window moved to a private SkyLight space at an absolute level above the lock screen's shield, as research/atoll-media-lockscreen.md describes the technique (clean-room; no code copied). Shash locks the Mac (⌃⌘Q) and reports: is the window visible above the password field; does the password field still take focus and typing; does anything remain after unlocking; does it survive sleep and wake. security-auditor and dependency-manager review the route before D56. The wallpaper route stays ruled out.

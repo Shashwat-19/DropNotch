@@ -1288,3 +1288,24 @@ The island on Macs without a notch is not on the list: the pill shipped in v0.1.
 **Alternatives:** `pmset -g accps` or `system_profiler` (subprocess parsing; ruled out by D52); CoreBluetooth Battery Service (AirPods don't usually expose it, research A3 [I]); polling the keys (energy rule).
 
 **Risk:** private keys: High on macOS updates (FEATURE_MATRIX). The `responds(to:)` guard is the fallback. Bluetooth usage string and prompt need a Release build and launch (D11).
+
+---
+
+## D55. Lock-screen player: a private SkyLight space at level 400, the system's lock notifications, opt-in
+
+**Date:** 2026-11-13 · **Status:** Accepted for build (Shash, 2026-11-13: "just want the lock-screen player now"; probe passed with him at the Mac). Reopens D3 under D52's conditions. security-auditor and dependency-manager reviews still to run before release.
+
+**Probe (2026-11-13, MacBook Air M3, macOS 27.2.1; throwaway binary in /tmp, not committed; written from general platform knowledge, not from Atoll or the SkyLightWindow package):** the five SkyLight symbols (`SLSMainConnectionID`, `SLSSpaceCreate`, `SLSSpaceSetAbsoluteLevel`, `SLSShowSpaces`, `SLSSpaceAddWindowsAndRemoveFromSpaces`) resolved with `dlsym`. A borderless window at `CGShieldingWindowLevel()` moved into a new space at absolute level 400 showed above the lock screen (Shash saw it). The log: `com.apple.screenIsLocked` at 01:04:27, five clicks on the window's button while locked (01:04:29–30), `com.apple.screenIsUnlocked` at 01:04:31, and unlocking worked. [V: probe log and Shash]
+
+**Decision:**
+- `SkyLightLockScreenSpace` behind `LockScreenSpace` (Services/): symbols looked up at run time, never linked; any missing → `isAvailable` false, the setting greys out with "Not available on this version of macOS". No third-party package (Atoll's is on a branch, research §9): our own ~60 lines.
+- `DistributedLockStateSource`: the two lock notifications, nothing else. No poll while locked (Atoll polls every 500 ms; energy rule). Risk: a missed unlock leaves the player up until the next lock or unlock; device checks look for it.
+- `LockScreenPlayer` (not a module) shows `LockScreenPlayerWindow` only while locked **and** a track is loaded **and** Settings › General › "Show the player on the lock screen" is on (**off by default**). Content is the Home tab's Now Playing card on a dark rounded panel: artwork, title, artist, the lyric line if lyrics are on (D53: the card is on screen, so its rule holds), bar and controls.
+- The window is a non-activating panel that can never become key or main, so it can't take keystrokes from the password field; clicks work through `acceptsFirstMouse`.
+- Placed on the menu-bar screen, centred, at 42 % of its height (above the password field) [I: tune on device].
+
+**Security and privacy:** with the setting on, anyone at the locked Mac sees the track and can play, pause, skip and seek: the same as an iPhone's lock screen and Canopy's. Nothing else is reachable: no text fields, links or Settings. The Settings footer says so.
+
+**Alternatives:** the wallpaper route (ruled out, D3); a public-level window (sits under the shield, research §9); the SkyLightWindow package (branch-pinned, unreviewed licence); polling the session dictionary for lock state (energy rule).
+
+**Risk:** High on macOS updates (private symbols; the level could change). The fallback is the `isAvailable` check; a level that stops working fails silently (the window stays under the shield), so it's on every release's device checklist.

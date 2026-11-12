@@ -20,6 +20,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ? ChargingAlert(source: PowerSourceBatterySource(), registry: registry) : nil
     /// The HUD when headphones connect (D54); off until turned on in Settings.
     lazy var headphoneAlert = HeadphoneAlert(source: IOBluetoothHeadphoneSource(), registry: registry)
+    /// Now Playing above the lock screen (D55); off until turned on in Settings.
+    lazy var lockScreenPlayer: LockScreenPlayer? = registry.modules.lazy.compactMap { $0 as? NowPlayingModule }.first
+        .map { LockScreenPlayer(nowPlaying: $0) }
     private var screenObserver: ScreenObserver?
 
     /// Unit tests run inside the app, so it launches for them too. Xcode sets this variable for the
@@ -39,6 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             registry.start()
             chargingAlert?.refresh()
             headphoneAlert.refresh()
+            lockScreenPlayer?.refresh()
             // Inherits the main actor. The stream ends only with the app.
             Task { [notchState] in
                 for await _ in KeyboardShortcuts.events(.keyDown, for: .toggleNotch) {
@@ -78,6 +82,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         registry.stop()
         chargingAlert?.stop()
         headphoneAlert.stop()
+        lockScreenPlayer?.stop()
     }
 }
 

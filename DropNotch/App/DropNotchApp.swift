@@ -14,7 +14,7 @@ struct DropNotchApp: App {
         Settings {
             SettingsView(registry: appDelegate.registry, notchState: appDelegate.notchState,
                          screenCorners: appDelegate.screenCorners, chargingAlert: appDelegate.chargingAlert,
-                         headphoneAlert: appDelegate.headphoneAlert)
+                         headphoneAlert: appDelegate.headphoneAlert, lockScreenPlayer: appDelegate.lockScreenPlayer)
         }
     }
 }

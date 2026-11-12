@@ -10,6 +10,8 @@ struct GeneralSettingsView: View {
     /// Nil on a Mac without a battery: no charging alert to offer (D43).
     let chargingAlert: ChargingAlert?
     let headphoneAlert: HeadphoneAlert
+    /// Nil only without a Now Playing module.
+    let lockScreenPlayer: LockScreenPlayer?
 
     /// Read from the system, never saved by DropNotch: the user can change it in System Settings › Login Items.
     /// Waiting for approval shows as on, so the toggle can withdraw it (security-auditor L4).
@@ -20,6 +22,7 @@ struct GeneralSettingsView: View {
     @AppStorage(ChargingAlert.key) private var chargingAlertOn = true
     @AppStorage(Haptics.key) private var hapticsOn = true
     @AppStorage(HeadphoneAlert.key) private var headphoneAlertOn = false
+    @AppStorage(LockScreenPlayer.key) private var lockScreenPlayerOn = false
     @AppStorage(NotchAppearance.key) private var appearance = NotchAppearance.black
 
     var body: some View {
@@ -64,6 +67,18 @@ struct GeneralSettingsView: View {
             } footer: {
                 Text("Matches the rounded top corners of the built-in display. Clicks in the corners still reach what's underneath.")
                     .foregroundStyle(.secondary)
+            }
+            if let lockScreenPlayer {
+                Section {
+                    Toggle("Show the player on the lock screen", isOn: $lockScreenPlayerOn)
+                        .disabled(!lockScreenPlayer.isAvailable)
+                        .onChange(of: lockScreenPlayerOn) { lockScreenPlayer.refresh() }
+                } footer: {
+                    Text(lockScreenPlayer.isAvailable
+                         ? "While your Mac is locked and Music or Spotify has a track loaded, anyone at it can see the track and use play, pause, skip and seek. It uses private parts of macOS, so an update may turn it off."
+                         : "Not available on this version of macOS.")
+                        .foregroundStyle(.secondary)
+                }
             }
             Section {
                 if let chargingAlert {

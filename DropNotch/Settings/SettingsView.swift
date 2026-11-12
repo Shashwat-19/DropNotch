@@ -7,11 +7,12 @@ struct SettingsView: View {
     let screenCorners: ScreenCornersController
     let chargingAlert: ChargingAlert?
     let headphoneAlert: HeadphoneAlert
+    let lockScreenPlayer: LockScreenPlayer?
 
     var body: some View {
         TabView {
             GeneralSettingsView(notchState: notchState, screenCorners: screenCorners, chargingAlert: chargingAlert,
-                                headphoneAlert: headphoneAlert)
+                                headphoneAlert: headphoneAlert, lockScreenPlayer: lockScreenPlayer)
                 .tabItem { Label("General", systemImage: "gearshape") }
             ModulesSettingsView(registry: registry)
                 .tabItem { Label("Modules", systemImage: "square.grid.2x2") }
