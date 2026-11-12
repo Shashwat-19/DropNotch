@@ -1227,3 +1227,46 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 - `zap` removes `~/Library/Application Support/DropNotch` (`PrivateFolder.applicationSupport`) and `~/Library/Preferences/com.shashwat.DropNotch.plist`, the paths the README's uninstall note gives.
 
 **Alternatives:** submitting to homebrew/cask now (fails the audit above); DMG only (no one-line install or `brew upgrade`); `--no-quarantine` in the install line (bypasses Gatekeeper; deprecated in Homebrew 5.0.0).
+
+---
+
+## D52. v0.3 scope: the Canopy set, including lock screen, AirPods battery and per-app EQ
+
+**Date:** 2026-11-13 · **Status:** Accepted (Shash, 2026-11-13). Reopens D3, D43 (Q6) and FEATURE_MATRIX's EQ "Skip", on the conditions below.
+
+**Decision:** v0.3 adds, one branch each, in this order:
+1. `feat/screen-corners`: rounded bottom corners on the notch display (click-through overlay windows; off by default).
+2. `feat/charging-hud`: a timed peek in the notch when the Mac is plugged in, with a trackpad haptic; built on `BatterySource` (D43) and the transient-HUD idea in ARCHITECTURE §3.
+3. `feat/weather`: a weather and air-quality Home card (D53).
+4. `feat/lyrics`: time-synced lyrics in the open Now Playing card (D53). The island only; not the lock screen.
+5. `feat/liquid-glass`: the Liquid Glass material on macOS 26 and later, behind an availability check; macOS 14–25 keep the current look. The deployment target stays 14.0.
+6. `feat/airpods-battery`, 7. `feat/equaliser`, 8. `feat/lock-screen`: each starts with a probe outside the app and its own decision (D54 onwards) before any app code.
+
+The island on Macs without a notch is not on the list: the pill shipped in v0.1.0 (D9, D17).
+
+**Conditions for the reopened items:**
+- Lock screen (reopens D3): opt-in, behind a protocol in Services/ with a fallback (CLAUDE.md), `security-auditor` and `dependency-manager` review the route first. The wallpaper route stays ruled out.
+- AirPods battery (reopens D43 Q6): event-driven only, behind `BluetoothBatteryProvider`. No subprocess parsing (`pmset`, `system_profiler`) and no polling loop; if the probe finds no route that meets this, the result is written up and Shash decides.
+- Per-app EQ (reopens the matrix's Skip): Core Audio process taps need macOS 14.2 [V: FEATURE_MATRIX], above the 14.0 target, so the feature is gated by availability. D2 records that tapping Spotify broke the AirPods pause gesture over Bluetooth [V]; the probe checks this first.
+- A heavy item whose probe fails doesn't silently slip: Shash decides whether v0.3 ships without it.
+
+**Alternatives:** the quick set only in v0.3, with the three heavy items in v0.4 (recommended; not chosen); the quick set plus AirPods (not chosen).
+
+**Why:** Shash's choice: one release that matches Canopy's list, as a free open-source alternative.
+
+---
+
+## D53. Network features: weather by a typed city (Open-Meteo), lyrics from LRCLIB, both off by default
+
+**Date:** 2026-11-13 · **Status:** Accepted (Shash, 2026-11-13: city in Settings; both off by default). Details below are proposals until each branch is reviewed.
+
+**Decision:**
+- **Weather and AQI:** Open-Meteo's forecast, air-quality and geocoding APIs (no key). The user types a city in Settings; it is geocoded once when saved, and only the chosen place's coordinates, rounded to two decimals (about 1 km), are kept and sent. No Location permission, no location entitlement, no usage string. The card is off by default (D46's two-card default stays).
+- **Refresh without a timer:** a reading is fetched when the Home tab is shown and the last one is older than 30 minutes, and once after wake if the card is on screen. Nothing runs while the notch is closed (ARCHITECTURE §9).
+- **Lyrics:** LRCLIB's `/api/get` with track, artist, album and duration; synced (LRC) lyrics only; one request per track, cached in memory for the session; the line shown follows the position anchor Now Playing already keeps (D26), so no new timer beyond the view's own redraw while visible. Off by default; turned on in Settings › Privacy, which says what is sent.
+- **Privacy, for both:** an ephemeral `URLSession` (no cookies, no disk cache), HTTPS only, a `User-Agent` naming DropNotch and its repository, nothing logged beyond status codes and counts (CLAUDE.md: never log track info). The city, coordinates and lyrics are never logged.
+- Open-Meteo's free API is for non-commercial use [I: check their terms page before release]. DropNotch is free and open source; any paid version would need their commercial plan or another provider.
+
+**Alternatives:** CoreLocation approximate location (a prompt, a new entitlement and usage string; follows the user when travelling; not chosen); WeatherKit (needs a paid Apple Developer Program membership, FEATURE_MATRIX); a fixed refresh timer (rejected: energy rule); NetEase as a lyrics fallback (undocumented API, FEATURE_MATRIX).
+
+**Why:** a typed city sends no more than the user chose to share and adds no permission. Off by default because both send data off the Mac (ARCHITECTURE §10).

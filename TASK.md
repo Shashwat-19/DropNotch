@@ -2,6 +2,8 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
+**Status (2026-11-13):** v0.3 started (D52, D53): see "v0.3" at the end. Branch 1, `feat/screen-corners`, is in progress.
+
 **Status (2026-11-10):** v0.2.0 is released as a pre-release (tag v0.2.0 at e5568a6; DMG SHA-256 4a970ba8a50f20f9d0b13ae8f9ee46dacbf40ee708eecdfb2a6d1e3778141fe9; the repository is still private). v0.1.0 is released. v0.2 (Home dashboard, D42–D45) is in progress in speed mode: see "v0.2" at the end. Branch 1, `feat/home`, is merged to main (2026-11-09). Branch 2, `feat/battery-card`, is merged to main (2026-11-09). Branch 3, `feat/calendar-card`, and branch 3b, `feat/home-layout` (D46), are merged to main (2026-11-09; device checks 84–94 passed on one Release build). Branch 4, `feat/quick-commands`, was built but set aside unmerged (Shash, 2026-11-10); branch 4b, `feat/terminal` (D48), is merged to main (2026-11-10; device checks 95–100 passed). `feat/notch-size` (D49) is merged (checks 101–113 passed). Next: `release/v0.2.0`.
 
 **Phase 3 status (2026-11-01, kept for history):** release/v0.1.0 in progress: the keyboard fix (D40), reviews and DMG (D41) are done; the one device session below is next, then Shash approves the public steps. Phase 3 is in progress, in speed mode (CLAUDE.md). Branches 1, `feat/now-playing-scripting`, 2, `feat/now-playing-media`, 3, `feat/compact-slot`, 4, `feat/hotkey`, 5, `feat/notes`, 6, `feat/file-tray`, and 7, `feat/clipboard`, are merged to main and pushed to `origin`. Branches 8, `feat/settings`, and 9, `feat/polish`, are merged to main (2026-11-01). Next: release. See "Phase 3" below.
@@ -494,3 +496,16 @@ Check 111 passed (Shash, 2026-11-10, Release 7d66b5d). Then keys on choosing the
 112. **Tab click and ⌘ number.** Hover-open on another tab, click the Terminal tab: the caret turns solid and typing goes to the shell with no second click; secure input is on (`ioreg -l -w 0 | grep -c SecureInputPID` in Terminal.app is 1 or more). Same with ⌘ and Terminal's number after ⌃⌥N. Leaving closes after about 0.5 s.
 113. **Type as soon as the notch opens.** Off (default): a hover-open on the Terminal tab keeps the caret hollow and the keys with the app in front. Turn it on in Settings › Terminal (check the help text): a hover-open on Terminal gives the shell the keys at once; with no session yet, Start Session takes them and no shell starts until you press Return or click. Turn it off again.
 Checks 112–113 passed (Shash, 2026-11-10, Release 4f03075); Shash keeps "hover never starts a shell". Merged to main 2026-11-10.
+
+## v0.3: the Canopy set (scope approved by Shash, 2026-11-13; D52, D53)
+
+Speed mode as in v0.2. Branches from `main`, one feature each, in this order:
+1. `feat/screen-corners` (D52): rounded bottom corners on the notch display; Settings › General, off by default.
+2. `feat/charging-hud` (D52): a timed peek when power connects, with a haptic.
+3. `feat/weather` (D53): weather + AQI Home card, Open-Meteo, typed city, off by default.
+4. `feat/lyrics` (D53): LRCLIB synced lyrics in the Now Playing card, off by default.
+5. `feat/liquid-glass` (D52): Liquid Glass on macOS 26+, current look below.
+6. `feat/airpods-battery`, 7. `feat/equaliser`, 8. `feat/lock-screen` (D52): probe first, then a decision, then code.
+9. `release/v0.3.0`: performance-optimizer, accessibility-auditor, security-auditor (network, private APIs), docs-writer, changelog-agent.
+
+Not in v0.3: the pill on Macs without a notch already shipped in v0.1.0.
