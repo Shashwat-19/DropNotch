@@ -84,7 +84,12 @@ final class LockScreenPlayerWindow: LockScreenSurface {
         // The lock screen's own level; on its own this stays under the shield, the space puts it above (D55).
         panel.level = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()))
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
-        panel.contentView = FirstClickHostingView(rootView: content(presentation))
+        let hosting = FirstClickHostingView(rootView: content(presentation))
+        // The window's size is ours (compact or the screen), never the content's. With the default sizing options the
+        // hosting view recomputed the window's minimum size on every layout pass; on the lock screen each pass
+        // invalidated the next until AppKit stopped the app (crash, 2026-11-13 02:13). Same fix as the notch (D16).
+        hosting.sizingOptions = []
+        panel.contentView = hosting
         return panel
     }
 
