@@ -604,3 +604,8 @@ Device checks (MacBook Air, Release build, Music playing, lock-screen player on)
 149. **Password and Touch ID.** Type the password: every key lands; Touch ID works; unlocking removes the player at once.
 150. **Controls and lyrics while locked.** Play/pause, next, previous, a click on the bar; the lyrics button opens the right-hand panel and closes it.
 151. **Home card.** Clicking the artwork on the Home card does nothing (lock screen only).
+
+### Branch 10 revised: two-state lock-screen player (D58; on `feat/lock-screen-art`)
+Compact glass player above the password when locked; the artwork, title or lyrics button expands to full screen (artwork left, lyrics right, × back). Two fixed windows swapped, never resized; lyrics moved by offset. Two crashes on the way (AppKit update-constraints loop from resizing and scrolling inside the lock-screen space), fixed and checked with a real-window test that swaps the states three times. 658 tests, 0 failures.
+
+**Status (2026-11-13):** Shash on device, Release build 1257617: "perfect". Still to check: Touch ID and typed password with the expanded view up (149), sleep while locked (141), a second display.

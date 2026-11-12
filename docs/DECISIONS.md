@@ -1346,3 +1346,19 @@ The island on Macs without a notch is not on the list: the pill shipped in v0.1.
 - The Home card's artwork no longer opens anything; the desktop full-screen panel (`FullScreenPlayer`) and the small lock card (`LockScreenPlayerView`) are removed. No close button or Escape: unlocking closes it.
 
 **Alternatives:** keeping the whole screen with a transparent band at the bottom (rejected: it hid the password field on device, and the field's place isn't documented); keeping the desktop version as well (Shash: lock screen only).
+
+---
+
+## D58. Lock-screen player in two states: compact above the password, expanded with lyrics
+
+**Date:** 2026-11-13 · **Status:** Accepted (Shash, 2026-11-13: a video of the look he wants; "perfect" on device). Revises D57.
+
+**Why the change:** probes with Shash at the Mac (2026-11-13) showed that a window in a private space at absolute level 1 or 100 never appears on the lock screen, and at 200, 300 or 400 it appears above the lock screen's clock, avatar and password. Nothing can sit between the lock screen's wallpaper and its own UI. The look in Shash's video (and Canopy's) is two states, not artwork under the system UI. Swapping the wallpaper was rejected: macOS reported a wallpaper file that no longer exists, so it couldn't be restored without rewriting the private wallpaper store (D3).
+
+**Decision:**
+- **Compact** (every lock starts here): a 320 × 132 glass player centred 66 % down the screen, above the avatar and password prompt [I: from Shash's photo; tune on other Macs]: artwork, title, artist, waveform, bar, controls, a lyrics button and an output button. The rest of the lock screen is the system's.
+- **Expanded** (the artwork, the title or the lyrics button): the whole screen: the artwork blurred and darkened 55 %, date and clock, the artwork on the left with the player under it, lyrics on the right; the lyrics button hides them and centres the artwork; × top left goes back to compact. It covers the password prompt; Touch ID and typing the password still unlock.
+- Two fixed windows, compact and full-screen, each moved into the lock-screen space once, swapped on expand and collapse. Neither is resized, and the hosting views never size their windows (`sizingOptions = []`). Lyrics move by an offset from measured line heights, with a spring; no scroll view. Resizing a window inside the private space, and scrolling in it, crashed DropNotch in an AppKit update-constraints loop twice (02:13, 02:17); the crash reports pointed at `NSHostingView.updateConstraints` → `updateTransform`.
+- Lyrics: the current line fills word by word (each word over its share of the line's time, so the fill is smooth), the next and previous lines dimmed, the column fading out at its top and bottom.
+
+**Alternatives:** the wallpaper swap (rejected above); one window resized between the two states (crashed); a scroll view for the lyrics (crashed).
