@@ -1,24 +1,5 @@
 import SwiftUI
 
-/// The lock-screen player's content (D58): compact or expanded, as `presentation` says.
-struct LockScreenPlayerRoot: View {
-    let module: NowPlayingModule
-    let presentation: LockScreenPresentation
-
-    var body: some View {
-        Group {
-            if presentation.isExpanded {
-                FullScreenPlayerView(module: module, collapse: presentation.collapse)
-                    .transition(.opacity)
-            } else {
-                CompactLockPlayerView(module: module, expand: presentation.expand)
-                    .transition(.opacity)
-            }
-        }
-        .environment(\.colorScheme, .dark)
-    }
-}
-
 /// The compact lock-screen player (D58): a small glass card above the password prompt with the artwork, title and
 /// artist, the bar and the controls. A click on the artwork, the title or the expand button opens the full screen.
 struct CompactLockPlayerView: View {

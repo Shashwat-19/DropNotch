@@ -36,39 +36,43 @@ struct LyricWordsView: View {
     }
 }
 
-/// All the lines, scrolled so the current one sits a third of the way down.
+/// All the lines, moved so the current one sits a third of the way down. Each line's height is measured once and the
+/// column is moved by an offset: no scroll view, since scrolling inside the lock-screen window crashed it in a layout
+/// loop (2026-11-13).
 private struct LyricColumn: View {
     let lyrics: SyncedLyrics
     let info: NowPlayingInfo
     let index: Int?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Measured heights by line; a line not measured yet counts as one line of text.
+    @State private var heights: [Int: CGFloat] = [:]
+
+    static let spacing: CGFloat = 22
+    /// The current line's top, as a share of the column's height.
+    static let anchor: CGFloat = 0.34
 
     var body: some View {
         GeometryReader { proxy in
-            ScrollViewReader { scroller in
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 22) {
-                        ForEach(lyrics.lines.indices, id: \.self) { line in
-                            row(line)
-                                .id(line)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                // Room above the first line and below the last, so either can reach the anchor.
-                .contentMargins(.vertical, proxy.size.height * 0.45, for: .scrollContent)
-                .scrollDisabled(true)
-                .onChange(of: index, initial: true) { old, new in
-                    let move = { scroller.scrollTo(new ?? 0, anchor: UnitPoint(x: 0, y: 0.34)) }
-                    // No animation for the first placement or under Reduce Motion; a soft spring otherwise.
-                    if reduceMotion || old == nil { move() } else { withAnimation(.spring(duration: 0.7, bounce: 0.12), move) }
+            let current = index ?? 0
+            let above = (0..<current).reduce(CGFloat(0)) { $0 + (heights[$1] ?? 32) + Self.spacing }
+            VStack(alignment: .leading, spacing: Self.spacing) {
+                ForEach(lyrics.lines.indices, id: \.self) { line in
+                    row(line)
+                        .background(GeometryReader { row in
+                            Color.clear.preference(key: LyricRowHeights.self, value: [line: row.size.height])
+                        })
                 }
             }
-            // The column fades out at the top and bottom instead of ending in a hard line.
-            .mask(LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.15),
-                                         .init(color: .black, location: 0.8), .init(color: .clear, location: 1)],
-                                 startPoint: .top, endPoint: .bottom))
+            .frame(width: proxy.size.width, alignment: .leading)
+            .offset(y: proxy.size.height * Self.anchor - above)
+            .animation(reduceMotion ? nil : .spring(duration: 0.7, bounce: 0.12), value: index)
         }
+        .clipped()
+        .onPreferenceChange(LyricRowHeights.self) { heights = $0 }
+        // The column fades out at the top and bottom instead of ending in a hard line.
+        .mask(LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.15),
+                                     .init(color: .black, location: 0.8), .init(color: .clear, location: 1)],
+                             startPoint: .top, endPoint: .bottom))
     }
 
     @ViewBuilder
@@ -86,14 +90,21 @@ private struct LyricColumn: View {
         .multilineTextAlignment(.leading)
         .lineLimit(3)
         .fixedSize(horizontal: false, vertical: true)
-        // The current line a touch larger; the change rides the scroll's spring.
+        // The current line a touch larger; drawn larger only, so the measured heights don't change.
         .scaleEffect(line == index ? 1 : 0.94, anchor: .leading)
-        .animation(reduceMotion ? nil : .spring(duration: 0.5, bounce: 0), value: index)
     }
 
     private func text(_ line: Int) -> String {
         let text = lyrics.lines[line].text
         return text.isEmpty ? "♪" : text
+    }
+}
+
+/// Each lyric line's height, by index.
+private struct LyricRowHeights: PreferenceKey {
+    static let defaultValue: [Int: CGFloat] = [:]
+    static func reduce(value: inout [Int: CGFloat], nextValue: () -> [Int: CGFloat]) {
+        value.merge(nextValue()) { $1 }
     }
 }
 

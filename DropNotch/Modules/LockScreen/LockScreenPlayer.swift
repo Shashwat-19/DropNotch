@@ -34,9 +34,11 @@ final class LockScreenPlayer {
     convenience init(nowPlaying: NowPlayingModule) {
         let space = SkyLightLockScreenSpace()
         self.init(nowPlaying: nowPlaying, locks: DistributedLockStateSource(),
-                  surface: LockScreenPlayerWindow(space: space) { presentation in
-                      AnyView(LockScreenPlayerRoot(module: nowPlaying, presentation: presentation))
-                  },
+                  surface: LockScreenPlayerWindow(space: space,
+                                                  compact: { AnyView(CompactLockPlayerView(module: nowPlaying, expand: $0.expand)
+                                                      .environment(\.colorScheme, .dark)) },
+                                                  expanded: { AnyView(FullScreenPlayerView(module: nowPlaying, collapse: $0.collapse)
+                                                      .environment(\.colorScheme, .dark)) }),
                   isAvailable: space.isAvailable)
     }
 

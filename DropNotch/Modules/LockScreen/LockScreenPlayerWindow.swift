@@ -10,10 +10,11 @@ protocol LockScreenSurface: AnyObject {
     var isShown: Bool { get }
 }
 
-/// The lock-screen player's window (D55, D58): one panel that never becomes key, so it can't take a keystroke from the
-/// password field, moved into the lock-screen space the first time it shows. Compact, it is only as big as the small
-/// player, so the rest of the lock screen (clock, avatar, password prompt) is the system's; expanded, it covers the
-/// screen until its × collapses it. Clicks reach its controls without activating DropNotch.
+/// The lock-screen player's windows (D55, D58): a compact one, only as big as the small player so the rest of the lock
+/// screen (clock, avatar, password prompt) stays the system's, and a full-screen one for the expanded player. Both are
+/// panels that never become key, so they can't take a keystroke from the password field, each moved into the
+/// lock-screen space once. Expanding and collapsing swap them; neither is ever resized: resizing a window inside the
+/// private space, with SwiftUI content, crashed DropNotch in a layout loop (2026-11-13 02:17).
 @MainActor
 final class LockScreenPlayerWindow: LockScreenSurface {
     /// The compact player's size, and where its centre sits as a share of the screen's height from the top: above the
@@ -23,46 +24,67 @@ final class LockScreenPlayerWindow: LockScreenSurface {
 
     let presentation = LockScreenPresentation()
     private let space: any LockScreenSpace
-    private let content: (LockScreenPresentation) -> AnyView
-    private var panel: Panel?
-    private var attached = false
+    private let compactContent: (LockScreenPresentation) -> AnyView
+    private let expandedContent: (LockScreenPresentation) -> AnyView
+    private var compact: Panel?
+    private var expanded: Panel?
+    private var attached: Set<Int> = []
 
-    init(space: any LockScreenSpace, content: @escaping (LockScreenPresentation) -> AnyView) {
+    init(space: any LockScreenSpace, compact: @escaping (LockScreenPresentation) -> AnyView,
+         expanded: @escaping (LockScreenPresentation) -> AnyView) {
         self.space = space
-        self.content = content
-        presentation.onChange = { [weak self] expanded in self?.resize(expanded: expanded) }
+        compactContent = compact
+        expandedContent = expanded
+        presentation.onChange = { [weak self] isExpanded in self?.swap(toExpanded: isExpanded) }
     }
 
-    var isShown: Bool { panel?.isVisible ?? false }
+    var isShown: Bool { (compact?.isVisible ?? false) || (expanded?.isVisible ?? false) }
 
     func show() -> Bool {
-        // The menu-bar screen: the lock screen's password field is on it [I: device check with a second display].
-        guard let screen = NSScreen.screens.first else { return false }
         presentation.reset()
-        let panel = self.panel ?? makePanel()
-        self.panel = panel
-        panel.setFrame(Self.compactFrame(on: screen.frame), display: false)
-        panel.orderFrontRegardless()
-        if !attached {
-            attached = space.attach(windowNumber: panel.windowNumber)
-            if !attached {
-                panel.orderOut(nil)
-                return false
-            }
-        }
-        return true
+        guard let screen = NSScreen.screens.first, let panel = place(compact: true, on: screen) else { return false }
+        expanded?.orderOut(nil)
+        return panel.isVisible
     }
 
     func hide() {
-        panel?.orderOut(nil)
+        compact?.orderOut(nil)
+        expanded?.orderOut(nil)
         presentation.reset()
     }
 
-    private func resize(expanded: Bool) {
-        guard let panel, let screen = NSScreen.screens.first else { return }
-        let frame = expanded ? screen.frame : Self.compactFrame(on: screen.frame)
-        // AppKit's own frame animation; none under Reduce Motion.
-        panel.setFrame(frame, display: true, animate: !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+    private func swap(toExpanded isExpanded: Bool) {
+        guard let screen = NSScreen.screens.first else { return }
+        // The new one first, then the old one away, so the lock screen never flashes empty between them.
+        guard place(compact: !isExpanded, on: screen) != nil else {
+            presentation.reset()
+            return
+        }
+        (isExpanded ? compact : expanded)?.orderOut(nil)
+    }
+
+    /// Shows the compact or expanded panel on `screen`, made and moved into the space the first time. Nil if it couldn't be
+    /// placed above the lock screen.
+    private func place(compact isCompact: Bool, on screen: NSScreen) -> Panel? {
+        let frame = isCompact ? Self.compactFrame(on: screen.frame) : screen.frame
+        let panel: Panel
+        if let existing = isCompact ? compact : expanded {
+            panel = existing
+        } else {
+            panel = makePanel(frame: frame, content: (isCompact ? compactContent : expandedContent)(presentation))
+            if isCompact { compact = panel } else { expanded = panel }
+        }
+        // Only when the screen changed since last time (another display arrangement); otherwise the frame is left alone.
+        if panel.frame != frame { panel.setFrame(frame, display: false) }
+        panel.orderFrontRegardless()
+        if !attached.contains(panel.windowNumber) {
+            guard space.attach(windowNumber: panel.windowNumber) else {
+                panel.orderOut(nil)
+                return nil
+            }
+            attached.insert(panel.windowNumber)
+        }
+        return panel
     }
 
     /// Centred, `compactCentreFromTop` down the screen, on whole points. AppKit's y runs up. Pure, for tests.
@@ -72,9 +94,8 @@ final class LockScreenPlayerWindow: LockScreenSurface {
                       width: compactSize.width, height: compactSize.height)
     }
 
-    private func makePanel() -> Panel {
-        let panel = Panel(contentRect: CGRect(origin: .zero, size: Self.compactSize), styleMask: [.borderless, .nonactivatingPanel],
-                          backing: .buffered, defer: false)
+    private func makePanel(frame: CGRect, content: AnyView) -> Panel {
+        let panel = Panel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.isReleasedWhenClosed = false
         panel.isOpaque = false
         panel.backgroundColor = .clear
@@ -84,10 +105,8 @@ final class LockScreenPlayerWindow: LockScreenSurface {
         // The lock screen's own level; on its own this stays under the shield, the space puts it above (D55).
         panel.level = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()))
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
-        let hosting = FirstClickHostingView(rootView: content(presentation))
-        // The window's size is ours (compact or the screen), never the content's. With the default sizing options the
-        // hosting view recomputed the window's minimum size on every layout pass; on the lock screen each pass
-        // invalidated the next until AppKit stopped the app (crash, 2026-11-13 02:13). Same fix as the notch (D16).
+        let hosting = FirstClickHostingView(rootView: content)
+        // The window's size is ours, never the content's (as the notch, D16).
         hosting.sizingOptions = []
         panel.contentView = hosting
         return panel
