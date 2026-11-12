@@ -1,5 +1,6 @@
 import AppKit
 import KeyboardShortcuts
+import os
 
 /// Owns the AppKit side of the app: the notch panel and its screen observer (D16).
 @MainActor
@@ -37,7 +38,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.onDismiss = { [notchState] in notchState.send(.dismissed) }
         notchState.panel = panel
         if let nowPlaying = registry.modules.lazy.compactMap({ $0 as? NowPlayingModule }).first {
-            nowPlaying.openFullScreen = { [weak self] in self?.fullScreenPlayer?.open() }
+            nowPlaying.openFullScreen = { [weak self] in
+                Logger.nowPlaying.debug("Artwork clicked")
+                self?.fullScreenPlayer?.open()
+            }
         }
         // A test run must never start real modules (no player permission checks or Apple Events) or take
         // the user's global shortcut.

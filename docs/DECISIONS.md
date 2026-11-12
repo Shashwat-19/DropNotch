@@ -1325,4 +1325,10 @@ The island on Macs without a notch is not on the list: the pill shipped in v0.1.
 
 **Energy:** while open only: the clock redraws once a minute; the lyric highlight at 15 fps while playing (paused otherwise); the bar and times as in the card (ARCHITECTURE §9). Nothing runs while it's closed.
 
+**Revision (Shash, 2026-11-13, after the first device runs):**
+- **Note from Shash: this full-screen player is meant for the lock screen only.** The Home-card click is how it opens for now; moving it to the lock screen (in place of, or growing from, D55's card) is the next step, and a decision of its own.
+- Lyrics are hidden until the player's lyrics button (left of the controls) is clicked; they then open in a panel on the right, with the artwork and player moving left. Nothing is looked up until the panel is open.
+- It covers the open notch too (`.statusBar + 1`): the notch sat on the clock. Fixed-height blocks, so nothing runs off the screen.
+- The background is blurred once per track with Core Image (96 px, then scaled) and kept for the last 4 tracks, made before the window shows: a live 60 pt blur made it stutter, and a background made after opening arrived late.
+
 **Alternatives:** a real macOS full-screen window (its own Space and animation; slower to open and close, and the notch would need to follow it); the clock in a fixed colour (didn't match the screenshot); estimating word times from syllables (more code for little gain over even spacing in v1).

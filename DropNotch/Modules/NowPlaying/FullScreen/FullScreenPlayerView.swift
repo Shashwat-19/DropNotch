@@ -7,11 +7,12 @@ struct FullScreenPlayerView: View {
     let close: () -> Void
     @AppStorage(LRCLibClient.enabledKey) private var lyricsOn = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var appeared = false
+    /// The lyrics panel on the right, opened with the player's lyrics button (Shash, 2026-11-13). Closed at first.
+    @State private var showsLyrics = false
 
     var body: some View {
         GeometryReader { proxy in
-            let height = proxy.size.height
+            let height = proxy.size.height, width = proxy.size.width
             ZStack {
                 background
                     // A click on the background closes, like a click outside a sheet.
@@ -20,19 +21,28 @@ struct FullScreenPlayerView: View {
                 if let info = module.shown {
                     VStack(spacing: 0) {
                         clock(colour: ArtworkPalette.clockColour(for: info.artwork?.image), height: height)
-                            .padding(.top, height * 0.06)
-                        Spacer(minLength: height * 0.03)
-                        NowPlayingArtworkView(artwork: info.artwork, player: info.player, size: height * 0.36)
-                            .shadow(color: .black.opacity(0.45), radius: 30, y: 12)
-                            .scaleEffect(appeared || reduceMotion ? 1 : 0.85)
-                        FullScreenControlsView(module: module, info: info)
-                            .padding(.top, height * 0.035)
-                        lyrics(info)
-                            .frame(maxWidth: min(proxy.size.width * 0.6, 720), minHeight: height * 0.16, alignment: .top)
-                            .padding(.top, height * 0.03)
-                        Spacer(minLength: height * 0.02)
+                            .frame(height: height * 0.21, alignment: .bottom)
+                            .padding(.top, height * 0.04)
+                        // The artwork and player in the middle; with lyrics open, on the left with the lyrics on the right.
+                        HStack(alignment: .center, spacing: 0) {
+                            VStack(spacing: 0) {
+                                NowPlayingArtworkView(artwork: info.artwork, player: info.player, size: height * 0.36)
+                                    .shadow(color: .black.opacity(0.45), radius: 24, y: 10)
+                                FullScreenControlsView(module: module, info: info, showsLyrics: $showsLyrics)
+                                    .padding(.top, height * 0.035)
+                            }
+                            .frame(maxWidth: .infinity)
+                            if showsLyrics {
+                                lyricsPanel(info)
+                                    .frame(width: width * 0.42, height: height * 0.55)
+                                    .padding(.trailing, width * 0.06)
+                                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                            }
+                        }
+                        .padding(.top, height * 0.05)
+                        Spacer(minLength: 0)
                     }
-                    .frame(maxWidth: .infinity)
+                    .animation(reduceMotion ? nil : .spring(duration: 0.4, bounce: 0), value: showsLyrics)
                 }
                 closeButton
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -40,31 +50,33 @@ struct FullScreenPlayerView: View {
             }
         }
         .environment(\.colorScheme, .dark)
-        .opacity(appeared ? 1 : 0)
-        .onAppear { withAnimation(.easeOut(duration: reduceMotion ? 0.15 : 0.35)) { appeared = true } }
         .onExitCommand(perform: close)
-        // The card's own lookup rule (D53): once per track, only while lyrics are on and this is on screen.
-        .task(id: LyricsKey(trackID: module.shown?.trackID, on: lyricsOn)) { await module.loadLyrics() }
+        // Lyrics are looked up only with the panel open, and then by D53's rules: once per track, setting on.
+        .task(id: LyricsKey(trackID: module.shown?.trackID, on: lyricsOn && showsLyrics)) {
+            if lyricsOn && showsLyrics { await module.loadLyrics() }
+        }
     }
 
-    /// The artwork scaled past the edges and blurred, darkened so white text reads on it. Drawn once per track.
+    /// The artwork, blurred once per track (`BlurredArtwork.cached`) and scaled past the edges, darkened so white text
+    /// reads on it. A plain image: nothing is blurred while the view draws.
     @ViewBuilder
     private var background: some View {
         let artwork = module.shown?.artwork
         ZStack {
             Color.black
-            if let artwork {
-                Image(decorative: artwork.image, scale: 1)
+            if let artwork, let blurred = BlurredArtwork.cached(for: artwork) {
+                Image(decorative: blurred, scale: 1)
                     .resizable()
+                    .interpolation(.high)
                     .scaledToFill()
-                    .scaleEffect(1.25)
-                    .blur(radius: 60, opaque: true)
+                    .scaleEffect(1.1)
                     .id(artwork.trackID)
                     .transition(.opacity)
             }
             Color.black.opacity(0.3)
         }
-        .animation(.easeInOut(duration: 0.6), value: artwork?.trackID)
+        .animation(.easeInOut(duration: 0.3), value: artwork?.trackID)
+        .clipped()
         .ignoresSafeArea()
         .accessibilityHidden(true)
     }
@@ -74,9 +86,11 @@ struct FullScreenPlayerView: View {
         TimelineView(.everyMinute) { context in
             VStack(spacing: 0) {
                 Text(context.date, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day())
-                    .font(.system(size: height * 0.026, weight: .semibold))
+                    .font(.system(size: height * 0.024, weight: .semibold))
                 Text(context.date, format: .dateTime.hour(.defaultDigits(amPM: .omitted)).minute())
-                    .font(.system(size: height * 0.115, weight: .bold, design: .rounded).monospacedDigit())
+                    .font(.system(size: height * 0.12, weight: .bold, design: .rounded).monospacedDigit())
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
             }
             .foregroundStyle(colour)
             .shadow(color: .black.opacity(0.2), radius: 8)
@@ -84,17 +98,21 @@ struct FullScreenPlayerView: View {
     }
 
     @ViewBuilder
-    private func lyrics(_ info: NowPlayingInfo) -> some View {
-        if !lyricsOn {
-            Text("Turn on synced lyrics in Settings › Privacy to see them here.")
-                .font(.callout)
-                .foregroundStyle(.white.opacity(0.45))
-        } else if let current = module.lyrics, current.trackID == info.trackID {
-            LyricWordsView(lyrics: current.lyrics, info: info)
-        } else {
-            // Loading, or LRCLIB has none: nothing rather than a spinner that may never end.
-            Color.clear
+    private func lyricsPanel(_ info: NowPlayingInfo) -> some View {
+        Group {
+            if !lyricsOn {
+                Text("Turn on synced lyrics in Settings › Privacy to see them here.")
+                    .foregroundStyle(.white.opacity(0.55))
+            } else if let current = module.lyrics, current.trackID == info.trackID {
+                LyricWordsView(lyrics: current.lyrics, info: info, before: 2, after: 4, alignment: .leading)
+            } else {
+                // Loading, or LRCLIB has none for this track.
+                Text("No synced lyrics for this track.")
+                    .foregroundStyle(.white.opacity(0.45))
+            }
         }
+        .font(.title3)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 
     private var closeButton: some View {
@@ -121,6 +139,7 @@ struct FullScreenPlayerView: View {
 struct FullScreenControlsView: View {
     let module: NowPlayingModule
     let info: NowPlayingInfo
+    @Binding var showsLyrics: Bool
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -150,7 +169,14 @@ struct FullScreenControlsView: View {
                 progress(duration: duration)
             }
             HStack(spacing: 30) {
-                Color.clear.frame(width: 18, height: 1)
+                Button { showsLyrics.toggle() } label: {
+                    Image(systemName: showsLyrics ? "quote.bubble.fill" : "quote.bubble").font(.system(size: 13))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white.opacity(showsLyrics ? 1 : 0.6))
+                .frame(width: 18)
+                .help(showsLyrics ? "Hide lyrics" : "Show lyrics")
+                .accessibilityLabel(Text(showsLyrics ? "Hide lyrics" : "Show lyrics"))
                 control(.previous, "Previous track", "backward.fill")
                 control(.playPause, module.isPlaying ? "Pause" : "Play", module.isPlaying ? "pause.fill" : "play.fill")
                     .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))

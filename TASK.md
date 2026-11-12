@@ -585,9 +585,13 @@ Probe to run with Shash at the Mac (throwaway): a window moved to a private SkyL
 ### Branch 9: `feat/full-screen-player` (D56, "v1"; branched from `feat/lock-screen`)
 Click the Now Playing card's artwork: blurred artwork over the whole screen, date and clock tinted from the artwork, the artwork, a compact player and word-by-word lyrics (even spacing across each line). Artwork thumbnails 128 → 640 px.
 
+**Note from Shash (2026-11-13): this feature is only for the lock screen.** For now it opens from the Home card; moving it to the lock screen is next (D56 revision).
+
+**Revised (2026-11-13) after Shash's runs:** smoother after the background blur moved out of the draw loop (Shash: "way better and smoother"); covers the notch; lyrics behind a button, in a right-hand panel; background ready before the first frame. 658 tests, 0 failures.
+
 **Status (2026-11-13):** built; 657 tests, 0 failures (3 new). Device checks (MacBook Air, Release build, Music playing, lyrics on):
 143. **Open and look.** Hover-open the notch on Home, click the artwork: the screen fills with the blurred artwork, the date and time on top, sharp artwork in the middle, the player under it and lyrics under that. Compare with Canopy's screenshot; say what to move.
 144. **Controls.** Play/pause, previous, next, a click on the bar: all work; the times count; the waveform moves while playing.
 145. **Close.** Escape, the × button, a click on the background, and ⌘Tab each close it. Quitting Music closes it.
 146. **Track change.** Next track: the background, artwork, clock tint and lyrics follow.
-147. **Lyrics.** Words light left to right roughly with the singing; the next line takes over on time. Lyrics off: the hint shows.
+147. **Lyrics.** Hidden at first. The lyrics button (left of previous) opens a panel on the right and the artwork moves left; words light left to right roughly with the singing; clicking it again closes the panel. Lyrics off in Settings: the panel shows the hint.

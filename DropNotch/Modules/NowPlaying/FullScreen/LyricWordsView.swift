@@ -6,6 +6,10 @@ import SwiftUI
 struct LyricWordsView: View {
     let lyrics: SyncedLyrics
     let info: NowPlayingInfo
+    /// Lines shown dimmed before and after the current one.
+    var before = 1
+    var after = 1
+    var alignment: HorizontalAlignment = .center
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// A line with nothing after it lights over this long.
@@ -15,34 +19,36 @@ struct LyricWordsView: View {
         TimelineView(.animation(minimumInterval: 1.0 / 15, paused: !info.isPlaying)) { _ in
             let elapsed = info.elapsed(at: Date()) ?? 0
             let index = lyrics.lines.lastIndex { $0.time <= elapsed }
-            VStack(spacing: 14) {
-                line(at: index.map { $0 - 1 }, dim: true)
+            let anchor = index ?? -1
+            VStack(alignment: alignment, spacing: 14) {
+                ForEach(Array((anchor - before)..<anchor), id: \.self) { line(at: $0) }
                 current(index, elapsed: elapsed)
-                line(at: index.map { $0 + 1 } ?? 0, dim: true)
+                ForEach(Array((anchor + 1)...(anchor + after)), id: \.self) { line(at: $0) }
             }
+            .frame(maxWidth: .infinity, alignment: Alignment(horizontal: alignment, vertical: .center))
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: index)
         }
     }
 
-    private func line(at index: Int?, dim: Bool) -> some View {
-        let text = index.flatMap { lyrics.lines.indices.contains($0) ? lyrics.lines[$0].text : nil } ?? ""
+    private var textAlignment: TextAlignment { alignment == .leading ? .leading : .center }
+
+    private func line(at index: Int) -> some View {
+        let text = lyrics.lines.indices.contains(index) ? lyrics.lines[index].text : ""
         return Text(verbatim: text.isEmpty ? " " : text)
-            .font(.system(size: 17, weight: .semibold))
+            .font(.system(size: 20, weight: .semibold))
             .foregroundStyle(.white.opacity(0.35))
-            .lineLimit(1)
+            .multilineTextAlignment(textAlignment)
+            .lineLimit(2)
     }
 
     private func current(_ index: Int?, elapsed: TimeInterval) -> some View {
-        guard let index else {
-            return AnyView(Text(verbatim: "♪").font(.system(size: 26, weight: .bold)).foregroundStyle(.white.opacity(0.6)))
-        }
+        let note = Text(verbatim: "♪").font(.system(size: 30, weight: .bold)).foregroundStyle(.white.opacity(0.6))
+        guard let index else { return AnyView(note) }
         let line = lyrics.lines[index]
         let end = lyrics.lines.indices.contains(index + 1) ? lyrics.lines[index + 1].time : line.time + Self.lastLineLength
         let progress = Self.progress(elapsed: elapsed, start: line.time, end: end)
         let words = line.text.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
-        guard !words.isEmpty else {
-            return AnyView(Text(verbatim: "♪").font(.system(size: 26, weight: .bold)).foregroundStyle(.white.opacity(0.6)))
-        }
+        guard !words.isEmpty else { return AnyView(note) }
         let lit = Self.litWords(count: words.count, progress: progress)
         // One Text built from runs, so the line wraps as words, not as separate views.
         let text = words.enumerated().reduce(Text(verbatim: "")) { result, item in
@@ -51,9 +57,9 @@ struct LyricWordsView: View {
             return result + word
         }
         return AnyView(text
-            .font(.system(size: 26, weight: .bold))
-            .multilineTextAlignment(.center)
-            .lineLimit(2)
+            .font(.system(size: 30, weight: .bold))
+            .multilineTextAlignment(textAlignment)
+            .lineLimit(3)
             .accessibilityLabel(Text(verbatim: line.text)))
     }
 

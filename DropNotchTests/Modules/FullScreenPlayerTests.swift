@@ -36,3 +36,16 @@ final class FullScreenPlayerTests: XCTestCase {
         XCTAssertFalse(player.isOpen, "nothing playing: nothing to show")
     }
 }
+
+final class BlurredArtworkTests: XCTestCase {
+    func testBlurIsSmallAndKeepsTheShape() throws {
+        let context = try XCTUnwrap(CGContext(data: nil, width: 640, height: 320, bitsPerComponent: 8, bytesPerRow: 0,
+                                              space: CGColorSpaceCreateDeviceRGB(),
+                                              bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        context.setFillColor(red: 0.2, green: 0.4, blue: 0.6, alpha: 1)
+        context.fill(CGRect(x: 0, y: 0, width: 640, height: 320))
+        let blurred = try XCTUnwrap(BlurredArtwork.make(from: try XCTUnwrap(context.makeImage())))
+        XCTAssertEqual(blurred.width, 96)
+        XCTAssertEqual(blurred.height, 48)
+    }
+}
