@@ -123,14 +123,6 @@ final class LockScreenPlayerTests: XCTestCase {
         XCTAssertFalse(surface.isShown)
     }
 
-    func testWindowSitsCentredAboveThePasswordField() {
-        let frame = LockScreenPlayerWindow.frame(on: CGRect(x: 0, y: 0, width: 1470, height: 956))
-        XCTAssertEqual(frame.size, LockScreenPlayerWindow.size)
-        XCTAssertEqual(frame.midX, 735)
-        XCTAssertEqual(frame.midY, (956 * LockScreenPlayerWindow.heightShare).rounded(), accuracy: 1)
-        XCTAssertEqual(frame.minX, frame.minX.rounded())
-    }
-
     func testTheRealSpaceIsAvailableOnThisMac() {
         // Documents the probe's result on the build machine; on a macOS without the symbols this fails loudly in CI.
         XCTAssertTrue(SkyLightLockScreenSpace().isAvailable)

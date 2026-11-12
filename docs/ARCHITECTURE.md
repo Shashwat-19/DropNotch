@@ -32,8 +32,8 @@ DropNotch/
     NowPlaying/   NowPlayingModule, NowPlayingExpandedView (the wide Home card, D42), NowPlayingArtworkView, PlaybackProgressBar,
                   PlaybackProgressView, NowPlayingControlStyle, NowPlayingCompactView, CompactWaveform
                   (D22–D28); TrackLyrics, LyricLineView: synced lyrics in the card (D53);
-                  FullScreen/: FullScreenPlayer (panel), FullScreenPlayerView, FullScreenControlsView, LyricWordsView,
-                  ArtworkPalette: the full-screen player behind the card's artwork (D56). Planned: settings view
+                  FullScreen/: FullScreenPlayerView, FullScreenControlsView, LyricWordsView, ArtworkPalette, BlurredArtwork:
+                  the full-screen player, shown on the lock screen only (D56, D57). Planned: settings view
     FileTray/     FileTrayModule (list, bookmarks, copies), TrayItem, FileTrayExpandedView,
                   TrayItemDragSource (drag out), TrayShareMenu (share picker) (D32, D40)
     Clipboard/    ClipboardModule (poll, access states, history), ClipboardItem, ClipboardExpandedView (D7c, D33)
@@ -42,8 +42,8 @@ DropNotch/
                   HeadphoneAlert: the headphones-connect HUD, off by default (D54)
     Calendar/     CalendarModule, CalendarCardView: the medium Home card (D44)
     Weather/      WeatherModule, WeatherCardView: the narrow Home card, off by default (D53)
-    LockScreen/   LockScreenPlayer (not a module), LockScreenPlayerWindow (never key), LockScreenPlayerView: Now Playing
-                  above the lock screen, off by default (D55)
+    LockScreen/   LockScreenPlayer (not a module), LockScreenPlayerWindow (never key, top 70 % of the screen): the
+                  full-screen player above the lock screen, off by default (D55, D57)
     Terminal/     TerminalModule, TerminalExpandedView, TerminalTopRowView, TerminalSettings: the Terminal tab, off by
                   default (D48)
   Services/       one protocol + implementations per system dependency:
@@ -220,7 +220,7 @@ Target: zero wake-ups while idle, apart from the clipboard poll. Intervals below
 | Decorative waveform (D28) | No app timer: Core Animation repeating animations, capped at 15 fps | Compact view visible **and** playing **and** display awake **and** not Low Power Mode **and** not Reduce Motion | Animation; the render server draws it, as the progress bar. Still bars otherwise. |
 | Terminal hang-up (D48) | One-shot 2 s after End Session | A session ended while it ran | SIGKILL for what SIGHUP didn't end; no signal says a process ignored SIGHUP. At quit, the wait is up to 1 s inline instead, since a later timer would never run. |
 | Terminal output (D48) | No app timer: SwiftTerm reads the pty on its own I/O thread and draws through an `NSView` display link that runs only while output is pending and the view is on screen, pausing after 8 idle frames; the caret is steady, not blinking | A session is running | A busy program (`top`, `tail -f`) is still parsed while the notch is closed, in proportion to its output, as in any terminal. Idle wake-ups with a shell at its prompt: unmeasured, on the release checklist. |
-| Full-screen player (D56) | Clock: `TimelineView(.everyMinute)`; lyric highlight: `TimelineView(.animation)` at 15 fps | Open **and** (for the highlight) playing with lyrics | User-opened, full-screen; closes on Escape, background click or another app coming forward. Nothing while closed. |
+| Lock-screen full-screen player (D56, D57) | Clock: `TimelineView(.everyMinute)`; lyric highlight: `TimelineView(.animation)` at 15 fps | Locked **and** shown **and** (for the highlight) playing with the lyrics panel open | Shown only while locked; unlocking closes it. Nothing while unlocked. |
 | Lyric line (D53) | No app timer: a SwiftUI `TimelineView(.explicit)` at each upcoming line's start, worked out from the position anchor (D26) | Card on screen **and** playing **and** lyrics on; nothing while paused or closed | A line has to change when it starts; one redraw per line (a few dozen per song), as the Calendar card does for event ends. |
 | Calendar card event ends (D44) | No app timer: a SwiftUI `TimelineView(.explicit)` at the end times of today's remaining events | Card on screen (notch open on Home) | An event that ends while the notch is open drops off; closed, the next open recomputes the list anyway. |
 

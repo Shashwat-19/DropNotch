@@ -16,8 +16,6 @@ struct NowPlayingExpandedView: View {
     @Environment(\.notchSize) private var size
     /// Settings › Privacy › Show synced lyrics (D53).
     @AppStorage(LRCLibClient.enabledKey) private var lyricsOn = false
-    /// Off on the lock screen, which reuses this card (D55): there's no full-screen player behind the shield.
-    @Environment(\.allowsFullScreenPlayer) private var allowsFullScreenPlayer
 
     var body: some View {
         if let info = module.shown {
@@ -30,16 +28,6 @@ struct NowPlayingExpandedView: View {
                         NowPlayingArtworkView(artwork: info.artwork, player: info.player, size: proxy.size.height)
                     }
                     .aspectRatio(1, contentMode: .fit)
-                    // A click on the artwork opens the full-screen player (D56).
-                    .overlay {
-                        if allowsFullScreenPlayer, let open = module.openFullScreen {
-                            Button(action: open) { Color.clear.contentShape(Rectangle()) }
-                                .buttonStyle(.plain)
-                                .focusable(false)
-                                .help("Open full screen")
-                                .accessibilityLabel(Text("Open full-screen player"))
-                        }
-                    }
                     VStack(alignment: .leading, spacing: 2) {
                         // Verbatim (a String, not a literal): track names are never looked up for translation.
                         Text(text.title)

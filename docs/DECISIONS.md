@@ -1332,3 +1332,17 @@ The island on Macs without a notch is not on the list: the pill shipped in v0.1.
 - The background is blurred once per track with Core Image (96 px, then scaled) and kept for the last 4 tracks, made before the window shows: a live 60 pt blur made it stutter, and a background made after opening arrived late.
 
 **Alternatives:** a real macOS full-screen window (its own Space and animation; slower to open and close, and the notch would need to follow it); the clock in a fixed colour (didn't match the screenshot); estimating word times from syllables (more code for little gain over even spacing in v1).
+
+---
+
+## D57. The full-screen player is the lock-screen player; no desktop version
+
+**Date:** 2026-11-13 · **Status:** Accepted (Shash, 2026-11-13: "this feature is only for the lock screen… yes please go ahead"). Revises D55 (its small card) and D56 (the Home-card click).
+
+**Decision:**
+- While locked, the lock-screen player (D55's window, space and triggers) shows D56's full-screen player instead of the Now Playing card: the blurred artwork, date and clock, artwork, compact player, and the lyrics button with its right-hand panel.
+- The window covers the **top 70 %** of the screen and fades out over its last tenth. The system's own avatar and password field, in the lower part of the lock screen, are never covered: the first full-screen version covered the whole screen and hid them (Shash, 2026-11-13). Its clock replaces the system's, which sits under it.
+- Layout, in shares of the screen's height: clock 14 %, artwork 26 %, player about 12.5 %, gaps 9 %, ending by about 62 % [V: offscreen render at 1470 × 956, 2026-11-13].
+- The Home card's artwork no longer opens anything; the desktop full-screen panel (`FullScreenPlayer`) and the small lock card (`LockScreenPlayerView`) are removed. No close button or Escape: unlocking closes it.
+
+**Alternatives:** keeping the whole screen with a transparent band at the bottom (rejected: it hid the password field on device, and the field's place isn't documented); keeping the desktop version as well (Shash: lock screen only).

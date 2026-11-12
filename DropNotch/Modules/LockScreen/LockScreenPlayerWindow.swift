@@ -10,16 +10,15 @@ protocol LockScreenSurface: AnyObject {
     var isShown: Bool { get }
 }
 
-/// The lock-screen player's window (D55): a panel that never becomes key, so it can't take a single keystroke from the
-/// password field, moved into the lock-screen space the first time it shows. Clicks reach its controls without
-/// activating DropNotch.
+/// The lock-screen player's window (D55, D57): the full-screen player across the whole screen, in a panel that never
+/// becomes key, so it can't take a single keystroke from the password field, moved into the lock-screen space the
+/// first time it shows. Clicks reach its controls without activating DropNotch; its clear bottom lets clicks through
+/// to the password field [I: device check 149].
 @MainActor
 final class LockScreenPlayerWindow: LockScreenSurface {
-    /// The card's size: the Home tab's Now Playing card with room around it. [I] Tune on device (check 137).
-    nonisolated static let size = CGSize(width: 380, height: 140)
-    /// Where its centre sits, as a share of the screen's height from the bottom: above the password field. [I]
-    nonisolated static let heightShare: CGFloat = 0.42
-
+    /// The share of the screen it covers, from the top. The rest stays the system's: the avatar and password field sit
+    /// in the lower part of the lock screen, and covering the whole screen hid them (Shash, 2026-11-13).
+    nonisolated static let coverage: CGFloat = 0.70
     private let space: any LockScreenSpace
     private let content: () -> AnyView
     private var panel: Panel?
@@ -53,19 +52,20 @@ final class LockScreenPlayerWindow: LockScreenSurface {
         panel?.orderOut(nil)
     }
 
-    /// Centred, `heightShare` up the screen, on whole points. Pure, for tests.
+    /// The top `coverage` of the screen (AppKit's y runs up, so the window starts above the bottom 30 %). Pure, for tests.
     nonisolated static func frame(on screen: CGRect) -> CGRect {
-        CGRect(x: (screen.midX - size.width / 2).rounded(), y: (screen.minY + screen.height * heightShare - size.height / 2).rounded(),
-               width: size.width, height: size.height)
+        let height = (screen.height * coverage).rounded()
+        return CGRect(x: screen.minX, y: screen.maxY - height, width: screen.width, height: height)
     }
 
     private func makePanel() -> Panel {
-        let panel = Panel(contentRect: CGRect(origin: .zero, size: Self.size), styleMask: [.borderless, .nonactivatingPanel],
+        let panel = Panel(contentRect: Self.frame(on: NSScreen.screens.first?.frame ?? .zero),
+                          styleMask: [.borderless, .nonactivatingPanel],
                           backing: .buffered, defer: false)
         panel.isReleasedWhenClosed = false
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = true
+        panel.hasShadow = false
         panel.hidesOnDeactivate = false
         panel.isMovable = false
         // The lock screen's own level; on its own this stays under the shield, the space puts it above (D55).

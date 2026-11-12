@@ -75,7 +75,7 @@ struct GeneralSettingsView: View {
                         .onChange(of: lockScreenPlayerOn) { lockScreenPlayer.refresh() }
                 } footer: {
                     Text(lockScreenPlayer.isAvailable
-                         ? "While your Mac is locked and Music or Spotify has a track loaded, anyone at it can see the track and use play, pause, skip and seek. It uses private parts of macOS, so an update may turn it off."
+                         ? "While your Mac is locked and Music or Spotify has a track loaded, the artwork fills the lock screen with the player and lyrics. Anyone at your Mac can see the track and use play, pause, skip and seek. It uses private parts of macOS, so an update may turn it off."
                          : "Not available on this version of macOS.")
                         .foregroundStyle(.secondary)
                 }

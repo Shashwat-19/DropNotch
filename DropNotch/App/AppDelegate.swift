@@ -1,6 +1,5 @@
 import AppKit
 import KeyboardShortcuts
-import os
 
 /// Owns the AppKit side of the app: the notch panel and its screen observer (D16).
 @MainActor
@@ -21,9 +20,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ? ChargingAlert(source: PowerSourceBatterySource(), registry: registry) : nil
     /// The HUD when headphones connect (D54); off until turned on in Settings.
     lazy var headphoneAlert = HeadphoneAlert(source: IOBluetoothHeadphoneSource(), registry: registry)
-    /// The full-screen player behind the Now Playing card's artwork (D56).
-    lazy var fullScreenPlayer: FullScreenPlayer? = registry.modules.lazy.compactMap { $0 as? NowPlayingModule }.first
-        .map { FullScreenPlayer(module: $0) }
     /// Now Playing above the lock screen (D55); off until turned on in Settings.
     lazy var lockScreenPlayer: LockScreenPlayer? = registry.modules.lazy.compactMap { $0 as? NowPlayingModule }.first
         .map { LockScreenPlayer(nowPlaying: $0) }
@@ -37,12 +33,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let panel = NotchPanel(contentView: NotchHostingView(rootView: NotchRootView(state: notchState, registry: registry)))
         panel.onDismiss = { [notchState] in notchState.send(.dismissed) }
         notchState.panel = panel
-        if let nowPlaying = registry.modules.lazy.compactMap({ $0 as? NowPlayingModule }).first {
-            nowPlaying.openFullScreen = { [weak self] in
-                Logger.nowPlaying.debug("Artwork clicked")
-                self?.fullScreenPlayer?.open()
-            }
-        }
         // A test run must never start real modules (no player permission checks or Apple Events) or take
         // the user's global shortcut.
         if !Self.isTestHost {

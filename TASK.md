@@ -595,3 +595,12 @@ Click the Now Playing card's artwork: blurred artwork over the whole screen, dat
 145. **Close.** Escape, the × button, a click on the background, and ⌘Tab each close it. Quitting Music closes it.
 146. **Track change.** Next track: the background, artwork, clock tint and lyrics follow.
 147. **Lyrics.** Hidden at first. The lyrics button (left of previous) opens a panel on the right and the artwork moves left; words light left to right roughly with the singing; clicking it again closes the panel. Lyrics off in Settings: the panel shows the hint.
+
+### Branch 10: `feat/lock-screen-art` (D57; branched from `feat/full-screen-player`)
+The full-screen player becomes the lock-screen player: a window over the top 70 % of the screen fading into the system's lock screen, so the avatar and password field stay visible. The Home-card click and the small lock card are removed. Layout checked with an offscreen render at 1470 × 956 (password-field area clear) before the device run.
+
+Device checks (MacBook Air, Release build, Music playing, lock-screen player on):
+148. **Lock.** ⌃⌘Q: blurred artwork, date and clock, artwork and player in the top part, fading out above your avatar and password field, which look and work as usual.
+149. **Password and Touch ID.** Type the password: every key lands; Touch ID works; unlocking removes the player at once.
+150. **Controls and lyrics while locked.** Play/pause, next, previous, a click on the bar; the lyrics button opens the right-hand panel and closes it.
+151. **Home card.** Clicking the artwork on the Home card does nothing (lock screen only).

@@ -27,14 +27,6 @@ final class FullScreenPlayerTests: XCTestCase {
         XCTAssertEqual(average.green, 0, accuracy: 0.02)
         XCTAssertEqual(average.blue, 0, accuracy: 0.02)
     }
-
-    @MainActor
-    func testOpensOnlyWithATrackLoaded() {
-        let module = NowPlayingModule(source: NoNowPlayingSource())
-        let player = FullScreenPlayer(module: module)
-        player.open()
-        XCTAssertFalse(player.isOpen, "nothing playing: nothing to show")
-    }
 }
 
 final class BlurredArtworkTests: XCTestCase {

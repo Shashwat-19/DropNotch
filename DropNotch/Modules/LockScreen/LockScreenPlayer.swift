@@ -34,7 +34,7 @@ final class LockScreenPlayer {
     convenience init(nowPlaying: NowPlayingModule) {
         let space = SkyLightLockScreenSpace()
         self.init(nowPlaying: nowPlaying, locks: DistributedLockStateSource(),
-                  surface: LockScreenPlayerWindow(space: space) { AnyView(LockScreenPlayerView(module: nowPlaying)) },
+                  surface: LockScreenPlayerWindow(space: space) { AnyView(FullScreenPlayerView(module: nowPlaying)) },
                   isAvailable: space.isAvailable)
     }
 
@@ -70,6 +70,8 @@ final class LockScreenPlayer {
     private func update() {
         let wanted = isRunning && isLocked && nowPlaying.shown != nil
         if wanted, !surface.isShown {
+            // The blurred background ready before the first frame (D56), so it doesn't arrive late.
+            if let artwork = nowPlaying.shown?.artwork { _ = BlurredArtwork.cached(for: artwork) }
             if !surface.show() { Logger.lockScreen.error("Lock-screen player couldn't be placed") }
         } else if !wanted, surface.isShown {
             surface.hide()
