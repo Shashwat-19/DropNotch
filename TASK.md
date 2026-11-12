@@ -2,7 +2,7 @@
 
 Rules, commands and constraints are in CLAUDE.md. Follow them throughout.
 
-**Status (2026-11-13):** v0.3 started (D52, D53): see "v0.3" at the end. Branch 1, `feat/screen-corners`, is built (device checks 114–116 open); branch 2, `feat/charging-hud`, is built (checks 117–120 open).
+**Status (2026-11-13):** v0.3 started (D52, D53): see "v0.3" at the end. Branch 1, `feat/screen-corners`, is built (device checks 114–116 open); branch 2, `feat/charging-hud`, is built (checks 117–120 open); branch 3, `feat/weather`, is built (checks 121–125 open).
 
 **Status (2026-11-10):** v0.2.0 is released as a pre-release (tag v0.2.0 at e5568a6; DMG SHA-256 4a970ba8a50f20f9d0b13ae8f9ee46dacbf40ee708eecdfb2a6d1e3778141fe9; the repository is still private). v0.1.0 is released. v0.2 (Home dashboard, D42–D45) is in progress in speed mode: see "v0.2" at the end. Branch 1, `feat/home`, is merged to main (2026-11-09). Branch 2, `feat/battery-card`, is merged to main (2026-11-09). Branch 3, `feat/calendar-card`, and branch 3b, `feat/home-layout` (D46), are merged to main (2026-11-09; device checks 84–94 passed on one Release build). Branch 4, `feat/quick-commands`, was built but set aside unmerged (Shash, 2026-11-10); branch 4b, `feat/terminal` (D48), is merged to main (2026-11-10; device checks 95–100 passed). `feat/notch-size` (D49) is merged (checks 101–113 passed). Next: `release/v0.2.0`.
 
@@ -526,3 +526,13 @@ Two click-through borderless windows (black quarter-disc masks, `.statusBar` lev
 118. **With music.** Play a track (wings showing artwork and bars), plug in: the HUD replaces the wings for 3 s, then artwork and bars come back. Hover-open during the HUD: the notch opens as usual.
 119. **Settings.** Turn off "Show an alert…": plugging in shows nothing. Turn off "Haptic feedback" with the alert on: the HUD shows, no tap. Launch DropNotch while plugged in: no HUD.
 120. **VoiceOver.** With VoiceOver on, plug in: it says "Charging, 82 %" (or "On power").
+
+### Branch 3: `feat/weather` (D53; branched from `feat/charging-hud`)
+`WeatherModule` (narrow Home card, off by default), `OpenMeteoClient` (geocoding, forecast, air quality; response shapes checked with curl, 2026-11-13), Settings › Weather (card on/off, city search, privacy text). Temperature in the locale's unit without the scale letter; US AQI with its band in words. `HomeLayout` keeps a wide card at 30 % or more of the row, so four cards still leave Now Playing room.
+
+**Status (2026-11-13):** built; 633 tests, 0 failures (17 new). Device checks (MacBook Air, Release build):
+121. **Choose a city.** Settings › Weather: search "Bengaluru", pick "Bengaluru, Karnataka, India"; it shows as the city. Search "zzzz": "No city matches". Wi-Fi off, search: "Couldn't search…".
+122. **Card.** Turn the card on, open the notch on Home: a spinner, then the symbol, temperature (°C), "Bengaluru", H/L and "AQI n Moderate" (or its band). Compare with the Weather app: within a degree or two. VoiceOver reads it as one sentence.
+123. **No polling.** In Terminal.app, `log stream --predicate 'subsystem == "com.shashwat.DropNotch" AND category == "Weather"'` and Little Snitch or `nettop -p DropNotch` if you have them: opening and closing the notch repeatedly within 30 minutes makes no new requests; with the notch closed, none at all.
+124. **Four cards.** Battery and Weather on with Calendar and Now Playing: the Now Playing card stays readable (about 150 pt); the narrow cards' text shrinks but isn't cut off. At Large too.
+125. **Off.** Card off: Home as before; Remove City: the card asks for a city.

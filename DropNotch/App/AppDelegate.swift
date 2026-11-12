@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let registry = ModuleRegistry(modules: [HomeModule(), NowPlayingModule(source: ScriptablePlayersSource()),
                                             CalendarModule(source: EventKitCalendarSource())]
         + (PowerSourceBatterySource.hasInternalBattery ? [BatteryModule(source: PowerSourceBatterySource())] : [])
+        + [WeatherModule(source: OpenMeteoClient())]
         + [NotesModule(), FileTrayModule(), ClipboardModule(),
             TerminalModule { fontSize, scrollback in SwiftTermSession(fontSize: fontSize, scrollback: scrollback) }])
     /// Rounded bottom corners on the notched display (D52). Internal so the Settings scene can reach it.

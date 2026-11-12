@@ -13,6 +13,10 @@ struct SettingsView: View {
                 .tabItem { Label("General", systemImage: "gearshape") }
             ModulesSettingsView(registry: registry)
                 .tabItem { Label("Modules", systemImage: "square.grid.2x2") }
+            if let weather = registry.modules.lazy.compactMap({ $0 as? WeatherModule }).first {
+                WeatherSettingsView(module: weather, registry: registry)
+                    .tabItem { Label("Weather", systemImage: "cloud.sun") }
+            }
             if let terminal = registry.modules.lazy.compactMap({ $0 as? TerminalModule }).first {
                 TerminalSettingsView(module: terminal, registry: registry)
                     .tabItem { Label("Terminal", systemImage: "apple.terminal") }

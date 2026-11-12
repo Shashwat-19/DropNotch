@@ -37,6 +37,7 @@ DropNotch/
     Notes/        NotesModule (load and save), NotesExpandedView (D31)
     Battery/      BatteryModule, BatteryCardView: the narrow Home card (D43); ChargingAlert: the plug-in HUD, not a module (D52)
     Calendar/     CalendarModule, CalendarCardView: the medium Home card (D44)
+    Weather/      WeatherModule, WeatherCardView: the narrow Home card, off by default (D53)
     Terminal/     TerminalModule, TerminalExpandedView, TerminalTopRowView, TerminalSettings: the Terminal tab, off by
                   default (D48)
   Services/       one protocol + implementations per system dependency:
@@ -50,6 +51,8 @@ DropNotch/
                   the store lives in a private actor), UpcomingEvents (pure: what the card lists).
                   Terminal (D48): TerminalSession, SwiftTermSession (SwiftTerm, with GuardedTerminalDelegate refusing
                   the clipboard), NotchTerminalView, LoginShell (pure), TerminalHangUp (pure).
+                  Weather (D53): WeatherSource, WeatherPlace, WeatherReading (with WeatherCondition, AirQualityLevel),
+                  OpenMeteoClient (geocoding, forecast, air quality; ephemeral session, no redirects).
                   Planned: MediaRemote (v0.2), BluetoothBatteryProvider (deferred, D43), …
   Settings/       SettingsView with General, Modules, Privacy and About tabs (D34). Planned: per-module settings
   Support/        Logger categories, small shared helpers (FourCharCode+Code), Haptics (trackpad tap, D52). Planned: file locations (section 5)
@@ -174,6 +177,7 @@ Target: zero wake-ups while idle, apart from the clipboard poll. Intervals below
 |---|---|
 | Battery card (D43) | IOKit `IOPSNotificationCreateRunLoopSource` on the main run loop: one read per power-source change, none while nothing changes |
 | Calendar card (D44) | `EKEventStoreChanged`, `NSCalendarDayChanged` and `NSSystemTimeZoneDidChange`, observed only while access is allowed; one fetch of today and tomorrow per change |
+| Weather card (D53) | The card appearing (notch open on Home) with a reading over 30 minutes old, or none and no attempt in the last minute; choosing a city in Settings. No timer: nothing runs while the notch is closed |
 | Hover open/close | AppKit tracking area enter/exit on the notch panel |
 | Screen changes | `didChangeScreenParametersNotification` (+ 200 ms one-shot debounce); also rebuilds the rounded screen corners (D52) |
 | Now playing (Music, Spotify) | The player's distributed notification on track or state change [V: probe, docs/research/now-playing-probe-2026-10-25.md]; `NSWorkspace` launch and quit notifications. Adds no timers (D24) |
@@ -213,7 +217,7 @@ Not allowed: any repeating timer while idle, a hover polling loop, a memory watc
 ## 10. Logging and privacy
 
 - `os.Logger(subsystem: "com.shashwat.DropNotch", category: "<Module>")` [V: CLAUDE.md]. Never log clipboard content, file names or track info. Dynamic strings and objects are redacted by default, but integers, floats and booleans are not [V: https://developer.apple.com/documentation/os/generating-log-messages-from-your-code], so mark anything sensitive `privacy: .private` explicitly.
-- One network request in the MVP: Spotify artwork, one HTTPS GET per track to `i.scdn.co` only, ephemeral session, no cookies or disk cache, never logged (D25). Lyrics, weather and updates are later features, and each one comes with privacy copy that says what it sends.
+- One network request in the MVP: Spotify artwork, one HTTPS GET per track to `i.scdn.co` only, ephemeral session, no cookies or disk cache, never logged (D25). Weather (D53, off by default): a city search to Open-Meteo's geocoding service from Settings, then the city's coordinates, rounded to about 1 km, to its forecast and air-quality services when the card shows a stale reading; ephemeral session, no redirects, never logged beyond status codes. Lyrics and updates are later features, and each one comes with privacy copy that says what it sends.
 - Each permission is requested when its feature is first enabled, never at launch. Now Playing is on by default (D21), so its Automation prompt comes on the first click on a control (D23). The Calendar card is on by default too, so its prompt comes only from its Allow button or from turning it on in Settings (D44).
 - Terminal (D48): nothing typed and nothing shown is logged, nor titles, folders, the environment or the shell's path; logs carry session starts and ends, exit statuses and signal counts. Scrollback is in memory only and goes with the session. SwiftTerm's host logging is never turned on; in Debug builds it may print parser diagnostics, including bits of output, to the Xcode console (not the unified log). The shell itself keeps its history (~/.zsh_history), as in any terminal.
 - Calendar (D44): event titles, times and calendar names are never logged or saved; logs carry access states, counts and error codes. Titles live in memory and `stop()` clears them; Settings › Privacy › Show event titles off shows times only.
