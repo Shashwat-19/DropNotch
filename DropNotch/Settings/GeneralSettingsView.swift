@@ -3,15 +3,17 @@ import os
 import ServiceManagement
 import SwiftUI
 
-/// Launch at login, the notch size, the hotkey and the notch's display (D30, D34, D49).
+/// Launch at login, the notch size, rounded screen corners, the hotkey and the notch's display (D30, D34, D49, D52).
 struct GeneralSettingsView: View {
     let notchState: NotchState
+    let screenCorners: ScreenCornersController
 
     /// Read from the system, never saved by DropNotch: the user can change it in System Settings › Login Items.
     /// Waiting for approval shows as on, so the toggle can withdraw it (security-auditor L4).
     @State private var loginStatus = SMAppService.mainApp.status
     @State private var loginError = false
     @AppStorage(NotchDisplay.key) private var display = NotchDisplay.builtIn
+    @AppStorage(ScreenCorners.key) private var roundCorners = false
 
     var body: some View {
         Form {
@@ -37,6 +39,13 @@ struct GeneralSettingsView: View {
                 }
             } footer: {
                 Text("Large is taller and wider, with larger text and controls on every tab. The terminal keeps its own font size.").foregroundStyle(.secondary)
+            }
+            Section {
+                Toggle("Round the bottom corners of the screen", isOn: $roundCorners)
+                    .onChange(of: roundCorners) { screenCorners.refresh() }
+            } footer: {
+                Text("Matches the rounded top corners of the built-in display. Clicks in the corners still reach what's underneath.")
+                    .foregroundStyle(.secondary)
             }
             Section {
                 KeyboardShortcuts.Recorder("Open and close the notch", name: .toggleNotch)

@@ -12,6 +12,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         + (PowerSourceBatterySource.hasInternalBattery ? [BatteryModule(source: PowerSourceBatterySource())] : [])
         + [NotesModule(), FileTrayModule(), ClipboardModule(),
             TerminalModule { fontSize, scrollback in SwiftTermSession(fontSize: fontSize, scrollback: scrollback) }])
+    /// Rounded bottom corners on the notched display (D52). Internal so the Settings scene can reach it.
+    let screenCorners = ScreenCornersController()
     private var screenObserver: ScreenObserver?
 
     /// Unit tests run inside the app, so it launches for them too. Xcode sets this variable for the
@@ -39,7 +41,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         followTabCount()
         notchState.screensChanged()
         followCompactContent()
-        screenObserver = ScreenObserver { [notchState] in notchState.screensChanged() }
+        // A test run shows no windows of its own beyond the panel.
+        if !Self.isTestHost { screenCorners.refresh() }
+        screenObserver = ScreenObserver { [notchState, screenCorners] in
+            notchState.screensChanged()
+            if !Self.isTestHost { screenCorners.refresh() }
+        }
     }
 
     /// Widens the closed notch on each side where a module fills a compact slot (D28, D36). Observation reports one change and

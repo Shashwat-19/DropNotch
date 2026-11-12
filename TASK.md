@@ -509,3 +509,11 @@ Speed mode as in v0.2. Branches from `main`, one feature each, in this order:
 9. `release/v0.3.0`: performance-optimizer, accessibility-auditor, security-auditor (network, private APIs), docs-writer, changelog-agent.
 
 Not in v0.3: the pill on Macs without a notch already shipped in v0.1.0.
+
+### Branch 1: `feat/screen-corners` (D52)
+Two click-through borderless windows (black quarter-disc masks, `.statusBar` level, every Space) at the bottom corners of each screen with a notch; Settings › General › Round the bottom corners, off by default; rebuilt on every screen change. 10 pt radius [I].
+
+**Status (2026-11-13):** built; 611 tests, 0 failures (6 new). Device checks (MacBook Air, Release build of `feat/screen-corners`):
+114. **Corners.** Settings › General › Round the bottom corners on: both bottom corners of the built-in display are rounded, close to the top corners' curve (if not, say bigger or smaller). Off: they go at once.
+115. **Click-through and layering.** With the Dock at the bottom, click its first and last icons near the corners; drag a window into a corner and click there: every click reaches what's underneath. The corners stay over the Dock, a full-screen app (Safari ⌃⌘F) and after switching Spaces.
+116. **Displays.** With an external display connected, it has no corners; close the lid (clamshell) and reopen: the built-in display's corners come back. Screen sleep and wake: still there.

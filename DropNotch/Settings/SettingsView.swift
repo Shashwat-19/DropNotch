@@ -4,10 +4,11 @@ import SwiftUI
 struct SettingsView: View {
     let registry: ModuleRegistry
     let notchState: NotchState
+    let screenCorners: ScreenCornersController
 
     var body: some View {
         TabView {
-            GeneralSettingsView(notchState: notchState)
+            GeneralSettingsView(notchState: notchState, screenCorners: screenCorners)
                 .tabItem { Label("General", systemImage: "gearshape") }
             ModulesSettingsView(registry: registry)
                 .tabItem { Label("Modules", systemImage: "square.grid.2x2") }
