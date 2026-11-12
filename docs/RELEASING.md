@@ -41,3 +41,4 @@ Before you start: the device checks in TASK.md's Release checklist are done, `xc
    brew style shashwat-19/tap && brew audit --cask shashwat-19/tap/dropnotch
    ```
    Commit and push the tap. `brew audit --cask --new` also fails because the app isn't notarised and the repository is below Homebrew's notability threshold (D50); those rules apply only to the official homebrew/cask.
+10. **Update the website.** In `website/index.html`, replace the old version in the two download buttons, the SHA-256 link and the meta line, and update the size in the meta line (`gh api repos/Shashwat-19/DropNotch/releases/latest --jq '.assets[0].size'`). Commit and push; Vercel redeploys the site (website/README.md).
