@@ -175,6 +175,9 @@ details > p + p { margin-top: -0.5rem; }
 /* Install */
 .install-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2.5rem; }
 @media (max-width: 48rem) { .install-grid { grid-template-columns: 1fr; } }
+/* Long commands wrap inside the cards instead of widening their column. */
+.install-grid > * { min-width: 0; }
+.install-grid .brew code { white-space: normal; overflow-wrap: anywhere; }
 .panel-card { background: var(--surface); border-radius: 1.5rem; padding: 1.75rem; box-shadow: 0 0 0 1px var(--hairline); display: flex; flex-direction: column; gap: 1rem; align-items: flex-start; }
 .panel-card h3 { font-size: 1.25rem; letter-spacing: -0.015em; }
 .steps { margin: 0; padding-left: 1.25rem; color: var(--text-2); font-size: 0.9375rem; }
