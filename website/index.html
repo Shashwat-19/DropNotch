@@ -151,6 +151,11 @@ section { padding-block: clamp(4rem, 10vw, 7.5rem); }
 .tile p { color: var(--text-2); font-size: 0.9375rem; line-height: 1.5; }
 .clip { order: -1; height: clamp(11rem, 18vw, 14rem); border-radius: 1rem; background: var(--surface-2); display: grid; place-items: center; margin-bottom: 0.75rem; font-size: 0.8125rem; color: var(--text-2); }
 .clip video { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+/* Rendered media (website/README.md, Feature media): shown whole at its own shape, not cropped into the placeholder box. */
+.clip.media { height: auto; background: #111; overflow: hidden; }
+.clip.media img, .clip.media video { display: block; width: 100%; height: auto; object-fit: initial; }
+.tile.w6 { grid-column: 1 / -1; }
+.media-note { margin-top: 1rem; font-size: 0.8125rem; color: var(--text-2); }
 @media (max-width: 56rem) { .tile, .tile.w4, .tile.w2 { grid-column: span 3; } }
 @media (max-width: 40rem) { .bento { grid-template-columns: 1fr; } .tile, .tile.w4, .tile.w2 { grid-column: auto; } }
 .planned { margin-top: 1.5rem; font-size: 0.9375rem; color: var(--text-2); }
@@ -270,10 +275,21 @@ footer a { text-decoration: none; } footer a:hover { color: var(--text); }
       <p class="lede" style="margin-top:1rem">Turn each tab on or off and reorder them in Settings. Nothing runs that you haven't turned on.</p>
 
       <div class="bento">
-        <article class="tile w4" data-claim="verified: README Features (Home, Now Playing, Calendar, Battery); CHANGELOG 0.2.0">
+        <article class="tile w6" data-claim="verified: CHANGELOG 0.3.0 (lock-screen player, synced lyrics); D55, D58">
+          <h3>Your music on the lock screen</h3>
+          <p>Lock your Mac and a small player sits above the password. Click it for the artwork, the controls and synced lyrics that light up word by word. Off until you turn it on.</p>
+          <div class="clip media" data-claim="verified: rendered from DropNotch 0.3.0's own views with invented songs, lyrics and events (DropNotchTests/SiteMedia, scripts/site-media.sh)">
+            <video src="media/lock-screen.mp4" poster="media/lock-screen-poster.jpg" autoplay muted loop playsinline preload="metadata"
+              aria-label="The lock screen with DropNotch's small player above the password prompt, then the full-screen player with the artwork and lyrics lighting up line by line"></video>
+          </div>
+        </article>
+        <article class="tile w4" data-claim="verified: README Features (Home, Now Playing, Calendar, Battery); CHANGELOG 0.2.0 and 0.3.0 (Weather)">
           <h3>Music and your day, together</h3>
-          <p>Play, pause, skip and seek in Apple Music or Spotify, with artwork and track times. Next to it, today's events from your calendars, read only. Add a battery ring if you like.</p>
-          <div class="clip" data-claim="placeholder: clip, 6 s: hover the notch, Home opens, press pause, drag the progress bar">Clip coming soon</div>
+          <p>Play, pause, skip and seek in Apple Music or Spotify, with artwork and track times. Next to it, today's events from your calendars, read only. Add a battery ring, or the weather and air quality for your city.</p>
+          <div class="clip media" data-claim="verified: rendered from DropNotch 0.3.0's own views with invented songs, lyrics and events (DropNotchTests/SiteMedia, scripts/site-media.sh)">
+            <img src="media/home.png" width="1600" height="480" loading="lazy"
+              alt="The open notch's Home tab: a Now Playing card with artwork and controls, today's next three events, and the weather with air quality">
+          </div>
         </article>
         <article class="tile w2" data-claim="verified: CHANGELOG 0.1.0 File tray; FileTrayExpandedView.swift (AirDrop)">
           <h3>A tray for files</h3>
@@ -290,19 +306,32 @@ footer a { text-decoration: none; } footer a:hover { color: var(--text); }
           <p>Your login shell, like Terminal.app, inside the notch. Off by default. It starts only when you open the tab on purpose, never on hover, and keeps running while the notch is closed.</p>
           <div class="clip" data-claim="placeholder: clip, 6 s: ⌃⌥N, switch to Terminal, run a command, close, reopen and it's still there">Clip coming soon</div>
         </article>
-        <article class="tile" data-claim="verified: CHANGELOG 0.1.0 Notes">
+        <article class="tile w2" data-claim="verified: CHANGELOG 0.1.0 Notes">
           <h3>Quick notes</h3>
           <p>One plain-text note, saved as you type, without leaving what you're doing.</p>
-          <div class="clip" data-claim="placeholder: clip, 4 s: ⌃⌥N, ⌘2, type a line, move away">Clip coming soon</div>
+          <div class="clip media" data-claim="verified: rendered from DropNotch 0.3.0's own views with invented songs, lyrics and events (DropNotchTests/SiteMedia, scripts/site-media.sh)">
+            <img src="media/notes.png" width="1300" height="600" loading="lazy" alt="The Notes tab in the open notch with a short to-do list">
+          </div>
         </article>
-        <article class="tile" data-claim="verified: README Usage and Features (⌃⌥N, ⌘1 ⌘2, Esc, keyboard access, VoiceOver labels)">
+        <article class="tile w2" data-claim="verified: README Usage and Features (⌃⌥N, ⌘1 ⌘2, Esc, keyboard access, VoiceOver labels)">
           <h3>Made for the keyboard</h3>
           <p>⌃⌥N opens the notch ready to type. ⌘1, ⌘2 and so on switch tabs, and Esc closes it. Full keyboard access and VoiceOver labels.</p>
           <div class="clip" data-claim="placeholder: clip, 5 s: keyboard only, ⌃⌥N, ⌘1 to ⌘4, Esc">Clip coming soon</div>
         </article>
+        <article class="tile w2" data-claim="verified: CHANGELOG 0.3.0 (charging and headphone alerts, haptic feedback)">
+          <h3>Alerts in the notch</h3>
+          <p>Plug in and the notch shows the charge for a moment; connect AirPods and it shows their battery. A light trackpad tap if you like.</p>
+          <div class="clip media" data-claim="verified: rendered from DropNotch 0.3.0's own views with invented songs, lyrics and events (DropNotchTests/SiteMedia, scripts/site-media.sh)">
+            <picture>
+              <source srcset="media/charging-alert.png" media="(prefers-reduced-motion: reduce)">
+              <img src="media/charging-alert.gif" width="600" height="189" loading="lazy" alt="The closed notch widens to show a green bolt and 82%, then closes">
+            </picture>
+          </div>
+        </article>
       </div>
 
-      <p class="planned" data-claim="verified: README Roadmap (Planned rows; 'Dates are not promised')"><strong>Not built yet:</strong> Stats, a timer and live lyrics are planned, and signed builds with automatic updates are planned for 1.0. No dates. <a href="https://github.com/Shashwat-19/DropNotch/issues">Vote or ask for something else in Issues.</a></p>
+      <p class="media-note" data-claim="verified: rendered from DropNotch 0.3.0's own views with invented songs, lyrics and events (DropNotchTests/SiteMedia, scripts/site-media.sh)">Pictures and clips are drawn by DropNotch's own code, with a made-up song, lyrics and events. The lock screen around the small player is an illustration.</p>
+      <p class="planned" data-claim="verified: README Roadmap (Planned rows; 'Dates are not promised')"><strong>Not built yet:</strong> Stats and a timer are planned, and signed builds with automatic updates are planned for 1.0. No dates. <a href="https://github.com/Shashwat-19/DropNotch/issues">Vote or ask for something else in Issues.</a></p>
     </div>
   </section>
 
@@ -407,6 +436,11 @@ notch.addEventListener('click', (e) => { clearTimeout(timer); setOpen(e.pointerT
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
 // Open once on load so visitors who never hover still see what's inside.
 timer = setTimeout(() => setOpen(true), 700);
+
+// Reduce Motion: looping video is the motion it asks us to stop, so show the poster with controls instead.
+if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  document.querySelectorAll('video[autoplay]').forEach((v) => { v.removeAttribute('autoplay'); v.pause(); v.controls = true; });
+}
 
 // Copy the Homebrew command; if the clipboard API is refused, select the text so ⌘C works.
 const status = document.getElementById('status');

@@ -17,15 +17,24 @@ Vercel project `dropnotch`, connected to this repository with **Root Directory**
 
 ## Each release
 
-The DMG links name the version. After a release, replace `0.2.0` in `index.html` (two download buttons, the SHA-256 link and the meta line), and update the size in the meta line from `gh api repos/Shashwat-19/DropNotch/releases/latest --jq '.assets[0].size'`. RELEASING.md step 10.
+The DMG links name the version. After a release, replace the old version in `index.html` (two download buttons, the SHA-256 link and the meta line), and update the size in the meta line from `gh api repos/Shashwat-19/DropNotch/releases/latest --jq '.assets[0].size'`. RELEASING.md step 10.
 
-## Adding the feature clips
+## Feature media
 
-Each bento tile has a `<div class="clip">` placeholder whose `data-claim` says what to record. For each one:
+The pictures and clips in `media/` are rendered from DropNotch's own SwiftUI views, not screen recordings: `DropNotchTests/SiteMedia/SiteMediaRenderer.swift` feeds the real modules a made-up song ("Evening Drive" by "Example Artist"), lyrics written for the page, invented events and a generated cover, and renders them offscreen at 2×. The lock screen around the compact player is an illustration, since macOS doesn't allow capturing the real one. The page says all of this under the tiles.
 
-1. Record the notch area only, about 2:1, 4–8 s, no sound. Export H.264 `.mp4` under 2 MB to `website/clips/<name>.mp4`.
-2. Replace the placeholder's text with `<video src="clips/<name>.mp4" autoplay muted loop playsinline aria-label="<what happens in the clip>"></video>`, and change its `data-claim` to `verified: recorded from v0.2.0`.
-3. Before shipping the first clip, add a few lines that pause the videos when `prefers-reduced-motion: reduce` matches; looping video is the motion that setting asks us to stop.
+To rebuild them after a UI change, run `scripts/site-media.sh` from the repo root (XcodeGen and ffmpeg); it renders the frames into `build/site-media` and encodes:
+
+| File | What | Used by |
+|---|---|---|
+| `lock-screen.mp4`, `lock-screen-poster.jpg` | The compact lock-screen player, then the full screen with lyrics filling in; 9 s, about 140 KB | Lock-screen tile |
+| `home.png` | Home tab: Now Playing, Calendar and Weather cards | Music and your day tile |
+| `notes.png` | Notes tab | Quick notes tile |
+| `charging-alert.gif`, `charging-alert.png` | The charging alert in the closed notch, looping; the PNG for Reduce Motion | Alerts tile |
+
+Reduce Motion: the video loses autoplay and gets controls (the script at the end of `index.html`), and the GIF is swapped for its still with `<picture>`.
+
+Still placeholders ("Clip coming soon"): Tray, Clipboard, Terminal and Keyboard. They show interactions (a drag, a live shell, key presses) that a render can't honestly stand in for; record those on a Mac, notch area only, about 2:1, 4–8 s, no sound, H.264 under 2 MB in `media/`, as a `<video ... autoplay muted loop playsinline>` with an `aria-label`, and set its `data-claim` to say it was recorded.
 
 ## Claims ledger
 
