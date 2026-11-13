@@ -90,7 +90,17 @@ With fewer than five tabs on, the notch is 60 pt narrower. Sizes are measured on
 brew install --cask shashwat-19/tap/dropnotch
 ```
 
-This adds the tap and installs in one step. After the tap is added, `brew upgrade` and `brew uninstall --cask dropnotch` work with the short name.
+This adds the tap and installs in one step. After the tap is added, `brew uninstall --cask dropnotch` works with the short name.
+
+### Upgrade
+
+Quit DropNotch from its menu-bar item, then:
+
+```bash
+brew update && brew upgrade --cask shashwat-19/tap/dropnotch
+```
+
+`brew update` fetches the tap's new version first; without it, Homebrew can take up to a day to notice a release. Installed from the DMG instead? Homebrew doesn't know about that copy, so download the new DMG and drag it into **Applications**, choosing **Replace**. Your settings and notes stay either way. Because the build isn't notarised, macOS may block the new version once: click **Open Anyway** again.
 
 ### DMG
 

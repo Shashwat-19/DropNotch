@@ -367,9 +367,9 @@ footer a { text-decoration: none; } footer a:hover { color: var(--text); }
           <summary>Is the terminal safe to leave on?</summary>
           <p>It's off until you turn it on. Commands you run there use DropNotch's permissions, as they would in the terminal inside VS Code or iTerm. Settings shows exactly what that includes before you turn it on.</p>
         </details>
-        <details data-claim="verified: README Install (brew upgrade, brew uninstall); CHANGELOG 0.2.0 (no automatic updates); CHANGELOG 0.1.0 (menu-bar Quit)">
+        <details data-claim="verified: README Install › Upgrade (brew update, brew upgrade), brew uninstall; CHANGELOG 0.2.0 (no automatic updates); CHANGELOG 0.1.0 (menu-bar Quit)">
           <summary>How do I update or uninstall it?</summary>
-          <p>There are no automatic updates yet. Run <code>brew upgrade --cask dropnotch</code>, or download the new version here. To uninstall, quit from the menu-bar item and move DropNotch to the Bin, or run <code>brew uninstall --cask dropnotch</code>.</p>
+          <p>There are no automatic updates yet. Quit DropNotch, then run <code>brew update &amp;&amp; brew upgrade --cask shashwat-19/tap/dropnotch</code>, or download the new DMG here and replace the old app. To uninstall, quit from the menu-bar item and move DropNotch to the Bin, or run <code>brew uninstall --cask dropnotch</code>.</p>
         </details>
       </div>
     </div>
@@ -390,13 +390,19 @@ footer a { text-decoration: none; } footer a:hover { color: var(--text); }
              href="https://github.com/Shashwat-19/DropNotch/releases/download/v0.3.0/DropNotch-0.3.0.dmg">Download DropNotch 0.3.0</a>
           <p class="small muted">Check the download with the <a href="https://github.com/Shashwat-19/DropNotch/releases/download/v0.3.0/DropNotch-0.3.0.dmg.sha256">SHA-256 file</a>. All versions are on <a href="https://github.com/Shashwat-19/DropNotch/releases">GitHub Releases</a>.</p>
         </div>
-        <div class="panel-card" data-claim="verified: homebrew-tap Casks/dropnotch.rb (caveats); README Install › Homebrew">
+        <div class="panel-card" data-claim="verified: homebrew-tap Casks/dropnotch.rb (caveats); README Install › Homebrew, Upgrade">
           <h3>Homebrew</h3>
           <div class="brew" style="width:100%">
             <code>brew install --cask shashwat-19/tap/dropnotch</code>
             <button class="btn copy" type="button" data-copy="brew install --cask shashwat-19/tap/dropnotch" data-track="copy-brew-install">Copy</button>
           </div>
-          <p class="small muted">This adds the tap and installs in one step. The first launch still needs Open Anyway, as with the DMG. Later, <code>brew upgrade --cask dropnotch</code> updates it.</p>
+          <p class="small muted">This adds the tap and installs in one step. The first launch still needs Open Anyway, as with the DMG.</p>
+          <h3 style="margin-top:1rem">Upgrade</h3>
+          <div class="brew" style="width:100%">
+            <code>brew update &amp;&amp; brew upgrade --cask shashwat-19/tap/dropnotch</code>
+            <button class="btn copy" type="button" data-copy="brew update &amp;&amp; brew upgrade --cask shashwat-19/tap/dropnotch" data-track="copy-brew-upgrade">Copy</button>
+          </div>
+          <p class="small muted">Quit DropNotch from the menu bar first. Installed from the DMG? Download the new one and drag it into Applications, choosing Replace. Your settings and notes stay.</p>
         </div>
       </div>
 
