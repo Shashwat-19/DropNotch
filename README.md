@@ -100,7 +100,15 @@ Quit DropNotch from its menu-bar item, then:
 brew update && brew upgrade --cask shashwat-19/tap/dropnotch
 ```
 
-`brew update` fetches the tap's new version first; without it, Homebrew can take up to a day to notice a release. Installed from the DMG instead? Homebrew doesn't know about that copy, so download the new DMG and drag it into **Applications**, choosing **Replace**. Your settings and notes stay either way. Because the build isn't notarised, macOS may block the new version once: click **Open Anyway** again.
+`brew update` fetches the tap's new version first; without it, Homebrew can take up to a day to notice a release. Your settings and notes stay. Because the build isn't notarised, macOS may block the new version once: click **Open Anyway** again.
+
+**Installed from the DMG?** Homebrew doesn't know about that copy, so the command above says `Cask 'dropnotch' is not installed`. Either download the new DMG and drag it into **Applications**, choosing **Replace**, or hand the app over to Homebrew once:
+
+```bash
+brew update && brew install --cask --adopt shashwat-19/tap/dropnotch
+```
+
+`--adopt` takes over the copy already in Applications instead of installing a second one. It works only when that copy is the latest version, so update from the DMG first if it's older. After that, the upgrade command above works.
 
 ### DMG
 
