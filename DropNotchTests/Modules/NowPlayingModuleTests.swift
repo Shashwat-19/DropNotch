@@ -31,6 +31,14 @@ final class NowPlayingModuleTests: XCTestCase {
         func release(_ outcome: AppleEventOutcome) {
             held.removeFirst().resume(returning: outcome)
         }
+
+        var renewOutcome = AppleEventOutcome.ok
+        private(set) var renewed: [MediaPlayer] = []
+
+        func renewPermission(for player: MediaPlayer) async -> AppleEventOutcome {
+            renewed.append(player)
+            return renewOutcome
+        }
     }
 
     /// A started module showing `info`, and its source.
@@ -122,6 +130,29 @@ final class NowPlayingModuleTests: XCTestCase {
         source.outcome = .ok
         await module.perform(.playPause)
         XCTAssertNil(module.deniedPlayer)
+    }
+
+    func testRenewingAGrantClearsTheDeniedState() async {
+        let (module, source) = await moduleShowing(NowPlayingInfo(player: .music, state: .playing))
+        source.outcome = .denied
+        await module.perform(.playPause)
+        source.renewOutcome = .denied
+        let refused = await module.renewPermission()
+        XCTAssertEqual(refused, .denied)
+        XCTAssertEqual(module.deniedPlayer, .music, "Don't Allow in the prompt keeps the link")
+        source.renewOutcome = .ok
+        let granted = await module.renewPermission()
+        XCTAssertEqual(granted, .ok)
+        XCTAssertNil(module.deniedPlayer)
+        XCTAssertEqual(source.renewed, [.music, .music])
+        XCTAssertFalse(module.isSending)
+    }
+
+    func testNothingToRenewWithoutADenial() async {
+        let (module, source) = await moduleShowing(NowPlayingInfo(player: .music, state: .playing))
+        let outcome = await module.renewPermission()
+        XCTAssertNil(outcome)
+        XCTAssertEqual(source.renewed, [])
     }
 
     func testStopClearsTheDeniedState() async {

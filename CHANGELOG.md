@@ -4,6 +4,11 @@ All notable changes to DropNotch are recorded in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and DropNotch uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- After an update (or a new build from Xcode), Now Playing could lose its artwork, progress bar and controls and show "Allow control of Music in System Settings", while System Settings already showed DropNotch as allowed. macOS ties the permission to the exact build, and DropNotch isn't signed with a Developer ID yet, so it treats each new build as a different app. The link now reads "Allow control of Music" (or Spotify) and asks macOS again: click it, then Allow.
+
 ## [0.3.0] - 2026-11-13
 
 A lock-screen player, synced lyrics, a weather card and a few touches from Canopy's list; still an early, unsigned build for macOS 14 or later, tested on Apple silicon.
@@ -118,6 +123,7 @@ macOS asks for each permission only when you first use the feature that needs it
 - Now Playing relies on notifications that Music and Spotify don't document, so a player update could stop track details appearing; the controls would still work.
 - There are no automatic updates yet: check GitHub Releases for new versions.
 
+[Unreleased]: https://github.com/Shashwat-19/DropNotch/compare/v0.3.0...HEAD
 [0.3.0]: https://github.com/Shashwat-19/DropNotch/releases/tag/v0.3.0
 [0.2.0]: https://github.com/Shashwat-19/DropNotch/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Shashwat-19/DropNotch/releases/tag/v0.1.0

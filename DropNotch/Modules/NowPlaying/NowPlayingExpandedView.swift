@@ -35,9 +35,9 @@ struct NowPlayingExpandedView: View {
                             .font(.notch(.body, size).weight(.semibold))
                             .opacity(textOpacity)
                         if module.deniedPlayer == info.player {
-                            Button(action: openAutomationSettings) {
+                            Button(action: renewPermission) {
                                 // Underlined as well as coloured, so it reads as a link without colour (L6).
-                                Text("Allow control of \(info.player.displayName) in System Settings").underline()
+                                Text("Allow control of \(info.player.displayName)").underline()
                                     // Two lines: the card's text column is about 165 pt wide on the Air (D46).
                                     .lineLimit(2)
                                     // A 24 pt target (L7): it is the only way out of the denied state.
@@ -47,7 +47,7 @@ struct NowPlayingExpandedView: View {
                             .buttonStyle(.plain)
                             .foregroundStyle(.link)
                             .font(.notch(.subheadline, size))
-                            .keyboardControl(Focus.settingsLink, focus: $focus, action: openAutomationSettings)
+                            .keyboardControl(Focus.settingsLink, focus: $focus, action: renewPermission)
                         } else if let artist = text.artist {
                             Text(artist)
                                 .font(.notch(.subheadline, size))
@@ -150,6 +150,13 @@ struct NowPlayingExpandedView: View {
             // Whatever is current by now, so a second change during the fade isn't lost.
             displayedText = module.shown.map(TrackText.init)
             withAnimation(.easeIn(duration: 0.12)) { textOpacity = 1 }
+        }
+    }
+
+    /// Asks macOS again (D59); System Settings only when DropNotch's record couldn't be cleared.
+    private func renewPermission() {
+        Task {
+            if case .failed = await module.renewPermission() { openAutomationSettings() }
         }
     }
 

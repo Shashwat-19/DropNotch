@@ -199,6 +199,22 @@ final class NowPlayingModule: NotchModule {
         source.refresh(player)
     }
 
+    /// The denied link (D59): asks macOS again for the denied player, past a grant it keeps for an older build. A grant
+    /// clears the denied state. `.failed` means the record couldn't be cleared, so the view opens System Settings
+    /// instead; nil means there was nothing to ask, or a click was already in flight.
+    func renewPermission() async -> AppleEventOutcome? {
+        guard let player = deniedPlayer, !isSending else { return nil }
+        isSending = true
+        currentClick += 1
+        let click = currentClick
+        let outcome = await source.renewPermission(for: player)
+        // `stop()` or a newer click since: leave their state alone.
+        guard click == currentClick else { return outcome }
+        isSending = false
+        if outcome == .ok { deniedPlayer = nil }
+        return outcome
+    }
+
     /// Sends `command` to the player on screen. Play/pause flips `isPlaying` at once; everything else waits
     /// for the player's notification.
     func perform(_ command: PlaybackCommand) async {
@@ -247,7 +263,7 @@ final class NowPlayingModule: NotchModule {
             deniedPlayer = player
             // The artist line silently becomes the System Settings link; say so to VoiceOver (WCAG 4.1.3).
             AccessibilityNotification.Announcement(
-                String(localized: "Allow control of \(player.displayName) in System Settings")).post()
+                String(localized: "Allow control of \(player.displayName)")).post()
         case .ok: deniedPlayer = nil
         default: break
         }

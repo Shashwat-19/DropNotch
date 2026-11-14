@@ -14,6 +14,7 @@ import os
 final class ScriptablePlayersSource: NSObject, NowPlayingSource {
     private let sender: any AppleEventSending
     private let artworkLoader: any ArtworkLoading
+    private let automationReset: any AutomationResetting
     private let runningPID: (MediaPlayer) -> pid_t?
     private var selection = NowPlayingSelection()
     private var continuation: AsyncStream<NowPlayingInfo?>.Continuation?
@@ -29,12 +30,14 @@ final class ScriptablePlayersSource: NSObject, NowPlayingSource {
 
     init(sender: any AppleEventSending = AppleEventSender(),
          artworkLoader: any ArtworkLoading = ArtworkDownloader(),
+         automationReset: any AutomationResetting = TCCUtilAutomationReset(),
          runningPID: @escaping (MediaPlayer) -> pid_t? = {
              NSRunningApplication.runningApplications(withBundleIdentifier: $0.bundleID).first?.processIdentifier
          },
          observesSystem: Bool = true) {
         self.sender = sender
         self.artworkLoader = artworkLoader
+        self.automationReset = automationReset
         self.runningPID = runningPID
         self.observesSystem = observesSystem
     }
@@ -67,6 +70,18 @@ final class ScriptablePlayersSource: NSObject, NowPlayingSource {
         // A seek by Apple Event sends no notification [V: media probe], so read the new position (D26).
         if case .seek = command, outcome == .ok { refresh(player) }
         Logger.nowPlaying.info("Command to \(player.bundleID, privacy: .public) pid \(pid): \(String(describing: outcome), privacy: .public)")
+        return outcome
+    }
+
+    /// The denied link (D59). macOS ties a grant to the exact build it was given to, and DropNotch is signed ad hoc, so
+    /// every new build is a stranger: the old grant is refused without a prompt while System Settings shows it on.
+    /// Clearing DropNotch's record lets the check after it show the prompt again; a grant reads the track and artwork.
+    func renewPermission(for player: MediaPlayer) async -> AppleEventOutcome {
+        guard let pid = runningPID(player) else { return .notRunning }
+        guard await automationReset.resetAutomation() else { return .failed(OSStatus(unimpErr)) }
+        let outcome = await sender.permission(for: player, pid: pid, ask: true)
+        Logger.nowPlaying.info("Renewed permission for \(player.bundleID, privacy: .public): \(String(describing: outcome), privacy: .public)")
+        if outcome == .ok { refresh(player) }
         return outcome
     }
 

@@ -68,10 +68,22 @@ final class ScriptablePlayersSourceTests: XCTestCase {
         }
     }
 
+    /// Counts resets and answers with `succeeds`. Never the real Automation record.
+    private actor FakeReset: AutomationResetting {
+        private(set) var count = 0
+        private let succeeds: Bool
+        init(succeeds: Bool = true) { self.succeeds = succeeds }
+        func resetAutomation() async -> Bool {
+            count += 1
+            return succeeds
+        }
+    }
+
     private func makeSource(_ sender: FakeSender, running: Set<MediaPlayer>,
-                            loader: any ArtworkLoading = FakeArtworkLoader()) -> ScriptablePlayersSource {
-        ScriptablePlayersSource(sender: sender, artworkLoader: loader, runningPID: { running.contains($0) ? 4242 : nil },
-                                observesSystem: false)
+                            loader: any ArtworkLoading = FakeArtworkLoader(),
+                            reset: any AutomationResetting = FakeReset()) -> ScriptablePlayersSource {
+        ScriptablePlayersSource(sender: sender, artworkLoader: loader, automationReset: reset,
+                                runningPID: { running.contains($0) ? 4242 : nil }, observesSystem: false)
     }
 
     private static func png(size: Int = 8) -> Data {
@@ -117,6 +129,51 @@ final class ScriptablePlayersSourceTests: XCTestCase {
         XCTAssertEqual(outcome, .notRunning)
         let calls = await sender.calls
         XCTAssertEqual(calls, [.permission(.music, ask: true), .send(.playPause, .music)])
+    }
+
+    // MARK: Renewing a stale grant (D59)
+
+    func testRenewingClearsTheRecordAsksAgainThenReadsTheTrack() async {
+        let sender = FakeSender()
+        let reset = FakeReset()
+        let source = makeSource(sender, running: [.music], reset: reset)
+        let stream = source.updates
+        await waitForCalls(sender, count: 2) // the start check and read
+        let outcome = await source.renewPermission(for: .music)
+        XCTAssertEqual(outcome, .ok)
+        let resets = await reset.count
+        XCTAssertEqual(resets, 1)
+        await waitForCalls(sender, count: 5)
+        let calls = await sender.calls.suffix(3)
+        XCTAssertEqual(Array(calls), [.permission(.music, ask: true), .permission(.music, ask: false), .read(.music)])
+        withExtendedLifetime(stream) {}
+    }
+
+    func testRenewingThatIsRefusedAgainReadsNothing() async {
+        let sender = FakeSender(permission: .denied)
+        let outcome = await makeSource(sender, running: [.music]).renewPermission(for: .music)
+        XCTAssertEqual(outcome, .denied)
+        let calls = await sender.calls
+        XCTAssertEqual(calls, [.permission(.music, ask: true)])
+    }
+
+    func testAFailedResetNeverPrompts() async {
+        let sender = FakeSender()
+        let outcome = await makeSource(sender, running: [.music], reset: FakeReset(succeeds: false)).renewPermission(for: .music)
+        XCTAssertEqual(outcome, .failed(OSStatus(unimpErr)))
+        let calls = await sender.calls
+        XCTAssertEqual(calls, [])
+    }
+
+    func testRenewingForAPlayerThatIsNotRunningTouchesNothing() async {
+        let sender = FakeSender()
+        let reset = FakeReset()
+        let outcome = await makeSource(sender, running: [], reset: reset).renewPermission(for: .spotify)
+        XCTAssertEqual(outcome, .notRunning)
+        let resets = await reset.count
+        XCTAssertEqual(resets, 0)
+        let calls = await sender.calls
+        XCTAssertEqual(calls, [])
     }
 
     // MARK: Start

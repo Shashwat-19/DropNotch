@@ -603,7 +603,7 @@ Withdrawn before use: it was planned for launch at login, which moved to Phase 3
 | -1712 | errAETimeout | `.timedOut` |
 | anything else | | `.failed(code)` |
 
-- `.denied` shows "Allow control of <player> in System Settings" in place of the artist line, as a button that opens Privacy & Security › Automation (`x-apple.systempreferences:com.apple.preference.security?Privacy_Automation` [I: undocumented URL]; if it fails, the text still says where to go). The controls stay, so a retry works after a grant. Track info keeps updating from notifications, which need no permission. Other outcomes are logged only.
+- (Revised by D59: the link now asks again instead of opening System Settings.) `.denied` shows "Allow control of <player> in System Settings" in place of the artist line, as a button that opens Privacy & Security › Automation (`x-apple.systempreferences:com.apple.preference.security?Privacy_Automation` [I: undocumented URL]; if it fails, the text still says where to go). The controls stay, so a retry works after a grant. Track info keeps updating from notifications, which need no permission. Other outcomes are logged only.
 
 **Alternatives considered:**
 - Our own explanation screen before the prompt (RISKS §2). Rejected by Shash: more UI for one prompt per player, and the prompt already comes straight after the user's own click.
@@ -1378,3 +1378,22 @@ The island on Macs without a notch is not on the list: the pill shipped in v0.1.
 - Lyrics: the current line fills word by word (each word over its share of the line's time, so the fill is smooth), the next and previous lines dimmed, the column fading out at its top and bottom.
 
 **Alternatives:** the wallpaper swap (rejected above); one window resized between the two states (crashed); a scroll view for the lyrics (crashed).
+
+## D59. "Allow control of <player>" clears DropNotch's own Automation record and asks again
+
+**Date:** 2026-11-14 · **Status:** Accepted (Shash, 2026-11-14: "working" on device, after reporting that 0.3.0 showed Music without artwork or a bar, then "Allow control of Music in System Settings"). Revises D23's denied link.
+
+**Why:** macOS keeps a grant against the exact build it was given to. DropNotch is signed ad hoc, so that is the build's code hash, and every new build, from Xcode or a release, is a different app to macOS. The old grant is then refused without a prompt (-1743), while System Settings still shows the switch on, so D23's link to System Settings led nowhere. Seen on Shash's Mac, 2026-11-14: tccd logged "Failed to match existing code requirement for subject com.shashwat.DropNotch" with the stored hash differing from the running build's [V: tccd log]. The running copy was also an Xcode build whose files had been deleted.
+
+**Decision:**
+- The denied link reads "Allow control of <player>". A click runs `tccutil reset AppleEvents com.shashwat.DropNotch` (no admin rights; only DropNotch's own record), then the usual `permission(ask: true)`, so the system prompt appears again. Allow reads the track, position and artwork at once.
+- Only on that click: never at launch, never after a plain denial. Don't Allow in the prompt keeps the link, as before.
+- If tccutil can't run or fails, the link opens System Settings › Automation as before.
+- The reset clears DropNotch's records for every app it controls, so the other player asks again on its next click.
+
+**Alternatives considered:**
+- Tell people to run `tccutil` in Terminal. Rejected: the card can do it for them, and the step would be needed after every update.
+- A stable signature, so grants survive updates. That is the real fix and needs a signing identity: a Developer ID is planned for 1.0. A self-signed certificate would work on one Mac but has to be kept with its private key; an explicit designated requirement of the bundle ID alone would let any app with that ID inherit DropNotch's grants. Neither now.
+- Show the link at launch when the silent check says denied. Not now: it needs the source to report a denial it doesn't report today. The first click shows it.
+
+**Trade-offs / follow-ups:** Calendar has the same problem (seen in the same log), but EventKit still reports access, so the card shows "No events today" rather than asking. Until signing lands, `tccutil reset Calendar com.shashwat.DropNotch` and a relaunch fix it. Revisit both when 1.0 is signed.
