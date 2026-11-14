@@ -4,10 +4,17 @@ All notable changes to DropNotch are recorded in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and DropNotch uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.1] - 2026-11-14
+
+A fix for Now Playing after an update; still an unsigned build for macOS 14 or later, tested on Apple silicon.
 
 ### Fixed
-- After an update (or a new build from Xcode), Now Playing could lose its artwork, progress bar and controls and show "Allow control of Music in System Settings", while System Settings already showed DropNotch as allowed. macOS ties the permission to the exact build, and DropNotch isn't signed with a Developer ID yet, so it treats each new build as a different app. The link now reads "Allow control of Music" (or Spotify) and asks macOS again: click it, then Allow.
+- After an update (or a new build from Xcode), Now Playing could lose its artwork and progress bar, its controls stopped working, and it showed "Allow control of Music in System Settings", while System Settings already showed DropNotch as allowed. macOS ties the permission to the exact build, and DropNotch isn't signed with a Developer ID yet, so it treats each new build as a different app. The link now reads "Allow control of Music" (or Spotify) and asks macOS again: click it, then Allow.
+
+### Known issues
+- Calendar has the same cause but can't tell: after an update the card may say "No events today". Run `tccutil reset Calendar com.shashwat.DropNotch` in Terminal, relaunch DropNotch and click Allow Calendar.
+- The "Allow control" link appears only after you click a control, so a card can show the track without artwork until then.
+- Not notarised: macOS blocks the first launch of this version; click Open Anyway in System Settings › Privacy & Security.
 
 ## [0.3.0] - 2026-11-13
 
@@ -123,7 +130,7 @@ macOS asks for each permission only when you first use the feature that needs it
 - Now Playing relies on notifications that Music and Spotify don't document, so a player update could stop track details appearing; the controls would still work.
 - There are no automatic updates yet: check GitHub Releases for new versions.
 
-[Unreleased]: https://github.com/Shashwat-19/DropNotch/compare/v0.3.0...HEAD
+[0.3.1]: https://github.com/Shashwat-19/DropNotch/releases/tag/v0.3.1
 [0.3.0]: https://github.com/Shashwat-19/DropNotch/releases/tag/v0.3.0
 [0.2.0]: https://github.com/Shashwat-19/DropNotch/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Shashwat-19/DropNotch/releases/tag/v0.1.0
