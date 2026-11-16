@@ -30,6 +30,12 @@ struct NowPlayingExpandedView: View {
                     .aspectRatio(1, contentMode: .fit)
                     // The artwork is the card's open stop: the title column holds the denied link, its own stop.
                     .keyboardControl(Focus.open, focus: $focus, action: module.openPlayer)
+                    // The picture is hidden from VoiceOver, so the stop needs its own name (code-reviewer W1).
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text("Open \(info.player.displayName)"))
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityAction(.default, module.openPlayer)
+                    .help(Text("Open \(info.player.displayName)"))
                     VStack(alignment: .leading, spacing: 2) {
                         // Verbatim (a String, not a literal): track names are never looked up for translation.
                         Text(text.title)
@@ -38,6 +44,8 @@ struct NowPlayingExpandedView: View {
                             .opacity(textOpacity)
                             // On the title: the artwork is hidden from VoiceOver, and the title is what it reads first.
                             .accessibilityAction(named: Text("Open \(info.player.displayName)"), module.openPlayer)
+                            // Not on the whole row: the denied link would say "Open Music" too (code-reviewer W2).
+                            .help(Text("Open \(info.player.displayName)"))
                         if module.deniedPlayer == info.player {
                             Button(action: renewPermission) {
                                 // Underlined as well as coloured, so it reads as a link without colour (L6).
@@ -71,7 +79,6 @@ struct NowPlayingExpandedView: View {
                 // link's button takes its click before this gesture (D60).
                 .contentShape(Rectangle())
                 .onTapGesture(perform: module.openPlayer)
-                .help(Text("Open \(info.player.displayName)"))
                 // Top-aligned, so the controls sit beside the bar rather than centred on the bar and time.
                 HStack(alignment: .top, spacing: NotchStyle.spacing) {
                     // An ad can report a zero duration: no bar rather than a dead one.
@@ -107,6 +114,7 @@ struct NowPlayingExpandedView: View {
             .buttonStyle(.plain)
             .keyboardControl(Focus.open, focus: $focus, action: module.openPlayer)
             .help(Text("Open \(player.displayName)"))
+            .accessibilityHint(Text("Opens \(player.displayName)"))
             .accessibilityAction(named: Text("Open \(player.displayName)"), module.openPlayer)
         } else {
             NotchEmptyState("Nothing playing in Music or Spotify", systemImage: "music.note")
