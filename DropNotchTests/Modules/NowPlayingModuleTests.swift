@@ -48,7 +48,7 @@ final class NowPlayingModuleTests: XCTestCase {
                                artworkHold: Duration = .seconds(600), compactGrace: Duration = .seconds(600))
         async -> (NowPlayingModule, FakeSource) {
         let source = FakeSource(stream: AsyncStream { _ in })
-        let module = NowPlayingModule(source: source, settleDelay: settleDelay, artworkHold: artworkHold,
+        let module = NowPlayingModule(source: source, defaults: .scratch, settleDelay: settleDelay, artworkHold: artworkHold,
                                       compactGrace: compactGrace)
         await start(module, source, showing: info)
         return (module, source)
@@ -75,7 +75,7 @@ final class NowPlayingModuleTests: XCTestCase {
 
     func testStartConsumesUpdatesAndStopClearsThem() async throws {
         let (stream, continuation) = AsyncStream.makeStream(of: NowPlayingInfo?.self)
-        let module = NowPlayingModule(source: FakeSource(stream: stream))
+        let module = NowPlayingModule(source: FakeSource(stream: stream), defaults: .scratch)
         XCTAssertFalse(module.hasCompactContent)
         module.start()
         continuation.yield(NowPlayingInfo(player: .music, state: .playing, title: "t", artist: "a"))
@@ -92,7 +92,7 @@ final class NowPlayingModuleTests: XCTestCase {
         let (stream, continuation) = AsyncStream.makeStream(of: NowPlayingInfo?.self)
         let ended = expectation(description: "stream consumption ended")
         continuation.onTermination = { _ in ended.fulfill() }
-        let module = NowPlayingModule(source: FakeSource(stream: stream))
+        let module = NowPlayingModule(source: FakeSource(stream: stream), defaults: .scratch)
         module.start()
         continuation.yield(NowPlayingInfo(player: .music, state: .playing, title: "t", artist: "a"))
         for _ in 0..<1000 where module.info == nil { await Task.yield() }
@@ -113,7 +113,7 @@ final class NowPlayingModuleTests: XCTestCase {
 
     func testPerformWithNothingOnScreenSendsNothing() async {
         let source = FakeSource(stream: AsyncStream { _ in })
-        let module = NowPlayingModule(source: source)
+        let module = NowPlayingModule(source: source, defaults: .scratch)
         module.start()
         await module.perform(.playPause)
         XCTAssertEqual(source.sent, [])
@@ -402,7 +402,7 @@ final class NowPlayingModuleTests: XCTestCase {
 
     func testOpeningWithNothingOnScreenReadsNothing() {
         let source = FakeSource(stream: AsyncStream { _ in })
-        let module = NowPlayingModule(source: source)
+        let module = NowPlayingModule(source: source, defaults: .scratch)
         module.didOpen()
         XCTAssertEqual(source.refreshed, [])
     }
@@ -743,4 +743,56 @@ final class NowPlayingModuleTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(100)) // past the old grace
         XCTAssertTrue(module.hasCompactContent)
     }
+
+    // MARK: Opening the player (D60)
+
+    private func open(current: MediaPlayer?, lastSeen: MediaPlayer?, installed: Set<MediaPlayer>) -> MediaPlayer? {
+        NowPlayingModule.playerToOpen(current: current, lastSeen: lastSeen) { installed.contains($0) }
+    }
+
+    func testTheCurrentPlayerWinsOverLastSeenAndInstalledCheck() {
+        XCTAssertEqual(open(current: .spotify, lastSeen: .music, installed: [.music, .spotify]), .spotify)
+        XCTAssertEqual(open(current: .spotify, lastSeen: .music, installed: []), .spotify,
+                       "a player on screen is running, so the installed check is not consulted")
+        XCTAssertEqual(open(current: .music, lastSeen: .spotify, installed: [.spotify]), .music)
+    }
+
+    func testWithNothingOnScreenTheLastSeenPlayerIsChosenWhenInstalled() {
+        XCTAssertEqual(open(current: nil, lastSeen: .spotify, installed: [.music, .spotify]), .spotify)
+        XCTAssertEqual(open(current: nil, lastSeen: .music, installed: [.music, .spotify]), .music)
+    }
+
+    func testAnUninstalledLastSeenFallsBackToMusicThenSpotify() {
+        XCTAssertEqual(open(current: nil, lastSeen: .spotify, installed: [.music]), .music)
+        XCTAssertEqual(open(current: nil, lastSeen: .music, installed: [.spotify]), .spotify)
+        XCTAssertEqual(open(current: nil, lastSeen: nil, installed: [.music, .spotify]), .music)
+        XCTAssertEqual(open(current: nil, lastSeen: nil, installed: [.spotify]), .spotify)
+    }
+
+    func testNothingInstalledOpensNothing() {
+        XCTAssertNil(open(current: nil, lastSeen: .spotify, installed: []))
+        XCTAssertNil(open(current: nil, lastSeen: nil, installed: []))
+    }
+
+    func testTheLastPlayerSeenIsPersistedAndOutlivesTheTrack() async {
+        let suite = "NowPlayingModuleTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        addTeardownBlock { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+        let source = FakeSource(stream: AsyncStream { _ in })
+        let module = NowPlayingModule(source: source, defaults: defaults)
+        XCTAssertNil(defaults.string(forKey: NowPlayingModule.lastPlayerKey))
+        await start(module, source, showing: NowPlayingInfo(player: .spotify, state: .playing))
+        XCTAssertEqual(defaults.string(forKey: NowPlayingModule.lastPlayerKey), "com.spotify.client")
+        await deliver(nil, to: module, source)
+        XCTAssertEqual(defaults.string(forKey: NowPlayingModule.lastPlayerKey), "com.spotify.client",
+                       "the player quitting must not forget it")
+        await deliver(NowPlayingInfo(player: .music, state: .paused), to: module, source)
+        XCTAssertEqual(defaults.string(forKey: NowPlayingModule.lastPlayerKey), "com.apple.Music")
+    }
+}
+
+extension UserDefaults {
+    /// For tests that don't read settings: the module records the last player (D60), and the tests run inside the
+    /// app, so `.standard` would be the app's own settings.
+    static let scratch = UserDefaults(suiteName: "DropNotchTests.scratch")!
 }

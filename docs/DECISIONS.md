@@ -1397,3 +1397,17 @@ The island on Macs without a notch is not on the list: the pill shipped in v0.1.
 - Show the link at launch when the silent check says denied. Not now: it needs the source to report a denial it doesn't report today. The first click shows it.
 
 **Trade-offs / follow-ups:** Calendar has the same problem (seen in the same log), but EventKit still reports access, so the card shows "No events today" rather than asking. Until signing lands, `tccutil reset Calendar com.shashwat.DropNotch` and a relaunch fix it. Revisit both when 1.0 is signed.
+
+## D60. A click on the Now Playing card opens the player
+
+**Date:** 2026-11-16 · **Status:** Accepted for build (Shash, 2026-11-16: "the Now Playing card has no 'open the player' action… Add it").
+
+**Decision:**
+- On the Home tab's Now Playing card, a click on the artwork or the title and artist row opens the player, launching it if it isn't running, as the Calendar card opens Calendar (D44). The controls, the bar and the time keep their own clicks and never open it. With nothing playing, the whole empty card is the button.
+- Which player: the one on the card (playing, paused, or running and stopped); otherwise the last player DropNotch saw, kept by bundle ID in `nowPlaying.lastPlayer`; otherwise Music, then Spotify. Only an installed app (`NSWorkspace.urlForApplication`); with neither installed, the empty card isn't a button and nothing happens.
+- Opened with `NSWorkspace.openApplication`: Launch Services, not an Apple Event, so no Automation prompt and no new entitlement.
+- Keyboard (D40): the artwork is a focus stop, first in the arrow order before the denied link and the controls; Space or Return opens the player. The hotkey still focuses play/pause. In the empty state the card is the stop.
+- VoiceOver: an "Open Music" / "Open Spotify" action on the title (the artwork is hidden from VoiceOver), and on the empty card.
+- Same at Standard and Large; nothing animates, so Reduce Motion is unaffected. The lock-screen player is unchanged (D57).
+
+**Alternatives:** a separate "Open" button (rejected: no room on the Air's card, and a click on the artwork is what people try first); opening through the player's `activate` Apple Event (rejected: needs the Automation grant, which D59 shows can be lost on every update); remembering the last player only for the session (rejected: after a relaunch with no player running, the card would always open Music).
