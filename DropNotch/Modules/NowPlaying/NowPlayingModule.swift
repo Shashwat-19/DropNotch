@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// Now Playing (D2, D22–D24): shows what a `NowPlayingSource` reports and sends its commands.
@@ -70,6 +71,34 @@ final class NowPlayingModule: NotchModule {
 
     func settingsView() -> AnyView { AnyView(EmptyView()) }
 
+    /// The bundle ID of the last player seen, so a click can open it after it quits (D60).
+    static let lastPlayerKey = "nowPlaying.lastPlayer"
+
+    /// The app a click on the card opens (D60), or nil when neither player is installed.
+    var playerToOpen: MediaPlayer? {
+        let lastSeen = defaults.string(forKey: Self.lastPlayerKey).flatMap { id in
+            MediaPlayer.allCases.first { $0.bundleID == id }
+        }
+        return Self.playerToOpen(current: info?.player, lastSeen: lastSeen) {
+            NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0.bundleID) != nil
+        }
+    }
+
+    /// The player on screen (it is running, so installed); else the last one seen; else Music, then Spotify. A player
+    /// reported as stopped is on screen and also the last seen, so it is chosen either way.
+    static func playerToOpen(current: MediaPlayer?, lastSeen: MediaPlayer?,
+                             isInstalled: (MediaPlayer) -> Bool) -> MediaPlayer? {
+        if let current { return current }
+        return ([lastSeen].compactMap { $0 } + [.music, .spotify]).first(where: isInstalled)
+    }
+
+    /// Opens the player, launching it if it isn't running (D60). Launch Services only: no Apple Event, so no prompt.
+    func openPlayer() {
+        guard let player = playerToOpen,
+              let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: player.bundleID) else { return }
+        NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+    }
+
     func start() {
         guard task == nil else { return }
         // Inherits the main actor, so `info` is only touched on the main thread.
@@ -133,6 +162,10 @@ final class NowPlayingModule: NotchModule {
             let agrees = info?.isPlaying == pending
             let otherTrack = info?.player != self.info?.player || info?.trackID != self.info?.trackID
             if agrees || otherTrack { pendingIsPlaying = nil }
+        }
+        // Only on a change: Music sends bursts (D24).
+        if let id = info?.player.bundleID, defaults.string(forKey: Self.lastPlayerKey) != id {
+            defaults.set(id, forKey: Self.lastPlayerKey)
         }
         self.info = info
         updateShown()

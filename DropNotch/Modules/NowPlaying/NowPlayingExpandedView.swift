@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Now Playing as a Home card (D42): artwork beside the title and artist, then the progress bar and three controls
-/// (D22–D26) in one row, with the time under the bar (D46).
+/// (D22–D26) in one row, with the time under the bar (D46). A click on the artwork or the title opens the player (D60).
 struct NowPlayingExpandedView: View {
     let module: NowPlayingModule
     @Environment(\.openURL) private var openURL
@@ -28,12 +28,16 @@ struct NowPlayingExpandedView: View {
                         NowPlayingArtworkView(artwork: info.artwork, player: info.player, size: proxy.size.height)
                     }
                     .aspectRatio(1, contentMode: .fit)
+                    // The artwork is the card's open stop: the title column holds the denied link, its own stop.
+                    .keyboardControl(Focus.open, focus: $focus, action: module.openPlayer)
                     VStack(alignment: .leading, spacing: 2) {
                         // Verbatim (a String, not a literal): track names are never looked up for translation.
                         Text(text.title)
                             // A card's title is one step larger than a tab's (D42).
                             .font(.notch(.body, size).weight(.semibold))
                             .opacity(textOpacity)
+                            // On the title: the artwork is hidden from VoiceOver, and the title is what it reads first.
+                            .accessibilityAction(named: Text("Open \(info.player.displayName)"), module.openPlayer)
                         if module.deniedPlayer == info.player {
                             Button(action: renewPermission) {
                                 // Underlined as well as coloured, so it reads as a link without colour (L6).
@@ -63,6 +67,11 @@ struct NowPlayingExpandedView: View {
                     .padding(.top, 2)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                // Only this row opens the player: the controls, bar and time below keep their own clicks, and the denied
+                // link's button takes its click before this gesture (D60).
+                .contentShape(Rectangle())
+                .onTapGesture(perform: module.openPlayer)
+                .help(Text("Open \(info.player.displayName)"))
                 // Top-aligned, so the controls sit beside the bar rather than centred on the bar and time.
                 HStack(alignment: .top, spacing: NotchStyle.spacing) {
                     // An ad can report a zero duration: no bar rather than a dead one.
@@ -89,6 +98,16 @@ struct NowPlayingExpandedView: View {
             .onChange(of: TrackText(info)) { fadeToCurrentText() }
             // On appearing and on each track change while the card shows; cancelled when the notch closes (D53).
             .task(id: LyricsRequest(trackID: info.trackID, on: lyricsOn)) { await module.loadLyrics() }
+        } else if let player = module.playerToOpen {
+            // As the Calendar card: the whole card is the button (D60).
+            Button(action: module.openPlayer) {
+                NotchEmptyState("Nothing playing in Music or Spotify", systemImage: "music.note")
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .keyboardControl(Focus.open, focus: $focus, action: module.openPlayer)
+            .help(Text("Open \(player.displayName)"))
+            .accessibilityAction(named: Text("Open \(player.displayName)"), module.openPlayer)
         } else {
             NotchEmptyState("Nothing playing in Music or Spotify", systemImage: "music.note")
         }
@@ -127,7 +146,7 @@ struct NowPlayingExpandedView: View {
 
     /// Arrows step through the controls in reading order and stop at either end (D30).
     private func moveFocus(_ direction: MoveCommandDirection, denied: Bool) {
-        let order = (denied ? [Focus.settingsLink] : []) + [.previous, .playPause, .next]
+        let order = [Focus.open] + (denied ? [.settingsLink] : []) + [.previous, .playPause, .next]
         guard let current = focus, let index = order.firstIndex(of: current) else {
             focus = .playPause
             return
@@ -168,7 +187,7 @@ struct NowPlayingExpandedView: View {
     }
 
     private enum Focus: Hashable {
-        case settingsLink, previous, playPause, next
+        case open, settingsLink, previous, playPause, next
 
         init(_ command: PlaybackCommand) {
             switch command {
