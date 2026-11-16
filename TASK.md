@@ -367,6 +367,10 @@ Device checks moved here from feature branches (speed mode, CLAUDE.md). Run them
 
 For v0.2.0 (not run; listed under Known limitations in the 0.2.0 notes): 77 (VoiceOver on Home), 78 (Larger Text and every card off), 83 (VoiceOver on the Battery card), and the battery and calendar pending items in the v0.2 section below.
 
+From `feat/open-player` (D60; checks a–c passed, Shash, 2026-11-17, Release build, Air M3, macOS 27.0.1):
+- **Pending.** In the denied state, clicking "Allow control of <player>" asks again and does not bring the player forward.
+- **Pending.** VoiceOver on the card's artwork reads "Open Music" (or Spotify), button; the title offers the same action.
+
 From branch 9, `feat/polish` (accessibility-auditor, 2026-11-01; not fixed on the branch, decide before release):
 - **Closed in code by D40; not re-checked on a device for 0.2.** (Was: Open (High).) File Tray has no keyboard path: tiles can't take focus, the actions are Tab stops only with Keyboard navigation on, and the hotkey sets no first focus. Same for Clipboard's Turn On, Add Clipboard and Clear (Medium).
 - **Open (Medium).** VoiceOver finds nothing in the closed or compact notch (no element or open action); also the start of click-to-open. No announcement on open or ⌘N tab switch (L4); copy-back now says "Copied".
