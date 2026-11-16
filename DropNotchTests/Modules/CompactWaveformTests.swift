@@ -41,7 +41,7 @@ final class CompactWaveformTests: XCTestCase {
         try XCTSkipIf(ProcessInfo.processInfo.isLowPowerModeEnabled, "the bars stay still in Low Power Mode")
         try XCTSkipIf(NSWorkspace.shared.accessibilityDisplayShouldReduceMotion, "the bars stay still under Reduce Motion")
         let source = Source()
-        let module = NowPlayingModule(source: source)
+        let module = NowPlayingModule(source: source, defaults: .scratch)
         module.start()
         // A fixed size, as the wing gives it: alone in a window the hosting view would shrink to its content.
         let hosting = NSHostingView(rootView: NowPlayingCompactView(module: module, slot: .right).frame(width: 20, height: 20))

@@ -59,7 +59,7 @@ final class LockScreenPlayerTests: XCTestCase {
     private func setUp(on: Bool = true, available: Bool = true) async
         -> (LockScreenPlayer, FakeSurface, AsyncStream<Bool>.Continuation, AsyncStream<NowPlayingInfo?>.Continuation, FakeLocks) {
         let (tracks, trackFeed) = AsyncStream.makeStream(of: NowPlayingInfo?.self)
-        let nowPlaying = NowPlayingModule(source: FakePlayers(stream: tracks))
+        let nowPlaying = NowPlayingModule(source: FakePlayers(stream: tracks), defaults: .scratch)
         nowPlaying.start()
         let (lockStream, lockFeed) = AsyncStream.makeStream(of: Bool.self)
         let locks = FakeLocks(stream: lockStream)
