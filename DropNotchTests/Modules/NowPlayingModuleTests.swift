@@ -743,4 +743,50 @@ final class NowPlayingModuleTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(100)) // past the old grace
         XCTAssertTrue(module.hasCompactContent)
     }
+
+    // MARK: Opening the player (D60)
+
+    private func open(current: MediaPlayer?, lastSeen: MediaPlayer?, installed: Set<MediaPlayer>) -> MediaPlayer? {
+        NowPlayingModule.playerToOpen(current: current, lastSeen: lastSeen) { installed.contains($0) }
+    }
+
+    func testTheCurrentPlayerWinsOverLastSeenAndInstalledCheck() {
+        XCTAssertEqual(open(current: .spotify, lastSeen: .music, installed: [.music, .spotify]), .spotify)
+        XCTAssertEqual(open(current: .spotify, lastSeen: .music, installed: []), .spotify,
+                       "a player on screen is running, so the installed check is not consulted")
+        XCTAssertEqual(open(current: .music, lastSeen: .spotify, installed: [.spotify]), .music)
+    }
+
+    func testWithNothingOnScreenTheLastSeenPlayerIsChosenWhenInstalled() {
+        XCTAssertEqual(open(current: nil, lastSeen: .spotify, installed: [.music, .spotify]), .spotify)
+        XCTAssertEqual(open(current: nil, lastSeen: .music, installed: [.music, .spotify]), .music)
+    }
+
+    func testAnUninstalledLastSeenFallsBackToMusicThenSpotify() {
+        XCTAssertEqual(open(current: nil, lastSeen: .spotify, installed: [.music]), .music)
+        XCTAssertEqual(open(current: nil, lastSeen: .music, installed: [.spotify]), .spotify)
+        XCTAssertEqual(open(current: nil, lastSeen: nil, installed: [.music, .spotify]), .music)
+        XCTAssertEqual(open(current: nil, lastSeen: nil, installed: [.spotify]), .spotify)
+    }
+
+    func testNothingInstalledOpensNothing() {
+        XCTAssertNil(open(current: nil, lastSeen: .spotify, installed: []))
+        XCTAssertNil(open(current: nil, lastSeen: nil, installed: []))
+    }
+
+    func testTheLastPlayerSeenIsPersistedAndOutlivesTheTrack() async {
+        let suite = "NowPlayingModuleTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        addTeardownBlock { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+        let source = FakeSource(stream: AsyncStream { _ in })
+        let module = NowPlayingModule(source: source, defaults: defaults)
+        XCTAssertNil(defaults.string(forKey: NowPlayingModule.lastPlayerKey))
+        await start(module, source, showing: NowPlayingInfo(player: .spotify, state: .playing))
+        XCTAssertEqual(defaults.string(forKey: NowPlayingModule.lastPlayerKey), "com.spotify.client")
+        await deliver(nil, to: module, source)
+        XCTAssertEqual(defaults.string(forKey: NowPlayingModule.lastPlayerKey), "com.spotify.client",
+                       "the player quitting must not forget it")
+        await deliver(NowPlayingInfo(player: .music, state: .paused), to: module, source)
+        XCTAssertEqual(defaults.string(forKey: NowPlayingModule.lastPlayerKey), "com.apple.Music")
+    }
 }
