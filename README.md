@@ -62,7 +62,7 @@ Music, calendar, files, clipboard, notes and a terminal, one hover away.
 
 **Everywhere**
 
-- Now Playing for **Music** and **Spotify**: play, pause, skip, seek, artwork, track times
+- Now Playing for **Music** and **Spotify**: play, pause, skip, seek, artwork, track times; click the card to open the player
 - Calendar card with the next events, read from your calendars (no events are changed)
 - Global hotkey **⌃⌥N** opens the notch with the keyboard ready
 - **Standard** and **Large** notch sizes (Settings › General)
