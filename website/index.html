@@ -370,9 +370,9 @@ footer a { text-decoration: none; } footer a:hover { color: var(--text); }
           <summary>Is the terminal safe to leave on?</summary>
           <p>It's off until you turn it on. Commands you run there use DropNotch's permissions, as they would in the terminal inside VS Code or iTerm. Settings shows exactly what that includes before you turn it on.</p>
         </details>
-        <details data-claim="verified: README Install › Upgrade (brew update, brew upgrade), brew uninstall; CHANGELOG 0.2.0 (no automatic updates); CHANGELOG 0.1.0 (menu-bar Quit)">
+        <details data-claim="verified: README Updating (brew upgrade), brew uninstall; CHANGELOG 0.2.0 (no automatic updates); CHANGELOG 0.1.0 (menu-bar Quit)">
           <summary>How do I update or uninstall it?</summary>
-          <p>There are no automatic updates yet. Quit DropNotch, then run <code>brew update &amp;&amp; brew upgrade --cask shashwat-19/tap/dropnotch</code>, or download the new DMG here and replace the old app. To uninstall, quit from the menu-bar item and move DropNotch to the Bin, or run <code>brew uninstall --cask dropnotch</code>.</p>
+          <p>There are no automatic updates yet. Quit DropNotch, then run <code>brew upgrade --cask dropnotch</code>, or download the new DMG and replace the old app; <a href="#updating">Updating</a> has the details. To uninstall, quit from the menu-bar item and move DropNotch to the Bin, or run <code>brew uninstall --cask dropnotch</code>.</p>
         </details>
       </div>
     </div>
@@ -400,13 +400,25 @@ footer a { text-decoration: none; } footer a:hover { color: var(--text); }
             <button class="btn copy" type="button" data-copy="brew install --cask shashwat-19/tap/dropnotch" data-track="copy-brew-install">Copy</button>
           </div>
           <p class="small muted">This adds the tap and installs in one step. The first launch still needs Open Anyway, as with the DMG.</p>
-          <h3 style="margin-top:1rem">Upgrade</h3>
-          <div class="brew" style="width:100%">
-            <code>brew update &amp;&amp; brew upgrade --cask shashwat-19/tap/dropnotch</code>
-            <button class="btn copy" type="button" data-copy="brew update &amp;&amp; brew upgrade --cask shashwat-19/tap/dropnotch" data-track="copy-brew-upgrade">Copy</button>
-          </div>
-          <p class="small muted">Quit DropNotch from the menu bar first. Installed from the DMG? Download the new one and drag it into Applications, choosing Replace. Your settings and notes stay.</p>
         </div>
+      </div>
+
+      <div class="panel-card" id="updating" style="margin-top:1rem" data-claim="verified: README Updating">
+        <h3>Updating</h3>
+        <p class="small muted">Quit DropNotch first: menu-bar icon › Quit.</p>
+        <p><strong>Installed with Homebrew:</strong></p>
+        <div class="brew" style="width:100%">
+          <code>brew upgrade --cask dropnotch</code>
+          <button class="btn copy" type="button" data-copy="brew upgrade --cask dropnotch" data-track="copy-brew-upgrade">Copy</button>
+        </div>
+        <p class="small muted">Says it's already up to date right after a release? Run <code>brew update</code> first.</p>
+        <p><strong>Installed from the DMG:</strong> download the <a href="https://github.com/Shashwat-19/DropNotch/releases/latest">latest DMG</a> and drag it over the old copy, choosing Replace. Or switch to Homebrew once, and updates are one command after that:</p>
+        <div class="brew" style="width:100%">
+          <code>brew install --cask --force shashwat-19/tap/dropnotch</code>
+          <button class="btn copy" type="button" data-copy="brew install --cask --force shashwat-19/tap/dropnotch" data-track="copy-brew-switch">Copy</button>
+        </div>
+        <p class="small muted">This replaces the app in Applications. Your settings, notes and tray stay, since they live in ~/Library.</p>
+        <p><strong>After any update:</strong> open DropNotch once through System Settings › Privacy &amp; Security › Open Anyway, and allow Music (or Spotify) and Calendar again when asked. Builds aren't notarised yet, so macOS treats each version as a new app.</p>
       </div>
 
       <div class="feedback">
