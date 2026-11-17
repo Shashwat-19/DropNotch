@@ -38,6 +38,7 @@ Music, calendar, files, clipboard, notes and a terminal, one hover away.
 
 - [Features](#features)
 - [Install](#install)
+- [Updating](#updating)
 - [Usage](#usage)
 - [Privacy and permissions](#privacy-and-permissions)
 - [Architecture](#architecture)
@@ -92,24 +93,6 @@ brew install --cask shashwat-19/tap/dropnotch
 
 This adds the tap and installs in one step. After the tap is added, `brew uninstall --cask dropnotch` works with the short name.
 
-### Upgrade
-
-Quit DropNotch from its menu-bar item, then:
-
-```bash
-brew update && brew upgrade --cask shashwat-19/tap/dropnotch
-```
-
-`brew update` fetches the tap's new version first; without it, Homebrew can take up to a day to notice a release. Your settings and notes stay. Because the build isn't notarised, macOS may block the new version once: click **Open Anyway** again.
-
-**Installed from the DMG?** Homebrew doesn't know about that copy, so the command above says `Cask 'dropnotch' is not installed`. Either download the new DMG and drag it into **Applications**, choosing **Replace**, or hand the app over to Homebrew once:
-
-```bash
-brew update && brew install --cask --adopt shashwat-19/tap/dropnotch
-```
-
-`--adopt` takes over the copy already in Applications instead of installing a second one. It works only when that copy is the latest version, so update from the DMG first if it's older. After that, the upgrade command above works.
-
 ### DMG
 
 1. Download `DropNotch-<version>.dmg` from the [latest release](https://github.com/Shashwat-19/DropNotch/releases/latest).
@@ -139,6 +122,30 @@ flowchart TD
 ```
 
 The warning exists because the build is not yet notarised by Apple. A Developer ID build is planned for 1.0.
+
+---
+
+## Updating
+
+Quit DropNotch first: menu-bar icon › **Quit**.
+
+**Installed with Homebrew:**
+
+```bash
+brew upgrade --cask dropnotch
+```
+
+If it says DropNotch is already up to date right after a release, run `brew update` first: Homebrew checks the tap for new versions about once a day.
+
+**Installed from the DMG:** either download the latest DMG from the [latest release](https://github.com/Shashwat-19/DropNotch/releases/latest) and drag it over the old copy in **Applications** (choose **Replace**), or switch to Homebrew once:
+
+```bash
+brew install --cask --force shashwat-19/tap/dropnotch
+```
+
+This replaces the app in Applications. Your settings, notes and tray stay, since they live in `~/Library`. After that, updates are one command: `brew upgrade --cask dropnotch`.
+
+**After any update:** open DropNotch once through **System Settings › Privacy & Security › Open Anyway**, and allow Music (or Spotify) and Calendar again when asked. Builds aren't notarised yet, so macOS treats each version as a new app.
 
 ---
 
